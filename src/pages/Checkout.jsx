@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, CreditCard, Truck, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin } from 'lucide-react';
 import { API_URL } from '../apiConfig';
 import './Checkout.css';
 
