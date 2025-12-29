@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CreditCard, Truck, ShieldCheck } from 'lucide-react';
+import { API_URL } from '../apiConfig';
 import './Checkout.css';
 
 export default function Checkout() {
@@ -41,7 +42,7 @@ export default function Checkout() {
         };
 
         try {
-            const res = await fetch('http://localhost:5000/api/orders', {
+            const res = await fetch(`${API_URL}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ShoppingBag, TrendingUp, Users } from 'lucide-react';
+import { API_URL } from '../../apiConfig';
 import './Admin.css';
 
 export default function AdminDashboard() {
@@ -15,8 +16,8 @@ export default function AdminDashboard() {
         const fetchStats = async () => {
             try {
                 const [prodRes, orderRes] = await Promise.all([
-                    fetch('http://localhost:5000/api/products'),
-                    fetch('http://localhost:5000/api/orders')
+                    fetch(`${API_URL}/api/products`),
+                    fetch(`${API_URL}/api/orders`)
                 ]);
 
                 const products = prodRes.ok ? await prodRes.json() : [];

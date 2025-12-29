@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { API_URL } from '../apiConfig';
 import './ProductDetail.css';
 
 export default function ProductDetail() {
@@ -18,7 +19,7 @@ export default function ProductDetail() {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`http://localhost:5000/api/products/${slug}`)
+        fetch(`${API_URL}/api/products/${slug}`)
             .then(res => {
                 if (!res.ok) throw new Error('Товар не знайдено');
                 return res.json();

@@ -4,6 +4,7 @@ import { Filter, ChevronDown, Plus, X, Heart, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategoryName, getCategorySlug } from '../utils/categoryMapping';
+import { API_URL } from '../apiConfig';
 import './Shop.css';
 
 const FILTERS = [
@@ -40,7 +41,7 @@ export default function Shop() {
             badge
         }).toString();
 
-        fetch(`http://localhost:5000/api/products?${query}`)
+        fetch(`${API_URL}/api/products?${query}`)
             .then(res => {
                 if (!res.ok) throw new Error('Помилка завантаження товарів');
                 return res.json();

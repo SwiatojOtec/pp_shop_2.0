@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { API_URL } from '../apiConfig';
 import './ProductGrid.css';
 
 export default function ProductGrid() {
@@ -14,7 +15,7 @@ export default function ProductGrid() {
 
     useEffect(() => {
         setLoading(true);
-        fetch('http://localhost:5000/api/products')
+        fetch(`${API_URL}/api/products`)
             .then(res => res.json())
             .then(data => {
                 setProducts(Array.isArray(data) ? data : []);
