@@ -142,10 +142,10 @@ export default function ProductDetail() {
                             <div className="specs-grid">
                                 <div className="spec-item"><span className="spec-label">Категорія</span><span>{product.category}</span></div>
                                 <div className="spec-item"><span className="spec-label">Бренд</span><span>Pan Parket</span></div>
-                                {product.specs?.map((spec, i) => (
+                                {product.specs && Object.entries(product.specs).map(([label, value], i) => (
                                     <div key={i} className="spec-item">
-                                        <span className="spec-label">{spec.label}</span>
-                                        <span>{spec.value}</span>
+                                        <span className="spec-label">{label}</span>
+                                        <span>{value}</span>
                                     </div>
                                 ))}
                             </div>
