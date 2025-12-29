@@ -16,6 +16,7 @@ export default function ProductDetail() {
     const [error, setError] = useState(null);
     const [activeImg, setActiveImg] = useState('');
     const [quantity, setQuantity] = useState(1);
+    const [m2Value, setM2Value] = useState('');
     const [activeTab, setActiveTab] = useState('desc');
 
     useEffect(() => {
@@ -29,6 +30,9 @@ export default function ProductDetail() {
                 setProduct(data);
                 setActiveImg(data.image);
                 setLoading(false);
+                if (data.packSize) {
+                    setM2Value(data.packSize.toFixed(2));
+                }
 
                 // Fetch variants if groupId exists
                 if (data.groupId) {
@@ -149,13 +153,54 @@ export default function ProductDetail() {
                             </div>
                         )}
 
-                        <div className="purchase-section">
-                            <div className="quantity-control">
-                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={18} /></button>
-                                <input type="number" value={quantity} readOnly />
-                                <button onClick={() => setQuantity(quantity + 1)}><Plus size={18} /></button>
+                        {product.unit === 'м²' && product.packSize > 0 && (
+                            <div className="pack-calculator" style={{ background: '#f9f9f9', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' }}>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>Калькулятор упаковок:</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <div className="calc-group">
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>Площа (м²)</label>
+                                        <input
+                                            type="number"
+                                            value={m2Value}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setM2Value(val);
+                                                const packs = Math.ceil(parseFloat(val) / product.packSize);
+                                                if (!isNaN(packs) && packs > 0) setQuantity(packs);
+                                            }}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                        />
+                                    </div>
+                                    <div className="calc-group">
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>К-сть упаковок</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '5px 10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Minus size={14} /></button>
+                                            <span style={{ flex: 1, textAlign: 'center', fontWeight: 700 }}>{quantity}</span>
+                                            <button onClick={() => setQuantity(quantity + 1)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: '15px', fontSize: '0.85rem', color: '#444', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Разом площа: <strong>{(quantity * product.packSize).toFixed(2)} м²</strong></span>
+                                    <span>В упаковці: <strong>{product.packSize} м²</strong></span>
+                                </div>
+                                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #ddd', textAlign: 'right' }}>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                                        Сума: {(quantity * product.packSize * product.price).toLocaleString()} ₴
+                                    </span>
+                                </div>
                             </div>
-                            <button className="btn btn-primary buy-btn" onClick={() => addToCart(product, quantity)}>
+                        )}
+
+                        <div className="purchase-section">
+                            {product.unit !== 'м²' && (
+                                <div className="quantity-control">
+                                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={18} /></button>
+                                    <input type="number" value={quantity} readOnly />
+                                    <button onClick={() => setQuantity(quantity + 1)}><Plus size={18} /></button>
+                                </div>
+                            )}
+                            <button className="btn btn-primary buy-btn" onClick={() => addToCart(product, quantity)} style={{ flex: 1 }}>
                                 <ShoppingCart size={20} />
                                 Додати в кошик
                             </button>

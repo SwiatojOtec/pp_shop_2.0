@@ -24,6 +24,8 @@ export default function ProductEdit() {
         slug: '',
         groupId: '', // For linking variants
         stockStatus: 'in_stock',
+        packSize: 1.0,
+        unit: 'м²',
         specs: {}
     });
     const [categories, setCategories] = useState([]);
@@ -383,6 +385,29 @@ export default function ProductEdit() {
                                         <option key={brand.id} value={brand.name}>{brand.name}</option>
                                     ))}
                                 </select>
+                            </div>
+                            <div className="form-group" style={{ marginTop: '20px' }}>
+                                <label>Одиниця виміру</label>
+                                <select
+                                    value={formData.unit}
+                                    onChange={e => setFormData({ ...formData, unit: e.target.value })}
+                                >
+                                    <option value="м²">м² (Квадратний метр)</option>
+                                    <option value="шт">шт (Штука)</option>
+                                    <option value="п.м.">п.м. (Погонний метр)</option>
+                                    <option value="уп">уп (Упаковка)</option>
+                                </select>
+                            </div>
+                            <div className="form-group" style={{ marginTop: '20px' }}>
+                                <label>Площа в упаковці ({formData.unit})</label>
+                                <input
+                                    type="number"
+                                    step="0.001"
+                                    value={formData.packSize}
+                                    onChange={e => setFormData({ ...formData, packSize: e.target.value })}
+                                    placeholder="Напр: 2.25"
+                                />
+                                <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Для розрахунку кратності пакунку.</p>
                             </div>
                         </div>
                     </div>

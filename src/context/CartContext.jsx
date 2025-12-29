@@ -45,7 +45,10 @@ export function CartProvider({ children }) {
     const clearCart = () => setCartItems([]);
 
     const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
-    const cartTotal = safeCartItems.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
+    const cartTotal = safeCartItems.reduce((sum, item) => {
+        const packSize = item.packSize || 1;
+        return sum + (parseFloat(item.price) * item.quantity * packSize);
+    }, 0);
     const cartCount = safeCartItems.reduce((sum, item) => sum + item.quantity, 0);
 
     return (

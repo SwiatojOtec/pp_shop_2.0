@@ -37,12 +37,22 @@ export default function Cart({ isOpen, onClose }) {
                                     </div>
                                     <div className="item-info">
                                         <h3>{item.name}</h3>
-                                        <div className="item-price">{item.price} ₴ / м²</div>
+                                        <div className="item-price">
+                                            {item.price} ₴ / {item.unit || 'м²'}
+                                            {item.packSize > 0 && item.unit === 'м²' && (
+                                                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
+                                                    {item.quantity} уп. = {(item.quantity * item.packSize).toFixed(2)} м²
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="item-controls">
                                             <div className="qty-btns">
                                                 <button onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={14} /></button>
-                                                <span>{item.quantity}</span>
+                                                <span>{item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
                                                 <button onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={14} /></button>
+                                            </div>
+                                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                                                {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
                                             </div>
                                             <button className="remove-btn" onClick={() => removeFromCart(item.id)}>
                                                 <Trash2 size={18} />
@@ -59,7 +69,7 @@ export default function Cart({ isOpen, onClose }) {
                     <div className="cart-footer">
                         <div className="total-row">
                             <span>Разом:</span>
-                            <span className="total-price">{cartTotal} ₴</span>
+                            <span className="total-price">{cartTotal.toLocaleString()} ₴</span>
                         </div>
                         <Link to="/checkout" onClick={onClose}>
                             <button className="btn btn-primary checkout-btn">Оформити замовлення</button>
