@@ -47,6 +47,12 @@ export default function ProductEdit() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.image) {
+            alert('Будь ласка, додайте головне зображення (URL)');
+            return;
+        }
+
         const url = isNew
             ? `${API_URL}/api/products`
             : `${API_URL}/api/products/${id}`;
@@ -58,11 +64,17 @@ export default function ProductEdit() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
+
+            const data = await res.json();
+
             if (res.ok) {
                 navigate('/admin/products');
+            } else {
+                alert(`Помилка: ${data.message || 'Не вдалося зберегти товар'}`);
             }
         } catch (err) {
             console.error('Error saving product:', err);
+            alert("Сталася помилка при з'єднанні з сервером");
         }
     };
 

@@ -83,7 +83,8 @@ router.post('/', async (req, res) => {
         const product = await Product.create(data);
         res.status(201).json(product);
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error('CREATE PRODUCT ERROR:', err);
+        res.status(400).json({ message: err.message, errors: err.errors });
     }
 });
 
@@ -95,7 +96,8 @@ router.put('/:id', async (req, res) => {
         await product.update(req.body);
         res.json(product);
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error('UPDATE PRODUCT ERROR:', err);
+        res.status(400).json({ message: err.message, errors: err.errors });
     }
 });
 
