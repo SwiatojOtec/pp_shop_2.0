@@ -21,7 +21,11 @@ const Order = sequelize.define('Order', {
     },
     address: {
         type: DataTypes.TEXT,
-        allowNull: false
+        allowNull: true
+    },
+    deliveryMethod: {
+        type: DataTypes.STRING,
+        defaultValue: 'pickup' // pickup, delivery
     },
     paymentMethod: {
         type: DataTypes.STRING,
