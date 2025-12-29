@@ -5,13 +5,18 @@ const Product = require('../models/Product');
 const { Op } = require('sequelize');
 
 // Get all products with filtering and search
+
 router.get('/', async (req, res) => {
     try {
         const { search, category, brand, minPrice, maxPrice, sort, badge, groupId } = req.query;
         let where = {};
 
         if (search) {
-            where.name = { [Op.iLike]: `%${search}%` };
+            where[Op.or] = [
+                { name: { [Op.iLike]: `%${search}%` } },
+                { sku: { [Op.iLike]: `%${search}%` } },
+                { category: { [Op.iLike]: `%${search}%` } }
+            ];
         }
 
         if (category) {
@@ -31,6 +36,18 @@ router.get('/', async (req, res) => {
             if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
             if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
         }
+
+        // Handle dynamic spec filters (anything else in query)
+        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId'];
+        Object.keys(req.query).forEach(key => {
+            if (!standardParams.includes(key) && req.query[key]) {
+                // For JSONB specs filtering
+                where.specs = {
+                    ...where.specs,
+                    [key]: req.query[key]
+                };
+            }
+        });
 
         let order = [['createdAt', 'DESC']];
         if (sort === 'price_asc') order = [['price', 'ASC']];

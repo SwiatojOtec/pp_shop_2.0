@@ -40,14 +40,13 @@ export default function Shop() {
 
     useEffect(() => {
         setLoading(true);
-        const query = new URLSearchParams({
-            category,
-            search,
-            sort,
-            minPrice,
-            maxPrice,
-            badge
-        }).toString();
+        const params = Object.fromEntries(searchParams.entries());
+        // If category is slug, we need to pass the name to the API (or update API to handle slugs)
+        if (params.category) {
+            params.category = getCategoryName(params.category);
+        }
+
+        const query = new URLSearchParams(params).toString();
 
         fetch(`${API_URL}/api/products?${query}`)
             .then(res => {
@@ -62,7 +61,18 @@ export default function Shop() {
                 setError(err.message);
                 setLoading(false);
             });
-    }, [category, search, sort, minPrice, maxPrice]);
+    }, [searchParams]);
+
+    // Get unique values for specs to show in filters
+    const getUniqueSpecValues = (specKey) => {
+        const values = new Set();
+        products.forEach(p => {
+            if (p.specs && p.specs[specKey]) {
+                values.add(p.specs[specKey]);
+            }
+        });
+        return Array.from(values);
+    };
 
     const handleFilterChange = (key, value) => {
         const newParams = new URLSearchParams(searchParams);
@@ -153,6 +163,38 @@ export default function Shop() {
                                             onChange={() => handleFilterChange('brand', searchParams.get('brand') === brand.name ? '' : brand.name)}
                                         />
                                         <span>{brand.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="filter-group">
+                            <h4 className="filter-title">Товщина</h4>
+                            <div className="filter-options">
+                                {getUniqueSpecValues('Товщина').map((val, idx) => (
+                                    <label key={idx} className="filter-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={searchParams.get('Товщина') === val}
+                                            onChange={() => handleFilterChange('Товщина', searchParams.get('Товщина') === val ? '' : val)}
+                                        />
+                                        <span>{val}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="filter-group">
+                            <h4 className="filter-title">Клас зносостійкості</h4>
+                            <div className="filter-options">
+                                {getUniqueSpecValues('Клас зносостійкості').map((val, idx) => (
+                                    <label key={idx} className="filter-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={searchParams.get('Клас зносостійкості') === val}
+                                            onChange={() => handleFilterChange('Клас зносостійкості', searchParams.get('Клас зносостійкості') === val ? '' : val)}
+                                        />
+                                        <span>{val}</span>
                                     </label>
                                 ))}
                             </div>
