@@ -7,19 +7,23 @@ import { getCategoryName, getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
 import './Shop.css';
 
-const FILTERS = [
-    { title: 'Категорія', options: ['Паркетна дошка', 'Ламінат', 'Вініл', 'Двері'] },
-    { title: 'Бренд', options: ['Tarkett', 'Barlinek', 'Quick-Step', 'Arteo'] },
-];
-
 export default function Shop() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { addToCart } = useCart();
     const { toggleFavorite, isFavorite } = useFavorites();
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [quickViewProduct, setQuickViewProduct] = useState(null);
+
+    useEffect(() => {
+        // Fetch categories
+        fetch(`${API_URL}/api/categories`)
+            .then(res => res.json())
+            .then(data => setCategories(data))
+            .catch(err => console.error('Error fetching categories:', err));
+    }, []);
 
     // Filter states from URL
     const categorySlug = searchParams.get('category') || '';
@@ -118,23 +122,37 @@ export default function Shop() {
                             <span>Фільтри</span>
                         </div>
 
-                        {FILTERS.map((filter, idx) => (
-                            <div key={idx} className="filter-group">
-                                <h4 className="filter-title">{filter.title}</h4>
-                                <div className="filter-options">
-                                    {filter.options.map((opt, oIdx) => (
-                                        <label key={oIdx} className="filter-label">
-                                            <input
-                                                type="checkbox"
-                                                checked={category === opt}
-                                                onChange={() => handleFilterChange('category', category === opt ? '' : opt)}
-                                            />
-                                            <span>{opt}</span>
-                                        </label>
-                                    ))}
-                                </div>
+                        <div className="filter-group">
+                            <h4 className="filter-title">Категорія</h4>
+                            <div className="filter-options">
+                                {categories.map((cat) => (
+                                    <label key={cat.id} className="filter-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={category === cat.name}
+                                            onChange={() => handleFilterChange('category', category === cat.name ? '' : cat.name)}
+                                        />
+                                        <span>{cat.name}</span>
+                                    </label>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+
+                        <div className="filter-group">
+                            <h4 className="filter-title">Бренд</h4>
+                            <div className="filter-options">
+                                {['Tarkett', 'Barlinek', 'Quick-Step', 'Arteo'].map((brandName, idx) => (
+                                    <label key={idx} className="filter-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={searchParams.get('brand') === brandName}
+                                            onChange={() => handleFilterChange('brand', searchParams.get('brand') === brandName ? '' : brandName)}
+                                        />
+                                        <span>{brandName}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
 
                         <div className="filter-group">
                             <h4 className="filter-title">Спеціальні пропозиції</h4>
