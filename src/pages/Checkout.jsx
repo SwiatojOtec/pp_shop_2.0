@@ -157,14 +157,18 @@ export default function Checkout() {
                         <div className="summary-items">
                             {cartItems.map(item => (
                                 <div key={item.id} className="summary-item">
-                                    <span className="item-name">{item.name} x {item.quantity}</span>
-                                    <span className="item-price">{item.price * item.quantity} ₴</span>
+                                    <span className="item-name">
+                                        {item.name} x {item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}
+                                    </span>
+                                    <span className="item-price">
+                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
+                                    </span>
                                 </div>
                             ))}
                         </div>
                         <div className="summary-total">
                             <span>Разом до оплати:</span>
-                            <span className="total-value">{cartTotal} ₴</span>
+                            <span className="total-value">{cartTotal.toLocaleString()} ₴</span>
                         </div>
                         <div className="trust-info">
                             <div className="trust-item">
