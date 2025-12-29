@@ -1,0 +1,99 @@
+.showroom-section {
+    padding: var(--spacing-xl) 0;
+    background: var(--color-dark);
+    color: white;
+}
+
+.showroom-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.showroom-visual {
+    position: relative;
+    height: 500px;
+}
+
+.showroom-map {
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    filter: grayscale(0.3);
+    transition: filter 0.3s ease;
+}
+
+.showroom-map:hover {
+    filter: grayscale(0);
+}
+
+.showroom-badge {
+    position: absolute;
+    top: 30px;
+    right: -20px;
+    background: var(--color-primary);
+    color: white;
+    padding: 15px 30px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transform: rotate(90deg);
+    transform-origin: right top;
+    z-index: 10;
+}
+
+.showroom-desc {
+    font-size: 1.1rem;
+    color: #aaa;
+    margin-bottom: var(--spacing-lg);
+}
+
+.showroom-info {
+    margin-bottom: var(--spacing-lg);
+}
+
+.info-item {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.info-icon {
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.info-item h4 {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.info-item p {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.showroom-section .btn-primary {
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 992px) {
+    .showroom-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .showroom-visual {
+        height: 350px;
+        order: 2;
+    }
+
+    .showroom-badge {
+        right: 20px;
+        transform: none;
+        top: auto;
+        bottom: -20px;
+    }
+}

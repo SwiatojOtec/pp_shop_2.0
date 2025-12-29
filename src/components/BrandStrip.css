@@ -1,0 +1,39 @@
+.brand-strip {
+    padding: var(--spacing-md) 0;
+    background: white;
+    border-top: 1px solid var(--color-grey);
+    border-bottom: 1px solid var(--color-grey);
+    overflow: hidden;
+}
+
+.brand-track {
+    display: flex;
+    gap: var(--spacing-xl);
+    align-items: center;
+    animation: scroll 40s linear infinite;
+    width: max-content;
+}
+
+.brand-item {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ddd;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    user-select: none;
+    transition: color 0.3s;
+}
+
+.brand-item:hover {
+    color: var(--color-dark);
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}

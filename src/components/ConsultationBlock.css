@@ -1,0 +1,75 @@
+.consultation-section {
+    padding: var(--spacing-xl) 0;
+    background: var(--color-light);
+}
+
+.consultation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.consultation-text {
+    font-size: 1.1rem;
+    color: #666;
+    margin-bottom: var(--spacing-md);
+    max-width: 500px;
+}
+
+.consultation-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.consultation-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.info-card {
+    background: white;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-grey);
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+}
+
+.info-card.dark {
+    background: var(--color-dark);
+    color: white;
+    border-color: var(--color-dark);
+}
+
+.card-icon {
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-primary);
+}
+
+.info-card.dark .card-icon {
+    color: white;
+}
+
+.info-card h3 {
+    font-size: 1rem;
+    margin-bottom: 5px;
+}
+
+.info-card p {
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .consultation-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .consultation-cards {
+        grid-template-columns: 1fr;
+    }
+}

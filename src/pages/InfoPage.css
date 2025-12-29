@@ -1,0 +1,131 @@
+.info-page {
+    padding: 60px 0 100px;
+    background-color: #f9f9f9;
+    min-height: 100vh;
+}
+
+.info-content-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.page-title {
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: var(--color-dark);
+}
+
+.page-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 50px;
+    font-size: 1.1rem;
+}
+
+.policy-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.policy-card {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eee;
+}
+
+.intro-card p {
+    font-style: italic;
+    text-align: center;
+    color: #666;
+    line-height: 1.8;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.card-icon {
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.card-header h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin: 0;
+    text-transform: none;
+    color: var(--color-dark);
+}
+
+.policy-card h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 25px 0 15px;
+    color: var(--color-dark);
+}
+
+.policy-card p {
+    margin-bottom: 15px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.policy-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.policy-card li {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 12px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.policy-card li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--color-primary);
+    font-weight: bold;
+}
+
+.contact-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+}
+
+.contact-col h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--color-dark);
+}
+
+.contact-col p {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .contact-details-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+}
+
+.rich-text {
+    font-size: 1.05rem;
+}
