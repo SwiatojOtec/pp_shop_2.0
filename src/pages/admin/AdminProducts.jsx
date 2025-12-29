@@ -16,7 +16,7 @@ export default function AdminProducts() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch('${API_URL}/api/products');
+            const res = await fetch(`${API_URL}/api/products`);
             if (res.ok) {
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);
@@ -38,7 +38,7 @@ export default function AdminProducts() {
     });
 
     const handleDelete = async (id) => {
-        if (window.confirm('Р’Рё РІРїРµРІРЅРµРЅС–?')) {
+        if (window.confirm('Ви впевнені?')) {
             await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE' });
             fetchProducts();
         }
@@ -47,9 +47,9 @@ export default function AdminProducts() {
     return (
         <div className="admin-products">
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>РўРѕРІР°СЂРё</h1>
+                <h1 className="admin-title" style={{ margin: 0 }}>Товари</h1>
                 <button className="btn btn-primary" onClick={() => navigate('/admin/products/new')}>
-                    <Plus size={20} /> Р”РѕРґР°С‚Рё С‚РѕРІР°СЂ
+                    <Plus size={20} /> Додати товар
                 </button>
             </div>
 
@@ -58,7 +58,7 @@ export default function AdminProducts() {
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
                     <input
                         type="text"
-                        placeholder="РџРѕС€СѓРє Р·Р° РЅР°Р·РІРѕСЋ Р°Р±Рѕ SKU..."
+                        placeholder="Пошук за назвою або SKU..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
@@ -71,11 +71,11 @@ export default function AdminProducts() {
                         onChange={(e) => setFilterCategory(e.target.value)}
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
                     >
-                        <option value="All">Р’СЃС– РєР°С‚РµРіРѕСЂС–С—</option>
-                        <option value="РџР°СЂРєРµС‚РЅР° РґРѕС€РєР°">РџР°СЂРєРµС‚РЅР° РґРѕС€РєР°</option>
-                        <option value="Р›Р°РјС–РЅР°С‚">Р›Р°РјС–РЅР°С‚</option>
-                        <option value="Р’С–РЅС–Р»">Р’С–РЅС–Р»</option>
-                        <option value="Р”РІРµСЂС–">Р”РІРµСЂС–</option>
+                        <option value="All">Всі категорії</option>
+                        <option value="Паркетна дошка">Паркетна дошка</option>
+                        <option value="Ламінат">Ламінат</option>
+                        <option value="Вініл">Вініл</option>
+                        <option value="Двері">Двері</option>
                     </select>
                 </div>
             </div>
@@ -84,12 +84,12 @@ export default function AdminProducts() {
                 <table className="admin-table">
                     <thead>
                         <tr>
-                            <th>Р—РѕР±СЂР°Р¶РµРЅРЅСЏ</th>
+                            <th>Зображення</th>
                             <th>SKU</th>
-                            <th>РќР°Р·РІР°</th>
-                            <th>Р¦С–РЅР°</th>
-                            <th>РљР°С‚РµРіРѕСЂС–СЏ</th>
-                            <th>Р”С–С—</th>
+                            <th>Назва</th>
+                            <th>Ціна</th>
+                            <th>Категорія</th>
+                            <th>Дії</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,7 +98,7 @@ export default function AdminProducts() {
                                 <td><img src={product.image} alt={product.name} className="admin-table-img" /></td>
                                 <td><code style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>{product.sku}</code></td>
                                 <td>{product.name}</td>
-                                <td>{product.price} в‚ґ</td>
+                                <td>{product.price} ₴</td>
                                 <td>{product.category}</td>
                                 <td>
                                     <div className="table-actions">
@@ -110,7 +110,7 @@ export default function AdminProducts() {
                         ))}
                         {filteredProducts.length === 0 && (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>РўРѕРІР°СЂС–РІ РЅРµ Р·РЅР°Р№РґРµРЅРѕ</td>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Товарів не знайдено</td>
                             </tr>
                         )}
                     </tbody>

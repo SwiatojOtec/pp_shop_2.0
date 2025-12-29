@@ -12,7 +12,7 @@ export default function ProductEdit() {
     const [formData, setFormData] = useState({
         name: '',
         price: '',
-        category: 'РџР°СЂРєРµС‚РЅР° РґРѕС€РєР°',
+        category: 'Паркетна дошка',
         image: '',
         images: [],
         desc: '',
@@ -48,7 +48,7 @@ export default function ProductEdit() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const url = isNew
-            ? '${API_URL}/api/products'
+            ? `${API_URL}/api/products`
             : `${API_URL}/api/products/${id}`;
         const method = isNew ? 'POST' : 'PUT';
 
@@ -85,42 +85,42 @@ export default function ProductEdit() {
         });
     };
 
-    if (loading) return <div className="admin-content">Р—Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ...</div>;
+    if (loading) return <div className="admin-content">Завантаження...</div>;
 
     return (
         <div className="product-edit-page">
             <div className="admin-breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#666', fontSize: '0.9rem' }}>
-                <Link to="/admin/products" style={{ color: 'inherit', textDecoration: 'none' }}>РўРѕРІР°СЂРё</Link>
+                <Link to="/admin/products" style={{ color: 'inherit', textDecoration: 'none' }}>Товари</Link>
                 <ChevronRight size={14} />
-                <span style={{ color: 'var(--admin-dark)', fontWeight: 700 }}>{isNew ? 'РќРѕРІРёР№ С‚РѕРІР°СЂ' : formData.name}</span>
+                <span style={{ color: 'var(--admin-dark)', fontWeight: 700 }}>{isNew ? 'Новий товар' : formData.name}</span>
             </div>
 
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <button onClick={() => navigate('/admin/products')} className="action-btn" style={{ width: '40px', height: '40px' }}><ArrowLeft size={20} /></button>
-                    <h1 className="admin-title" style={{ margin: 0 }}>{isNew ? 'Р”РѕРґР°С‚Рё РЅРѕРІРёР№ С‚РѕРІР°СЂ' : 'Р РµРґР°РіСѓРІР°С‚Рё С‚РѕРІР°СЂ'}</h1>
+                    <h1 className="admin-title" style={{ margin: 0 }}>{isNew ? 'Додати новий товар' : 'Редагувати товар'}</h1>
                 </div>
                 <button onClick={handleSubmit} className="btn btn-primary">
-                    <Save size={20} /> Р—Р±РµСЂРµРіС‚Рё Р·РјС–РЅРё
+                    <Save size={20} /> Зберегти зміни
                 </button>
             </div>
 
             <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px' }}>
                 <div className="edit-main">
                     <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
-                        <h2 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800 }}>РћСЃРЅРѕРІРЅР° С–РЅС„РѕСЂРјР°С†С–СЏ</h2>
+                        <h2 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800 }}>Основна інформація</h2>
                         <div className="admin-form">
                             <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label>РќР°Р·РІР° С‚РѕРІР°СЂСѓ</label>
+                                <label>Назва товару</label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="РќР°РїСЂРёРєР»Р°Рґ: Chevron Oak Natural"
+                                    placeholder="Наприклад: Chevron Oak Natural"
                                 />
                             </div>
                             <div className="form-group">
-                                <label>РћРїРёСЃ С‚РѕРІР°СЂСѓ</label>
+                                <label>Опис товару</label>
                                 <textarea
                                     value={formData.desc}
                                     onChange={e => setFormData({ ...formData, desc: e.target.value })}
@@ -132,10 +132,10 @@ export default function ProductEdit() {
                     </div>
 
                     <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                        <h2 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800 }}>Р“Р°Р»РµСЂРµСЏ Р·РѕР±СЂР°Р¶РµРЅСЊ</h2>
+                        <h2 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800 }}>Галерея зображень</h2>
 
                         <div className="main-image-preview" style={{ marginBottom: '30px' }}>
-                            <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#666' }}>Р“РѕР»РѕРІРЅРµ Р·РѕР±СЂР°Р¶РµРЅРЅСЏ (Thumbnail)</label>
+                            <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#666' }}>Головне зображення (Thumbnail)</label>
                             <div className="image-upload-area" style={{ border: '2px dashed #ddd', borderRadius: '12px', padding: '20px', textAlign: 'center', background: '#fcfcfc' }}>
                                 {formData.image ? (
                                     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -151,21 +151,21 @@ export default function ProductEdit() {
                                 ) : (
                                     <div style={{ color: '#999' }}>
                                         <ImageIcon size={32} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                                        <p style={{ fontSize: '0.8rem' }}>Р’СЃС‚Р°РІС‚Рµ РїРѕСЃРёР»Р°РЅРЅСЏ РЅРёР¶С‡Рµ</p>
+                                        <p style={{ fontSize: '0.8rem' }}>Вставте посилання нижче</p>
                                     </div>
                                 )}
                                 <input
                                     type="text"
                                     value={formData.image}
                                     onChange={e => setFormData({ ...formData, image: e.target.value })}
-                                    placeholder="URL РіРѕР»РѕРІРЅРѕРіРѕ Р·РѕР±СЂР°Р¶РµРЅРЅСЏ"
+                                    placeholder="URL головного зображення"
                                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '15px' }}
                                 />
                             </div>
                         </div>
 
                         <div className="gallery-section">
-                            <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#666' }}>Р”РѕРґР°С‚РєРѕРІС– Р·РѕР±СЂР°Р¶РµРЅРЅСЏ</label>
+                            <label style={{ display: 'block', marginBottom: '10px', fontSize: '0.9rem', color: '#666' }}>Додаткові зображення</label>
                             <div className="image-gallery-grid">
                                 {formData.images.map((img, index) => (
                                     <div key={index} className="gallery-item">
@@ -178,14 +178,14 @@ export default function ProductEdit() {
                                 <div className="add-image-form" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <input
                                         type="text"
-                                        placeholder="Р’СЃС‚Р°РІС‚Рµ URL..."
+                                        placeholder="Вставте URL..."
                                         value={newImageUrl}
                                         onChange={(e) => setNewImageUrl(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addGalleryImage())}
                                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
                                     />
                                     <button type="button" onClick={addGalleryImage} className="btn-primary" style={{ justifyContent: 'center', fontSize: '0.8rem', padding: '8px' }}>
-                                        <Plus size={16} /> Р”РѕРґР°С‚Рё РІ РіР°Р»РµСЂРµСЋ
+                                        <Plus size={16} /> Додати в галерею
                                     </button>
                                 </div>
                             </div>
@@ -195,10 +195,10 @@ export default function ProductEdit() {
 
                 <div className="edit-sidebar">
                     <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
-                        <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Р¦С–РЅР° С‚Р° РљР°С‚РµРіРѕСЂС–СЏ</h2>
+                        <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Ціна та Категорія</h2>
                         <div className="admin-form">
                             <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label>Р¦С–РЅР° (в‚ґ)</label>
+                                <label>Ціна (₴)</label>
                                 <input
                                     type="number"
                                     value={formData.price}
@@ -206,22 +206,22 @@ export default function ProductEdit() {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>РљР°С‚РµРіРѕСЂС–СЏ</label>
+                                <label>Категорія</label>
                                 <select
                                     value={formData.category}
                                     onChange={e => setFormData({ ...formData, category: e.target.value })}
                                 >
-                                    <option>РџР°СЂРєРµС‚РЅР° РґРѕС€РєР°</option>
-                                    <option>Р›Р°РјС–РЅР°С‚</option>
-                                    <option>Р’С–РЅС–Р»</option>
-                                    <option>Р”РІРµСЂС–</option>
+                                    <option>Паркетна дошка</option>
+                                    <option>Ламінат</option>
+                                    <option>Вініл</option>
+                                    <option>Двері</option>
                                 </select>
                             </div>
                         </div>
                     </div>
 
                     <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                        <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Р†РґРµРЅС‚РёС„С–РєР°С‚РѕСЂРё</h2>
+                        <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Ідентифікатори</h2>
                         <div className="admin-form">
                             <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>SKU</label>
@@ -229,7 +229,7 @@ export default function ProductEdit() {
                                     type="text"
                                     value={formData.sku}
                                     disabled
-                                    placeholder="Р“РµРЅРµСЂСѓС”С‚СЊСЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РЅРѕ"
+                                    placeholder="Генерується автоматично"
                                     style={{ background: '#f5f5f5', color: '#666' }}
                                 />
                             </div>
@@ -239,7 +239,7 @@ export default function ProductEdit() {
                                     type="text"
                                     value={formData.slug}
                                     disabled
-                                    placeholder="Р“РµРЅРµСЂСѓС”С‚СЊСЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РЅРѕ"
+                                    placeholder="Генерується автоматично"
                                     style={{ background: '#f5f5f5', color: '#666' }}
                                 />
                             </div>
@@ -250,4 +250,3 @@ export default function ProductEdit() {
         </div>
     );
 }
-

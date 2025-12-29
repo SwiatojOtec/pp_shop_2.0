@@ -14,7 +14,7 @@ export default function AdminOrders() {
 
     const fetchOrders = async () => {
         try {
-            const res = await fetch('${API_URL}/api/orders');
+            const res = await fetch(`${API_URL}/api/orders`);
             if (res.ok) {
                 const data = await res.json();
                 setOrders(Array.isArray(data) ? data : []);
@@ -38,7 +38,7 @@ export default function AdminOrders() {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Р’РёРґР°Р»РёС‚Рё Р·Р°РјРѕРІР»РµРЅРЅСЏ?')) {
+        if (window.confirm('Видалити замовлення?')) {
             await fetch(`${API_URL}/api/orders/${id}`, { method: 'DELETE' });
             fetchOrders();
         }
@@ -54,14 +54,14 @@ export default function AdminOrders() {
 
     return (
         <div className="admin-orders">
-            <h1 className="admin-title" style={{ marginBottom: '30px' }}>Р—Р°РјРѕРІР»РµРЅРЅСЏ</h1>
+            <h1 className="admin-title" style={{ marginBottom: '30px' }}>Замовлення</h1>
 
             <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
                 <div className="search-box" style={{ flex: 1, position: 'relative' }}>
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
                     <input
                         type="text"
-                        placeholder="РџРѕС€СѓРє Р·Р° С–Рј'СЏРј, С‚РµР»РµС„РѕРЅРѕРј Р°Р±Рѕ ID..."
+                        placeholder="Пошук за ім'ям, телефоном або ID..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
@@ -74,11 +74,11 @@ export default function AdminOrders() {
                         onChange={(e) => setFilterStatus(e.target.value)}
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
                     >
-                        <option value="All">Р’СЃС– СЃС‚Р°С‚СѓСЃРё</option>
-                        <option value="pending">РћС‡С–РєСѓС”</option>
-                        <option value="processing">Р’ СЂРѕР±РѕС‚С–</option>
-                        <option value="completed">Р’РёРєРѕРЅР°РЅРѕ</option>
-                        <option value="cancelled">РЎРєР°СЃРѕРІР°РЅРѕ</option>
+                        <option value="All">Всі статуси</option>
+                        <option value="pending">Очікує</option>
+                        <option value="processing">В роботі</option>
+                        <option value="completed">Виконано</option>
+                        <option value="cancelled">Скасовано</option>
                     </select>
                 </div>
             </div>
@@ -88,11 +88,11 @@ export default function AdminOrders() {
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>РљР»С–С”РЅС‚</th>
-                            <th>РЎСѓРјР°</th>
-                            <th>РЎС‚Р°С‚СѓСЃ</th>
-                            <th>Р”Р°С‚Р°</th>
-                            <th>Р”С–С—</th>
+                            <th>Клієнт</th>
+                            <th>Сума</th>
+                            <th>Статус</th>
+                            <th>Дата</th>
+                            <th>Дії</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -105,13 +105,13 @@ export default function AdminOrders() {
                                         <span>{order.customerPhone}</span>
                                     </div>
                                 </td>
-                                <td>{order.totalAmount} в‚ґ</td>
+                                <td>{order.totalAmount} ₴</td>
                                 <td>
                                     <div className="status-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <span className={`status-badge ${order.status}`}>
-                                            {order.status === 'pending' ? 'РћС‡С–РєСѓС”' :
-                                                order.status === 'processing' ? 'Р’ СЂРѕР±РѕС‚С–' :
-                                                    order.status === 'completed' ? 'Р’РёРєРѕРЅР°РЅРѕ' : 'РЎРєР°СЃРѕРІР°РЅРѕ'}
+                                            {order.status === 'pending' ? 'Очікує' :
+                                                order.status === 'processing' ? 'В роботі' :
+                                                    order.status === 'completed' ? 'Виконано' : 'Скасовано'}
                                         </span>
                                         <select
                                             value={order.status}
@@ -119,10 +119,10 @@ export default function AdminOrders() {
                                             className="status-select-mini"
                                             style={{ padding: '4px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.8rem' }}
                                         >
-                                            <option value="pending">Р—РјС–РЅРёС‚Рё РЅР° РћС‡С–РєСѓС”</option>
-                                            <option value="processing">Р—РјС–РЅРёС‚Рё РЅР° Р’ СЂРѕР±РѕС‚С–</option>
-                                            <option value="completed">Р—РјС–РЅРёС‚Рё РЅР° Р’РёРєРѕРЅР°РЅРѕ</option>
-                                            <option value="cancelled">Р—РјС–РЅРёС‚Рё РЅР° РЎРєР°СЃРѕРІР°РЅРѕ</option>
+                                            <option value="pending">Змінити на Очікує</option>
+                                            <option value="processing">Змінити на В роботі</option>
+                                            <option value="completed">Змінити на Виконано</option>
+                                            <option value="cancelled">Змінити на Скасовано</option>
                                         </select>
                                     </div>
                                 </td>
@@ -136,7 +136,7 @@ export default function AdminOrders() {
                         ))}
                         {filteredOrders.length === 0 && (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Р—Р°РјРѕРІР»РµРЅСЊ РЅРµ Р·РЅР°Р№РґРµРЅРѕ</td>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Замовлень не знайдено</td>
                             </tr>
                         )}
                     </tbody>
@@ -145,4 +145,3 @@ export default function AdminOrders() {
         </div>
     );
 }
-
