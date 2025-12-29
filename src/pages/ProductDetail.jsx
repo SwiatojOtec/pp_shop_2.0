@@ -128,7 +128,7 @@ export default function ProductDetail() {
                                     {variants.map(v => (
                                         <Link
                                             key={v.id}
-                                            to={`/product/${v.slug}`}
+                                            to={`/shop/${v.slug}`}
                                             style={{ width: '45px', height: '45px', borderRadius: '50%', border: '1px solid #ddd', padding: '2px', transition: 'all 0.2s' }}
                                             onMouseOver={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
                                             onMouseOut={e => e.currentTarget.style.borderColor = '#ddd'}
