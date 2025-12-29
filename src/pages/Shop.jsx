@@ -13,16 +13,20 @@ export default function Shop() {
     const { toggleFavorite, isFavorite } = useFavorites();
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [quickViewProduct, setQuickViewProduct] = useState(null);
 
     useEffect(() => {
-        // Fetch categories
-        fetch(`${API_URL}/api/categories`)
-            .then(res => res.json())
-            .then(data => setCategories(data))
-            .catch(err => console.error('Error fetching categories:', err));
+        // Fetch categories and brands
+        Promise.all([
+            fetch(`${API_URL}/api/categories`).then(res => res.json()),
+            fetch(`${API_URL}/api/brands`).then(res => res.json())
+        ]).then(([catData, brandData]) => {
+            setCategories(catData);
+            setBrands(brandData);
+        }).catch(err => console.error('Error fetching filters:', err));
     }, []);
 
     // Filter states from URL
@@ -141,14 +145,14 @@ export default function Shop() {
                         <div className="filter-group">
                             <h4 className="filter-title">Бренд</h4>
                             <div className="filter-options">
-                                {['Tarkett', 'Barlinek', 'Quick-Step', 'Arteo'].map((brandName, idx) => (
-                                    <label key={idx} className="filter-label">
+                                {brands.map((brand) => (
+                                    <label key={brand.id} className="filter-label">
                                         <input
                                             type="checkbox"
-                                            checked={searchParams.get('brand') === brandName}
-                                            onChange={() => handleFilterChange('brand', searchParams.get('brand') === brandName ? '' : brandName)}
+                                            checked={searchParams.get('brand') === brand.name}
+                                            onChange={() => handleFilterChange('brand', searchParams.get('brand') === brand.name ? '' : brand.name)}
                                         />
-                                        <span>{brandName}</span>
+                                        <span>{brand.name}</span>
                                     </label>
                                 ))}
                             </div>

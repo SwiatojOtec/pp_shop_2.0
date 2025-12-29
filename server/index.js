@@ -6,6 +6,8 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const currencyRoutes = require('./routes/currencyRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const brandRoutes = require('./routes/brandRoutes');
+
 
 
 const app = express();
@@ -42,6 +44,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/currencies', currencyRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/brands', brandRoutes);
+
 
 
 // Database Connection and Sync

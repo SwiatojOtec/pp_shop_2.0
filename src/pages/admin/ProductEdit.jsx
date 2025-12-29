@@ -27,12 +27,14 @@ export default function ProductEdit() {
         specs: {}
     });
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
     const [newSpec, setNewSpec] = useState({ key: '', value: '' });
 
     useEffect(() => {
         fetchCategories();
+        fetchBrands();
         if (!isNew) {
             fetchProduct();
         }
@@ -51,6 +53,18 @@ export default function ProductEdit() {
             }
         } catch (err) {
             console.error('Error fetching categories:', err);
+        }
+    };
+
+    const fetchBrands = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/brands`);
+            if (res.ok) {
+                const data = await res.json();
+                setBrands(data);
+            }
+        } catch (err) {
+            console.error('Error fetching brands:', err);
         }
     };
 
@@ -356,6 +370,18 @@ export default function ProductEdit() {
                                         <option key={cat.id} value={cat.name}>{cat.name}</option>
                                     ))}
                                     {categories.length === 0 && <option>Спочатку додайте категорії</option>}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Бренд</label>
+                                <select
+                                    value={formData.brand}
+                                    onChange={e => setFormData({ ...formData, brand: e.target.value })}
+                                >
+                                    <option value="">Оберіть бренд</option>
+                                    {brands.map(brand => (
+                                        <option key={brand.id} value={brand.name}>{brand.name}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
