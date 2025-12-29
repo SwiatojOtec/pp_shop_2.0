@@ -55,6 +55,9 @@ const Product = sequelize.define('Product', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    brand: {
+        type: DataTypes.STRING
+    },
     desc: {
         type: DataTypes.TEXT,
         allowNull: false

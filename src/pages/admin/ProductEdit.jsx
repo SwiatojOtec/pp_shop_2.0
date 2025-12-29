@@ -24,6 +24,7 @@ export default function ProductEdit() {
         slug: '',
         groupId: '', // For linking variants
         stockStatus: 'in_stock',
+        brand: '',
         packSize: 1.0,
         unit: 'м²',
         specs: {}
