@@ -27,6 +27,10 @@ router.get('/', async (req, res) => {
             where.badge = badge;
         }
 
+        if (brand) {
+            where.brand = brand;
+        }
+
         if (groupId) {
             where.groupId = groupId;
         }
