@@ -67,17 +67,21 @@ router.post('/', async (req, res) => {
     try {
         const data = req.body;
 
-        // Auto-generate SKU if not provided
+        // Auto-generate SKU if not provided (more robust)
         if (!data.sku) {
-            const count = await Product.count();
-            data.sku = `PP-${String(count + 1).padStart(5, '0')}`;
+            const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+            data.sku = `PP-${randomStr}`;
         }
 
         // Auto-generate slug if not provided
         if (!data.slug && data.name) {
-            data.slug = data.name.toLowerCase()
+            const baseSlug = data.name.toLowerCase()
                 .replace(/[^\w\s-]/g, '')
                 .replace(/\s+/g, '-');
+
+            // Add a small random suffix to slug to avoid "Validation error" on duplicate names
+            const suffix = Math.random().toString(36).substring(2, 5);
+            data.slug = `${baseSlug}-${suffix}`;
         }
 
         const product = await Product.create(data);

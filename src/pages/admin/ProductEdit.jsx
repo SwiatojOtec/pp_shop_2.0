@@ -70,7 +70,18 @@ export default function ProductEdit() {
             if (res.ok) {
                 navigate('/admin/products');
             } else {
-                alert(`Помилка: ${data.message || 'Не вдалося зберегти товар'}`);
+                let errorMessage = data.message || 'Не вдалося зберегти товар';
+
+                // If there are specific validation errors, list them
+                if (data.errors && Array.isArray(data.errors)) {
+                    const details = data.errors.map(e => e.message).join('\n');
+                    errorMessage = `Помилка валідації:\n${details}`;
+                } else if (data.message && data.message.includes('unique constraint')) {
+                    if (data.message.includes('slug')) errorMessage = 'Товар з такою назвою вже існує (дублікат URL)';
+                    if (data.message.includes('sku')) errorMessage = 'Такий артикул (SKU) вже існує';
+                }
+
+                alert(errorMessage);
             }
         } catch (err) {
             console.error('Error saving product:', err);
