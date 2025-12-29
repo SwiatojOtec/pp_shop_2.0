@@ -60,6 +60,31 @@ export default function ProductEdit() {
         }
     };
 
+    const fetchExistingGroupData = async (groupId) => {
+        if (!isNew || !groupId) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/products?groupId=${groupId}`);
+            if (res.ok) {
+                const products = await res.json();
+                if (products.length > 0) {
+                    const template = products[0]; // Take data from the first found product in group
+                    setFormData(prev => ({
+                        ...prev,
+                        price: template.price,
+                        category: template.category,
+                        desc: template.desc,
+                        specs: template.specs || {}
+                    }));
+                    // Optional: show a small notification or toast
+                    console.log('Данные подтянуты из коллекции:', groupId);
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching group data:', err);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -321,6 +346,7 @@ export default function ProductEdit() {
                                     type="text"
                                     value={formData.groupId || ''}
                                     onChange={e => setFormData({ ...formData, groupId: e.target.value })}
+                                    onBlur={e => fetchExistingGroupData(e.target.value)}
                                     placeholder="Напр: chevron_oak_2024"
                                 />
                                 <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Однаковий ID об'єднує товари в одну колекцію.</p>
