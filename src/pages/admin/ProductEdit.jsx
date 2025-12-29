@@ -19,7 +19,8 @@ export default function ProductEdit() {
         desc: '',
         sku: '',
         slug: '',
-        specs: {} // Key-value pairs
+        groupId: '', // For linking variants
+        specs: {}
     });
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
@@ -314,6 +315,16 @@ export default function ProductEdit() {
                     <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
                         <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Ідентифікатори</h2>
                         <div className="admin-form">
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
+                                <label>Group ID (Колекція)</label>
+                                <input
+                                    type="text"
+                                    value={formData.groupId || ''}
+                                    onChange={e => setFormData({ ...formData, groupId: e.target.value })}
+                                    placeholder="Напр: chevron_oak_2024"
+                                />
+                                <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Однаковий ID об'єднує товари в одну колекцію.</p>
+                            </div>
                             <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>SKU</label>
                                 <input

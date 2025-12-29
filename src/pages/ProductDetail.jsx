@@ -11,6 +11,7 @@ export default function ProductDetail() {
     const { addToCart } = useCart();
     const { toggleFavorite, isFavorite } = useFavorites();
     const [product, setProduct] = useState(null);
+    const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeImg, setActiveImg] = useState('');
@@ -28,6 +29,19 @@ export default function ProductDetail() {
                 setProduct(data);
                 setActiveImg(data.image);
                 setLoading(false);
+
+                // Fetch variants if groupId exists
+                if (data.groupId) {
+                    fetch(`${API_URL}/api/products?groupId=${data.groupId}`)
+                        .then(res => res.json())
+                        .then(allProducts => {
+                            // Filter out current product
+                            setVariants(allProducts.filter(p => p.id !== data.id));
+                        })
+                        .catch(err => console.error('Error fetching variants:', err));
+                } else {
+                    setVariants([]);
+                }
             })
             .catch(err => {
                 setError(err.message);
@@ -101,6 +115,30 @@ export default function ProductDetail() {
                         </div>
 
                         <p className="short-desc">{product.desc}</p>
+
+                        {variants.length > 0 && (
+                            <div className="product-variants" style={{ marginBottom: '25px' }}>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '10px', color: '#666' }}>Інші кольори колекції:</h4>
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    {/* Current product indicator */}
+                                    <div style={{ width: '45px', height: '45px', borderRadius: '50%', border: '2px solid var(--color-primary)', padding: '2px', cursor: 'default' }}>
+                                        <img src={product.image} alt="current" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} title="Поточний колір" />
+                                    </div>
+                                    {/* Other variants */}
+                                    {variants.map(v => (
+                                        <Link
+                                            key={v.id}
+                                            to={`/product/${v.slug}`}
+                                            style={{ width: '45px', height: '45px', borderRadius: '50%', border: '1px solid #ddd', padding: '2px', transition: 'all 0.2s' }}
+                                            onMouseOver={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                                            onMouseOut={e => e.currentTarget.style.borderColor = '#ddd'}
+                                        >
+                                            <img src={v.image} alt={v.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} title={v.name} />
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="purchase-section">
                             <div className="quantity-control">

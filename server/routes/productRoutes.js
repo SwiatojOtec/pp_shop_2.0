@@ -7,7 +7,7 @@ const { Op } = require('sequelize');
 // Get all products with filtering and search
 router.get('/', async (req, res) => {
     try {
-        const { search, category, brand, minPrice, maxPrice, sort, badge } = req.query;
+        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId } = req.query;
         let where = {};
 
         if (search) {
@@ -20,6 +20,10 @@ router.get('/', async (req, res) => {
 
         if (badge) {
             where.badge = badge;
+        }
+
+        if (groupId) {
+            where.groupId = groupId;
         }
 
         if (minPrice || maxPrice) {
