@@ -97,6 +97,15 @@ export default function ProductDetail() {
                     <div className="product-info-panel">
                         <div className="info-header">
                             <span className="product-sku">SKU: {product.sku}</span>
+                            <div className="stock-status-badge" style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                color: product.stockStatus === 'out_of_stock' ? '#ef4444' :
+                                    product.stockStatus === 'on_order' ? '#f59e0b' : '#22c55e'
+                            }}>
+                                {product.stockStatus === 'out_of_stock' ? 'Немає в наявності' :
+                                    product.stockStatus === 'on_order' ? 'Під замовлення' : 'В наявності'}
+                            </div>
                             <div className="product-rating">
                                 <Star size={16} fill="var(--color-primary)" color="var(--color-primary)" />
                                 <span>{product.rating}.0 ({product.reviews} відгуків)</span>

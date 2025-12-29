@@ -23,6 +23,7 @@ export default function ProductEdit() {
         sku: '',
         slug: '',
         groupId: '', // For linking variants
+        stockStatus: 'in_stock',
         specs: {}
     });
     const [categories, setCategories] = useState([]);
@@ -333,6 +334,17 @@ export default function ProductEdit() {
                                     value={formData.price}
                                     onChange={e => setFormData({ ...formData, price: e.target.value })}
                                 />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
+                                <label>Наявність</label>
+                                <select
+                                    value={formData.stockStatus}
+                                    onChange={e => setFormData({ ...formData, stockStatus: e.target.value })}
+                                >
+                                    <option value="in_stock">В наявності</option>
+                                    <option value="on_order">Під замовлення</option>
+                                    <option value="out_of_stock">Немає в наявності</option>
+                                </select>
                             </div>
                             <div className="form-group">
                                 <label>Категорія</label>

@@ -88,9 +88,9 @@ const Product = sequelize.define('Product', {
     supplierPrice: {
         type: DataTypes.DECIMAL(10, 2)
     },
-    inStock: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
+    stockStatus: {
+        type: DataTypes.STRING,
+        defaultValue: 'in_stock' // in_stock, on_order, out_of_stock
     }
 });
 

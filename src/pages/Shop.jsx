@@ -226,6 +226,15 @@ export default function Shop() {
                                             <div className="price-block">
                                                 <span className="product-price">{product.price} ₴ / м²</span>
                                             </div>
+                                            <div className="stock-status" style={{
+                                                fontSize: '0.8rem',
+                                                marginTop: '5px',
+                                                color: product.stockStatus === 'out_of_stock' ? '#ef4444' :
+                                                    product.stockStatus === 'on_order' ? '#f59e0b' : '#22c55e'
+                                            }}>
+                                                {product.stockStatus === 'out_of_stock' ? 'Немає в наявності' :
+                                                    product.stockStatus === 'on_order' ? 'Під замовлення' : 'В наявності'}
+                                            </div>
                                         </div>
                                     </div>
                                 </React.Fragment>
