@@ -13,11 +13,16 @@ export default function AdminCategories() {
     }, []);
 
     const fetchCategories = async () => {
+        console.log('Fetching categories from:', `${API_URL}/api/categories`);
         try {
             const res = await fetch(`${API_URL}/api/categories`);
+            console.log('Fetch categories response status:', res.status);
             if (res.ok) {
                 const data = await res.json();
+                console.log('Fetched categories:', data);
                 setCategories(data);
+            } else {
+                console.error('Failed to fetch categories:', res.statusText);
             }
         } catch (err) {
             console.error('Error fetching categories:', err);
@@ -28,6 +33,7 @@ export default function AdminCategories() {
 
     const handleAdd = async (e) => {
         e.preventDefault();
+        console.log('Attempting to add category:', newCategory);
         if (!newCategory.trim()) return;
 
         try {
@@ -36,15 +42,19 @@ export default function AdminCategories() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: newCategory.trim() })
             });
+
             if (res.ok) {
+                console.log('Category added successfully');
                 setNewCategory('');
                 fetchCategories();
             } else {
                 const data = await res.json();
+                console.error('Server error adding category:', data);
                 alert(data.message || 'Помилка при додаванні');
             }
         } catch (err) {
-            console.error('Error adding category:', err);
+            console.error('Network error adding category:', err);
+            alert('Помилка мережі: ' + err.message);
         }
     };
 
