@@ -363,7 +363,7 @@ export default function ProductEdit() {
                                     <option value="out_of_stock">Немає в наявності</option>
                                 </select>
                             </div>
-                            <div className="form-group">
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>Категорія</label>
                                 <select
                                     value={formData.category}
@@ -375,7 +375,7 @@ export default function ProductEdit() {
                                     {categories.length === 0 && <option>Спочатку додайте категорії</option>}
                                 </select>
                             </div>
-                            <div className="form-group">
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>Бренд</label>
                                 <select
                                     value={formData.brand}
