@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
+const { transliterate } = require('../utils/transliterate');
 
 // Get all categories
 router.get('/', async (req, res) => {
@@ -16,9 +17,8 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { name } = req.body;
-        const slug = name.toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '_');
+        // Proper transliteration for Cyrillic names
+        const slug = transliterate(name);
 
         const category = await Category.create({ name, slug });
         res.status(201).json(category);
