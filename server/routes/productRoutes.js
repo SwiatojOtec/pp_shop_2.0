@@ -75,13 +75,9 @@ router.post('/', async (req, res) => {
 
         // Auto-generate slug if not provided
         if (!data.slug && data.name) {
-            const baseSlug = data.name.toLowerCase()
+            data.slug = data.name.toLowerCase()
                 .replace(/[^\w\s-]/g, '')
-                .replace(/\s+/g, '-');
-
-            // Add a small random suffix to slug to avoid "Validation error" on duplicate names
-            const suffix = Math.random().toString(36).substring(2, 5);
-            data.slug = `${baseSlug}-${suffix}`;
+                .replace(/\s+/g, '_');
         }
 
         const product = await Product.create(data);

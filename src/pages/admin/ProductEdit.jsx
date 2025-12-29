@@ -1,7 +1,8 @@
 ﻿import { API_URL } from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronRight, Save, ArrowLeft, Trash2, Image as ImageIcon, Plus, X } from 'lucide-react';
+import { ChevronRight, Save, ArrowLeft, Trash2, Image as ImageIcon, Plus, X, Settings } from 'lucide-react';
+import { transliterate } from '../../utils/transliterate';
 import './Admin.css';
 
 export default function ProductEdit() {
@@ -17,16 +18,28 @@ export default function ProductEdit() {
         images: [],
         desc: '',
         sku: '',
-        slug: ''
+        slug: '',
+        specs: {} // Key-value pairs
     });
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
+    const [newSpec, setNewSpec] = useState({ key: '', value: '' });
 
     useEffect(() => {
         if (!isNew) {
             fetchProduct();
         }
     }, [id]);
+
+    // Auto-generate slug when name changes (only for new products)
+    useEffect(() => {
+        if (isNew && formData.name) {
+            setFormData(prev => ({
+                ...prev,
+                slug: transliterate(prev.name)
+            }));
+        }
+    }, [formData.name, isNew]);
 
     const fetchProduct = async () => {
         try {
@@ -35,7 +48,8 @@ export default function ProductEdit() {
                 const data = await res.json();
                 setFormData({
                     ...data,
-                    images: data.images || []
+                    images: data.images || [],
+                    specs: data.specs || {}
                 });
             }
         } catch (err) {
@@ -71,16 +85,10 @@ export default function ProductEdit() {
                 navigate('/admin/products');
             } else {
                 let errorMessage = data.message || 'Не вдалося зберегти товар';
-
-                // If there are specific validation errors, list them
                 if (data.errors && Array.isArray(data.errors)) {
                     const details = data.errors.map(e => e.message).join('\n');
                     errorMessage = `Помилка валідації:\n${details}`;
-                } else if (data.message && data.message.includes('unique constraint')) {
-                    if (data.message.includes('slug')) errorMessage = 'Товар з такою назвою вже існує (дублікат URL)';
-                    if (data.message.includes('sku')) errorMessage = 'Такий артикул (SKU) вже існує';
                 }
-
                 alert(errorMessage);
             }
         } catch (err) {
@@ -105,6 +113,28 @@ export default function ProductEdit() {
         setFormData({
             ...formData,
             images: newImages
+        });
+    };
+
+    const addSpec = () => {
+        if (newSpec.key.trim() && newSpec.value.trim()) {
+            setFormData({
+                ...formData,
+                specs: {
+                    ...formData.specs,
+                    [newSpec.key.trim()]: newSpec.value.trim()
+                }
+            });
+            setNewSpec({ key: '', value: '' });
+        }
+    };
+
+    const removeSpec = (key) => {
+        const newSpecs = { ...formData.specs };
+        delete newSpecs[key];
+        setFormData({
+            ...formData,
+            specs: newSpecs
         });
     };
 
@@ -151,6 +181,44 @@ export default function ProductEdit() {
                                     style={{ resize: 'vertical' }}
                                 ></textarea>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                            <Settings size={20} />
+                            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Характеристики</h2>
+                        </div>
+
+                        <div className="specs-list" style={{ marginBottom: '20px' }}>
+                            {Object.entries(formData.specs).map(([key, value]) => (
+                                <div key={key} className="spec-item" style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center', background: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
+                                    <div style={{ flex: 1 }}><strong>{key}:</strong> {value}</div>
+                                    <button onClick={() => removeSpec(key)} className="remove-btn" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="add-spec-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
+                            <input
+                                type="text"
+                                placeholder="Назва (напр. Товщина)"
+                                value={newSpec.key}
+                                onChange={e => setNewSpec({ ...newSpec, key: e.target.value })}
+                                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Значення (напр. 14 мм)"
+                                value={newSpec.value}
+                                onChange={e => setNewSpec({ ...newSpec, value: e.target.value })}
+                                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            />
+                            <button type="button" onClick={addSpec} className="btn btn-primary" style={{ padding: '10px 20px' }}>
+                                <Plus size={20} />
+                            </button>
                         </div>
                     </div>
 
@@ -261,10 +329,10 @@ export default function ProductEdit() {
                                 <input
                                     type="text"
                                     value={formData.slug}
-                                    disabled
-                                    placeholder="Генерується автоматично"
-                                    style={{ background: '#f5f5f5', color: '#666' }}
+                                    onChange={e => setFormData({ ...formData, slug: e.target.value })}
+                                    placeholder="test_laminatu"
                                 />
+                                <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '5px' }}>Генерується автоматично з назви, але можна змінити.</p>
                             </div>
                         </div>
                     </div>
