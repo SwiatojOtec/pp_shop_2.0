@@ -1,7 +1,10 @@
-﻿import { API_URL } from '../../apiConfig';
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronRight, Save, ArrowLeft, Trash2, Image as ImageIcon, Plus, X, Settings } from 'lucide-react';
+import {
+    Save, ArrowLeft, Plus, Trash2, Image as ImageIcon,
+    X, ChevronRight, Settings
+} from 'lucide-react';
+import { API_URL } from '../../apiConfig';
 import { transliterate } from '../../utils/transliterate';
 import './Admin.css';
 
@@ -13,7 +16,7 @@ export default function ProductEdit() {
     const [formData, setFormData] = useState({
         name: '',
         price: '',
-        category: 'Паркетна дошка',
+        category: '',
         image: '',
         images: [],
         desc: '',
@@ -22,22 +25,40 @@ export default function ProductEdit() {
         groupId: '', // For linking variants
         specs: {}
     });
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
     const [newSpec, setNewSpec] = useState({ key: '', value: '' });
 
     useEffect(() => {
+        fetchCategories();
         if (!isNew) {
             fetchProduct();
         }
     }, [id]);
+
+    const fetchCategories = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/categories`);
+            if (res.ok) {
+                const data = await res.json();
+                setCategories(data);
+                // Set default category if it's a new product
+                if (isNew && data.length > 0 && !formData.category) {
+                    setFormData(prev => ({ ...prev, category: data[0].name }));
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching categories:', err);
+        }
+    };
 
     // Auto-generate slug when name changes (only for new products)
     useEffect(() => {
         if (isNew && formData.name) {
             setFormData(prev => ({
                 ...prev,
-                slug: transliterate(prev.name)
+                slug: transliterate(formData.name)
             }));
         }
     }, [formData.name, isNew]);
@@ -76,7 +97,6 @@ export default function ProductEdit() {
                         desc: template.desc,
                         specs: template.specs || {}
                     }));
-                    // Optional: show a small notification or toast
                     console.log('Данные подтянуты из коллекции:', groupId);
                 }
             }
@@ -89,37 +109,29 @@ export default function ProductEdit() {
         e.preventDefault();
 
         if (!formData.image) {
-            alert('Будь ласка, додайте головне зображення (URL)');
+            alert('Будь ласка, додайте головне зображення товару.');
             return;
         }
 
-        const url = isNew
-            ? `${API_URL}/api/products`
-            : `${API_URL}/api/products/${id}`;
-        const method = isNew ? 'POST' : 'PUT';
-
         try {
+            const url = isNew ? `${API_URL}/api/products` : `${API_URL}/api/products/${id}`;
+            const method = isNew ? 'POST' : 'PUT';
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
 
-            const data = await res.json();
-
             if (res.ok) {
                 navigate('/admin/products');
             } else {
-                let errorMessage = data.message || 'Не вдалося зберегти товар';
-                if (data.errors && Array.isArray(data.errors)) {
-                    const details = data.errors.map(e => e.message).join('\n');
-                    errorMessage = `Помилка валідації:\n${details}`;
-                }
-                alert(errorMessage);
+                const errorData = await res.json();
+                alert(`Помилка: ${errorData.message || 'Не вдалося зберегти товар'}`);
             }
         } catch (err) {
             console.error('Error saving product:', err);
-            alert("Сталася помилка при з'єднанні з сервером");
+            alert('Сталася помилка при збереженні товару.');
         }
     };
 
@@ -328,10 +340,10 @@ export default function ProductEdit() {
                                     value={formData.category}
                                     onChange={e => setFormData({ ...formData, category: e.target.value })}
                                 >
-                                    <option>Паркетна дошка</option>
-                                    <option>Ламінат</option>
-                                    <option>Вініл</option>
-                                    <option>Двері</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                    ))}
+                                    {categories.length === 0 && <option>Спочатку додайте категорії</option>}
                                 </select>
                             </div>
                         </div>

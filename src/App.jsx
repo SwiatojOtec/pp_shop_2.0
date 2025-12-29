@@ -13,6 +13,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import ProductEdit from './pages/admin/ProductEdit';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminCategories from './pages/admin/AdminCategories';
 import AdminLayout from './pages/admin/AdminLayout';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
@@ -46,6 +47,7 @@ function AppContent() {
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="products/:id" element={<ProductEdit />} />
                 <Route path="orders" element={<AdminOrders />} />
+                <Route path="settings" element={<AdminCategories />} />
               </Routes>
             </AdminLayout>
           } />

@@ -5,6 +5,8 @@ const sequelize = require('./config/db');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const currencyRoutes = require('./routes/currencyRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+
 
 const app = express();
 
@@ -39,6 +41,8 @@ app.get('/', (req, res) => {
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/currencies', currencyRoutes);
+app.use('/api/categories', categoryRoutes);
+
 
 // Database Connection and Sync
 const PORT = process.env.PORT || 5000;

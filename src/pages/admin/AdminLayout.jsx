@@ -10,6 +10,7 @@ export default function AdminLayout({ children }) {
         { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Дашборд' },
         { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
+        { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
     ];
 
     return (
