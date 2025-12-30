@@ -1,11 +1,10 @@
 export const CATEGORY_MAP = {
-    'parketna-doshka': 'Паркетна дошка',
+    'parketna_doshka': 'Паркетна дошка',
     'laminat': 'Ламінат',
-    'vinil': 'Вініл',
-    'pidvikonnya': 'Подоконники',
-    'dveri': 'Двері',
-    'stinovi-paneli': 'Стінові панелі',
-    'aksesuary': 'Аксесуари'
+    'vinilova_pidloha': 'Вінілова підлога',
+    'pidvikonnya': 'Підвіконня',
+    'stinovi_paneli': 'Стінові панелі',
+    'plintusa': 'Плінтуса'
 };
 
 export const getCategorySlug = (name) => {
@@ -13,5 +12,7 @@ export const getCategorySlug = (name) => {
 };
 
 export const getCategoryName = (slug) => {
-    return CATEGORY_MAP[slug] || slug;
+    // Also handle old hyphenated slugs for backward compatibility if needed
+    const normalizedSlug = slug.replace(/-/g, '_');
+    return CATEGORY_MAP[normalizedSlug] || CATEGORY_MAP[slug] || slug;
 };
