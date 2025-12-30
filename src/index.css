@@ -157,3 +157,14 @@ h3 {
 .badge-top {
   background: #264653;
 }
+
+/* Global Price Styles */
+.old-price {
+  text-decoration: line-through;
+  color: #999;
+  font-weight: 400;
+}
+
+.sale-price {
+  color: var(--color-primary) !important;
+}

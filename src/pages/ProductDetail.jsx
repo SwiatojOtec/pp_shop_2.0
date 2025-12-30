@@ -128,7 +128,7 @@ export default function ProductDetail() {
 
                         <div className="price-section">
                             <div className="price-current">
-                                {product.price} ₴ <span className="unit">/ м²</span>
+                                {product.price} ₴ <span className="unit">/ {product.unit || 'м²'}</span>
                             </div>
                             {product.oldPrice && (
                                 <div className="price-old">{product.oldPrice} ₴</div>

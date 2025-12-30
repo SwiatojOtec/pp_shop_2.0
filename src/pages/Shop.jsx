@@ -116,8 +116,6 @@ export default function Shop() {
         setSearchParams(newParams);
     };
 
-
-
     if (loading) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Завантаження товарів...</div>;
     if (error) return <div className="container" style={{ padding: '100px 0', textAlign: 'center', color: 'red' }}>{error}</div>;
 
@@ -307,7 +305,10 @@ export default function Shop() {
                                                 <h3 className="product-name">{product.name}</h3>
                                             </Link>
                                             <div className="price-block">
-                                                <span className="product-price">{product.price} ₴ / м²</span>
+                                                {product.oldPrice && <span className="old-price" style={{ marginRight: '10px', fontSize: '0.9rem' }}>{product.oldPrice} ₴</span>}
+                                                <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`} style={{ fontWeight: 700 }}>
+                                                    {product.price} ₴ / {product.unit || 'м²'}
+                                                </span>
                                             </div>
                                             <div className="stock-status" style={{
                                                 fontSize: '0.8rem',
@@ -340,7 +341,16 @@ export default function Shop() {
                             </div>
                             <div className="modal-info">
                                 <h2 className="modal-title">{quickViewProduct.name}</h2>
-                                <div className="modal-price">{quickViewProduct.price} ₴ / м²</div>
+                                <div className="modal-price-block" style={{ marginBottom: '20px' }}>
+                                    {quickViewProduct.oldPrice && (
+                                        <span className="old-price" style={{ marginRight: '15px', fontSize: '1.2rem' }}>
+                                            {quickViewProduct.oldPrice} ₴
+                                        </span>
+                                    )}
+                                    <span className={`modal-price ${quickViewProduct.oldPrice ? 'sale-price' : ''}`} style={{ fontSize: '1.8rem', fontWeight: 800 }}>
+                                        {quickViewProduct.price} ₴ / {quickViewProduct.unit || 'м²'}
+                                    </span>
+                                </div>
                                 <p className="modal-desc">{quickViewProduct.desc}</p>
                                 <div className="modal-actions">
                                     <button className="btn btn-primary add-btn" onClick={() => addToCart(quickViewProduct)}>
