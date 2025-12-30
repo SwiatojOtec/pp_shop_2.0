@@ -18,6 +18,10 @@ export default function Shop() {
     const [error, setError] = useState(null);
     const [quickViewProduct, setQuickViewProduct] = useState(null);
 
+    // Local state for price inputs to avoid immediate URL updates
+    const [localMinPrice, setLocalMinPrice] = useState(searchParams.get('minPrice') || '');
+    const [localMaxPrice, setLocalMaxPrice] = useState(searchParams.get('maxPrice') || '');
+
     useEffect(() => {
         // Fetch categories and brands
         Promise.all([
