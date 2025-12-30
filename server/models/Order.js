@@ -8,6 +8,10 @@ const Order = sequelize.define('Order', {
         autoIncrement: true,
         allowNull: false
     },
+    orderNumber: {
+        type: DataTypes.STRING,
+        unique: true
+    },
     customerName: {
         type: DataTypes.STRING,
         allowNull: false

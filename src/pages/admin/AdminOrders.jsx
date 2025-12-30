@@ -45,12 +45,25 @@ export default function AdminOrders() {
     };
 
     const filteredOrders = orders.filter(o => {
-        const matchesSearch = o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            o.customerPhone.includes(searchTerm) ||
-            o.id.toString().includes(searchTerm);
+        const matchesSearch =
+            (o.customerName && o.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (o.customerPhone && o.customerPhone.includes(searchTerm)) ||
+            (o.orderNumber && o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesStatus = filterStatus === 'All' || o.status === filterStatus;
         return matchesSearch && matchesStatus;
     });
+
+    const getStatusLabel = (status) => {
+        const labels = {
+            'pending': 'Новий',
+            'invoice_sent': 'Рахунок виставлено',
+            'paid': 'Оплачено',
+            'processing': 'В роботі',
+            'completed': 'Виконано',
+            'cancelled': 'Скасовано'
+        };
+        return labels[status] || status;
+    };
 
     return (
         <div className="admin-orders">
@@ -61,7 +74,7 @@ export default function AdminOrders() {
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
                     <input
                         type="text"
-                        placeholder="Пошук за ім'ям, телефоном або ID..."
+                        placeholder="Пошук за ім'ям, телефоном або № замовлення..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
@@ -72,10 +85,13 @@ export default function AdminOrders() {
                     <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
+                        className="admin-select-mini"
+                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none', minWidth: '180px' }}
                     >
                         <option value="All">Всі статуси</option>
-                        <option value="pending">Очікує</option>
+                        <option value="pending">Новий</option>
+                        <option value="invoice_sent">Рахунок виставлено</option>
+                        <option value="paid">Оплачено</option>
                         <option value="processing">В роботі</option>
                         <option value="completed">Виконано</option>
                         <option value="cancelled">Скасовано</option>
@@ -87,56 +103,75 @@ export default function AdminOrders() {
                 <table className="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>№ Замовлення</th>
                             <th>Клієнт</th>
+                            <th>Товари</th>
+                            <th>Доставка</th>
                             <th>Сума</th>
                             <th>Статус</th>
-                            <th>Дата</th>
                             <th>Дії</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredOrders.map(order => (
                             <tr key={order.id}>
-                                <td>#{order.id}</td>
+                                <td style={{ fontWeight: 800, color: 'var(--admin-accent)' }}>
+                                    {order.orderNumber || `#${order.id}`}
+                                </td>
                                 <td>
-                                    <div className="client-info">
-                                        <strong>{order.customerName}</strong>
-                                        <span>{order.customerPhone}</span>
+                                    <div className="client-info" style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <strong style={{ fontSize: '0.95rem' }}>{order.customerName}</strong>
+                                        <span style={{ color: '#666', fontSize: '0.85rem' }}>{order.customerPhone}</span>
+                                        {order.customerEmail && <span style={{ color: '#999', fontSize: '0.8rem' }}>{order.customerEmail}</span>}
                                     </div>
                                 </td>
-                                <td>{order.totalAmount} ₴</td>
+                                <td style={{ maxWidth: '250px' }}>
+                                    <div className="order-items-summary" style={{ fontSize: '0.85rem' }}>
+                                        {order.items && order.items.map((item, idx) => (
+                                            <div key={idx} style={{ marginBottom: '2px' }}>
+                                                • {item.name} x {item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </td>
+                                <td style={{ fontSize: '0.85rem', color: '#666' }}>
+                                    <div style={{ fontWeight: 600, color: '#333' }}>
+                                        {order.deliveryMethod === 'pickup' ? 'Самовивіз' : 'Доставка'}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem' }}>{order.address}</div>
+                                </td>
+                                <td style={{ fontWeight: 800 }}>{parseFloat(order.totalAmount).toLocaleString()} ₴</td>
                                 <td>
-                                    <div className="status-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span className={`status-badge ${order.status}`}>
-                                            {order.status === 'pending' ? 'Очікує' :
-                                                order.status === 'processing' ? 'В роботі' :
-                                                    order.status === 'completed' ? 'Виконано' : 'Скасовано'}
+                                    <div className="status-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <span className={`status-badge ${order.status}`} style={{ textAlign: 'center' }}>
+                                            {getStatusLabel(order.status)}
                                         </span>
                                         <select
                                             value={order.status}
                                             onChange={(e) => updateStatus(order.id, e.target.value)}
-                                            className="status-select-mini"
-                                            style={{ padding: '4px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.8rem' }}
+                                            style={{ padding: '4px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}
                                         >
-                                            <option value="pending">Змінити на Очікує</option>
-                                            <option value="processing">Змінити на В роботі</option>
-                                            <option value="completed">Змінити на Виконано</option>
-                                            <option value="cancelled">Змінити на Скасовано</option>
+                                            <option value="pending">Новий</option>
+                                            <option value="invoice_sent">Рахунок виставлено</option>
+                                            <option value="paid">Оплачено</option>
+                                            <option value="processing">В роботі</option>
+                                            <option value="completed">Виконано</option>
+                                            <option value="cancelled">Скасовано</option>
                                         </select>
                                     </div>
                                 </td>
-                                <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                                 <td>
-                                    <button onClick={() => handleDelete(order.id)} className="action-btn delete">
-                                        <Trash2 size={18} />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button onClick={() => handleDelete(order.id)} className="action-btn delete" title="Видалити">
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
                         {filteredOrders.length === 0 && (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Замовлень не знайдено</td>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Замовлень не знайдено</td>
                             </tr>
                         )}
                     </tbody>

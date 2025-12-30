@@ -5,13 +5,18 @@ const Order = require('../models/Order');
 // Create new order
 router.post('/', async (req, res) => {
     try {
-        const { customerName, customerPhone, customerEmail, address, paymentMethod, items, totalAmount } = req.body;
+        const { customerName, customerPhone, customerEmail, address, deliveryMethod, paymentMethod, items, totalAmount } = req.body;
+
+        // Generate order number: PP- + random 5 digits
+        const orderNumber = `PP-${Math.floor(10000 + Math.random() * 90000)}`;
 
         const order = await Order.create({
+            orderNumber,
             customerName,
             customerPhone,
             customerEmail,
             address,
+            deliveryMethod,
             paymentMethod,
             items,
             totalAmount

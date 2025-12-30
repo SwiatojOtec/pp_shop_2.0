@@ -17,7 +17,26 @@ export default function Checkout() {
         deliveryMethod: 'pickup', // pickup, delivery
         paymentMethod: 'invoice' // invoice
     });
-    const [loading, setLoading] = useState(false);
+    const [successOrder, setSuccessOrder] = useState(null);
+
+    if (successOrder) {
+        return (
+            <div className="container" style={{ padding: '100px 0', textAlign: 'center', maxWidth: '600px' }}>
+                <div style={{ background: '#f0fdf4', padding: '40px', borderRadius: '20px', border: '1px solid #bbf7d0' }}>
+                    <ShieldCheck size={64} color="#22c55e" style={{ marginBottom: '20px' }} />
+                    <h2 style={{ marginBottom: '15px', color: '#166534' }}>Дякуємо за замовлення!</h2>
+                    <p style={{ fontSize: '1.2rem', marginBottom: '20px' }}>
+                        Ваше замовлення <strong>№{successOrder.orderNumber}</strong> прийнято в роботу.
+                    </p>
+                    <p style={{ color: '#666', lineHeight: 1.6, marginBottom: '30px' }}>
+                        Дякуємо за замовлення та бажаємо гарного дня! <br />
+                        Невдовзі з вами зв'яжеться наш менеджер для уточнення деталей та виставлення рахунку.
+                    </p>
+                    <Link to="/" className="btn btn-primary" style={{ padding: '12px 30px' }}>На головну</Link>
+                </div>
+            </div>
+        );
+    }
 
     if (cartItems.length === 0) {
         return (
@@ -51,9 +70,9 @@ export default function Checkout() {
             });
 
             if (res.ok) {
+                const data = await res.json();
                 clearCart();
-                alert('Замовлення успішно оформлено!');
-                navigate('/');
+                setSuccessOrder(data);
             } else {
                 throw new Error('Помилка при оформленні замовлення');
             }
