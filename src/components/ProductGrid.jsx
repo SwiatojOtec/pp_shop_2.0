@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
 import './ProductGrid.css';
 
@@ -63,7 +64,7 @@ export default function ProductGrid() {
                                                     product.badge === 'TOP' ? 'Топ' : product.badge}
                                     </span>
                                 )}
-                                <Link to={`/shop/${product.slug}`}>
+                                <Link to={`/shop/${getCategorySlug(product.category)}/${product.slug}`}>
                                     <img src={product.image} alt={product.name} className="product-image" />
                                 </Link>
                                 <button
@@ -91,7 +92,7 @@ export default function ProductGrid() {
                                 <button className="add-to-cart-btn" onClick={() => addToCart(product)}><Plus size={24} /></button>
                             </div>
                             <div className="product-info">
-                                <Link to={`/shop/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <Link to={`/product/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <h3 className="product-name">{product.name}</h3>
                                 </Link>
                                 <div className="price-block">

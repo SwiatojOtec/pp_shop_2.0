@@ -8,10 +8,10 @@ const imgDoors = 'https://images.unsplash.com/photo-1506377247377-2a5b3b0ca7df?a
 const imgVinyl = 'https://images.unsplash.com/photo-1581850518616-bcb8186c3c30?auto=format&fit=crop&w=800&q=80';
 
 const CATEGORIES = [
-    { id: 1, name: 'Паркетна дошка', image: imgParquet, link: '/shop?category=parketna_doshka' },
-    { id: 2, name: 'Ламінат', image: imgLaminate, link: '/shop?category=laminat' },
-    { id: 3, name: 'Підвіконня', image: imgDoors, link: '/shop?category=pidvikonnya' },
-    { id: 4, name: 'Вінілова підлога', image: imgVinyl, link: '/shop?category=vinilova_pidloha' },
+    { id: 1, name: 'Паркетна дошка', image: imgParquet, link: '/shop/parketna_doshka' },
+    { id: 2, name: 'Ламінат', image: imgLaminate, link: '/shop/laminat' },
+    { id: 3, name: 'Підвіконня', image: imgDoors, link: '/shop/pidvikonnya' },
+    { id: 4, name: 'Вінілова підлога', image: imgVinyl, link: '/shop/vinilova_pidloha' },
 ];
 
 export default function CategoryGrid() {

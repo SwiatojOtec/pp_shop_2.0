@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Filter, ChevronDown, Plus, X, Heart, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -8,6 +8,8 @@ import { API_URL } from '../apiConfig';
 import './Shop.css';
 
 export default function Shop() {
+    const { categorySlug: pathCategorySlug } = useParams();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { addToCart } = useCart();
     const { toggleFavorite, isFavorite } = useFavorites();
@@ -66,7 +68,7 @@ export default function Shop() {
     }, [searchParams]);
 
     // Filter states from URL
-    const categorySlug = searchParams.get('category') || '';
+    const categorySlug = pathCategorySlug || searchParams.get('category') || '';
     const category = getCategoryName(categorySlug);
     const search = searchParams.get('search') || '';
     const sort = searchParams.get('sort') || 'popular';
@@ -77,9 +79,11 @@ export default function Shop() {
     useEffect(() => {
         setLoading(true);
         const params = Object.fromEntries(searchParams.entries());
-        // If category is slug, we need to pass the name to the API (or update API to handle slugs)
-        if (params.category) {
-            params.category = getCategoryName(params.category);
+
+        // Use category from path if present, otherwise from searchParams
+        const activeCategorySlug = pathCategorySlug || params.category;
+        if (activeCategorySlug) {
+            params.category = getCategoryName(activeCategorySlug);
         }
 
         const query = new URLSearchParams(params).toString();
@@ -97,7 +101,7 @@ export default function Shop() {
                 setError(err.message);
                 setLoading(false);
             });
-    }, [searchParams]);
+    }, [searchParams, pathCategorySlug]);
 
     // Get unique values for specs to show in filters
     const getUniqueSpecValues = (specKey) => {
@@ -111,11 +115,20 @@ export default function Shop() {
     };
 
     const handleFilterChange = (key, value) => {
+        if (key === 'category') {
+            const newSlug = value ? getCategorySlug(value) : '';
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('category'); // Remove from query if it was there
+
+            const queryString = newParams.toString();
+            const path = newSlug ? `/shop/${newSlug}` : '/shop';
+            navigate(queryString ? `${path}?${queryString}` : path);
+            return;
+        }
+
         const newParams = new URLSearchParams(searchParams);
         if (value) {
-            // If it's category, use slug
-            const finalValue = key === 'category' ? getCategorySlug(value) : value;
-            newParams.set(key, finalValue);
+            newParams.set(key, value);
         } else {
             newParams.delete(key);
         }
@@ -156,11 +169,12 @@ export default function Shop() {
         <div className="shop-page">
             <div className="container">
                 <nav className="breadcrumbs">
-                    <Link to="/">Головна</Link> / <span>Магазин</span>
+                    <Link to="/">Головна</Link> / <Link to="/shop">Магазин</Link>
+                    {category && <> / <span>{category}</span></>}
                 </nav>
 
                 <div className="shop-header">
-                    <h1 className="shop-title">Магазин</h1>
+                    <h1 className="shop-title">{category || 'Магазин'}</h1>
                     <div className="shop-controls">
                         <span className="product-count">Показано {products.length} товарів</span>
                         <div className="custom-sort-container" onClick={(e) => e.stopPropagation()}>
@@ -205,7 +219,7 @@ export default function Shop() {
                                 {badge === 'SALE' ? 'Розпродаж' : badge} <X size={14} onClick={() => handleFilterChange('badge', '')} />
                             </span>
                         )}
-                        <button className="clear-all" onClick={() => setSearchParams({})}>Очистити все</button>
+                        <button className="clear-all" onClick={() => navigate('/shop')}>Очистити все</button>
                     </div>
                 )}
 
@@ -327,7 +341,7 @@ export default function Shop() {
                                                                 product.badge === 'TOP' ? 'Топ' : product.badge}
                                                 </span>
                                             )}
-                                            <Link to={`/shop/${product.slug}`}>
+                                            <Link to={`/shop/${getCategorySlug(product.category)}/${product.slug}`}>
                                                 <img src={product.image} alt={product.name} className="product-image" />
                                             </Link>
                                             <button
@@ -353,7 +367,7 @@ export default function Shop() {
                                                     <span>{product.rating}.0 ({product.reviews})</span>
                                                 </div>
                                             </div>
-                                            <Link to={`/shop/${product.slug}`}>
+                                            <Link to={`/product/${product.slug}`}>
                                                 <h3 className="product-name">{product.name}</h3>
                                             </Link>
                                             <div className="price-block">

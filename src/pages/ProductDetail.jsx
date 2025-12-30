@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
 import './ProductDetail.css';
 
@@ -149,7 +150,7 @@ export default function ProductDetail() {
                                     {variants.map(v => (
                                         <Link
                                             key={v.id}
-                                            to={`/shop/${v.slug}`}
+                                            to={`/shop/${getCategorySlug(v.category)}/${v.slug}`}
                                             style={{ width: '45px', height: '45px', borderRadius: '50%', border: '1px solid #ddd', padding: '2px', transition: 'all 0.2s' }}
                                             onMouseOver={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
                                             onMouseOut={e => e.currentTarget.style.borderColor = '#ddd'}

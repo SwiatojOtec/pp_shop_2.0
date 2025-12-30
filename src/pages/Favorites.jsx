@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Eye, Trash2 } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
+import { getCategorySlug } from '../utils/categoryMapping';
 import './Favorites.css';
 
 export default function Favorites() {
@@ -60,7 +61,7 @@ export default function Favorites() {
                     {favorites.map(product => (
                         <div key={product._id || product.id} className="favorite-item">
                             <div className="favorite-image-container">
-                                <Link to={`/shop/${product.slug}`}>
+                                <Link to={`/shop/${getCategorySlug(product.category)}/${product.slug}`}>
                                     <img
                                         src={product.image}
                                         alt={product.name}
