@@ -72,10 +72,12 @@ export default function AdminProducts() {
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
                     >
                         <option value="All">Всі категорії</option>
-                        <option value="Паркетна дошка">Паркетна дошка</option>
+                        <option value="Паркетна Дошка">Паркетна Дошка</option>
                         <option value="Ламінат">Ламінат</option>
-                        <option value="Вініл">Вініл</option>
-                        <option value="Двері">Двері</option>
+                        <option value="Вінілова підлога">Вінілова підлога</option>
+                        <option value="Підвіконня">Підвіконня</option>
+                        <option value="Стінові панелі">Стінові панелі</option>
+                        <option value="Плінтуса">Плінтуса</option>
                     </select>
                 </div>
             </div>
@@ -89,6 +91,7 @@ export default function AdminProducts() {
                             <th>Назва</th>
                             <th>Ціна</th>
                             <th>Категорія</th>
+                            <th>Мітка</th>
                             <th>Дії</th>
                         </tr>
                     </thead>
@@ -101,6 +104,13 @@ export default function AdminProducts() {
                                 <td>{product.price} ₴</td>
                                 <td>{product.category}</td>
                                 <td>
+                                    {product.badge && (
+                                        <span className={`status-badge ${product.badge.toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                                            {product.badge}
+                                        </span>
+                                    )}
+                                </td>
+                                <td>
                                     <div className="table-actions">
                                         <button onClick={() => navigate(`/admin/products/${product.id}`)} className="action-btn edit"><Edit2 size={18} /></button>
                                         <button onClick={() => handleDelete(product.id)} className="action-btn delete"><Trash2 size={18} /></button>
@@ -110,7 +120,7 @@ export default function AdminProducts() {
                         ))}
                         {filteredProducts.length === 0 && (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Товарів не знайдено</td>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Товарів не знайдено</td>
                             </tr>
                         )}
                     </tbody>
@@ -119,4 +129,3 @@ export default function AdminProducts() {
         </div>
     );
 }
-

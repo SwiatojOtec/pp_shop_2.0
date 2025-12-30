@@ -371,6 +371,27 @@
     color: #64748b;
 }
 
+/* Product Badges in Table */
+.status-badge.sale {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.status-badge.new {
+    background: #ccfbf1;
+    color: #0d9488;
+}
+
+.status-badge.hot {
+    background: #ffedd5;
+    color: #ea580c;
+}
+
+.status-badge.top {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
 /* Buttons */
 .btn-primary {
     background: var(--admin-dark);

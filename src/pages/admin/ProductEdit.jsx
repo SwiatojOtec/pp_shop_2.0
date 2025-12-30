@@ -27,6 +27,7 @@ export default function ProductEdit() {
         brand: '',
         packSize: 1.0,
         unit: 'м²',
+        badge: '',
         specs: {}
     });
     const [categories, setCategories] = useState([]);
@@ -361,6 +362,19 @@ export default function ProductEdit() {
                                     <option value="in_stock">В наявності</option>
                                     <option value="on_order">Під замовлення</option>
                                     <option value="out_of_stock">Немає в наявності</option>
+                                </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '20px' }}>
+                                <label>Мітка (Badge)</label>
+                                <select
+                                    value={formData.badge || ''}
+                                    onChange={e => setFormData({ ...formData, badge: e.target.value })}
+                                >
+                                    <option value="">Без мітки</option>
+                                    <option value="SALE">Розпродаж %</option>
+                                    <option value="NEW">Новинка</option>
+                                    <option value="HOT">Хіт продажу</option>
+                                    <option value="TOP">Топ вибір</option>
                                 </select>
                             </div>
                             <div className="form-group" style={{ marginBottom: '20px' }}>

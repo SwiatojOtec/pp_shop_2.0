@@ -55,7 +55,14 @@ export default function ProductGrid() {
                     {filteredProducts.slice(0, 8).map(product => (
                         <div key={product._id || product.id} className="product-card">
                             <div className="product-image-container">
-                                {product.badge && <span className={`badge badge-${product.badge.toLowerCase()}`}>{product.badge}</span>}
+                                {product.badge && (
+                                    <span className={`badge badge-${product.badge.toLowerCase()}`}>
+                                        {product.badge === 'SALE' ? 'Розпродаж' :
+                                            product.badge === 'NEW' ? 'Новинка' :
+                                                product.badge === 'HOT' ? 'Хіт' :
+                                                    product.badge === 'TOP' ? 'Топ' : product.badge}
+                                    </span>
+                                )}
                                 <Link to={`/shop/${product.slug}`}>
                                     <img src={product.image} alt={product.name} className="product-image" />
                                 </Link>

@@ -269,7 +269,14 @@ export default function Shop() {
                                 <React.Fragment key={product._id || product.id}>
                                     <div className="product-card">
                                         <div className="product-image-container">
-                                            {product.badge && <span className={`badge badge-${product.badge.toLowerCase()}`}>{product.badge}</span>}
+                                            {product.badge && (
+                                                <span className={`badge badge-${product.badge.toLowerCase()}`}>
+                                                    {product.badge === 'SALE' ? 'Розпродаж' :
+                                                        product.badge === 'NEW' ? 'Новинка' :
+                                                            product.badge === 'HOT' ? 'Хіт' :
+                                                                product.badge === 'TOP' ? 'Топ' : product.badge}
+                                                </span>
+                                            )}
                                             <Link to={`/shop/${product.slug}`}>
                                                 <img src={product.image} alt={product.name} className="product-image" />
                                             </Link>

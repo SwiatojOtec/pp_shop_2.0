@@ -68,6 +68,14 @@ export default function ProductDetail() {
                     <div className="product-gallery">
                         <div className="main-image-container">
                             <img src={activeImg} alt={product.name} className="main-image" />
+                            {product.badge && (
+                                <span className={`badge badge-${product.badge.toLowerCase()}`} style={{ top: '20px', left: '20px' }}>
+                                    {product.badge === 'SALE' ? 'Розпродаж' :
+                                        product.badge === 'NEW' ? 'Новинка' :
+                                            product.badge === 'HOT' ? 'Хіт' :
+                                                product.badge === 'TOP' ? 'Топ' : product.badge}
+                                </span>
+                            )}
                             <button
                                 className={`wishlist-btn-large ${isFavorite(product._id || product.id) ? 'active' : ''}`}
                                 onClick={() => toggleFavorite(product)}

@@ -1,14 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 :root {
-  --color-primary: #D62828; /* Sharp Red */
+  --color-primary: #D62828;
+  /* Sharp Red */
   --color-dark: #121212;
   --color-light: #F8F9FA;
   --color-grey: #E9ECEF;
   --color-text: #212529;
-  
+
   --font-main: 'Outfit', sans-serif;
-  
+
   --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;
   --spacing-md: 2rem;
@@ -16,8 +17,8 @@
   --spacing-xl: 8rem;
 
   --border-width: 1px;
-  --border-color: rgba(0,0,0,0.1);
-  --border-color-dark: rgba(255,255,255,0.1);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-color-dark: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -91,23 +92,68 @@ img {
 }
 
 /* Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 800;
   line-height: 1.2;
   text-transform: uppercase;
 }
 
-h1 { font-size: 4rem; }
-h2 { font-size: 3rem; }
-h3 { font-size: 2rem; }
+h1 {
+  font-size: 4rem;
+}
+
+h2 {
+  font-size: 3rem;
+}
+
+h3 {
+  font-size: 2rem;
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--color-light);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-dark);
+}
+
+/* Product Badges */
+.badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  z-index: 5;
+  color: white;
+  letter-spacing: 1px;
+}
+
+.badge-sale {
+  background: #e63946;
+}
+
+.badge-new {
+  background: #2a9d8f;
+}
+
+.badge-hot {
+  background: #f4a261;
+}
+
+.badge-top {
+  background: #264653;
 }
