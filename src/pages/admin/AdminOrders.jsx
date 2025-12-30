@@ -4,6 +4,7 @@ import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save
 import './Admin.css';
 
 export default function AdminOrders() {
+    const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [productSearchTerm, setProductSearchTerm] = useState('');

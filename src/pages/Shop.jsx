@@ -29,6 +29,32 @@ export default function Shop() {
         }).catch(err => console.error('Error fetching filters:', err));
     }, []);
 
+    // Debounce price updates
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const newParams = new URLSearchParams(searchParams);
+
+            if (localMinPrice) newParams.set('minPrice', localMinPrice);
+            else newParams.delete('minPrice');
+
+            if (localMaxPrice) newParams.set('maxPrice', localMaxPrice);
+            else newParams.delete('maxPrice');
+
+            // Only update if values actually changed to avoid infinite loops
+            if (newParams.toString() !== searchParams.toString()) {
+                setSearchParams(newParams);
+            }
+        }, 800); // 800ms delay
+
+        return () => clearTimeout(timer);
+    }, [localMinPrice, localMaxPrice]);
+
+    // Update local state if URL changes (e.g. on "Clear All")
+    useEffect(() => {
+        setLocalMinPrice(searchParams.get('minPrice') || '');
+        setLocalMaxPrice(searchParams.get('maxPrice') || '');
+    }, [searchParams]);
+
     // Filter states from URL
     const categorySlug = searchParams.get('category') || '';
     const category = getCategoryName(categorySlug);
@@ -220,14 +246,14 @@ export default function Shop() {
                                 <input
                                     type="number"
                                     placeholder="Від"
-                                    value={minPrice}
-                                    onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                                    value={localMinPrice}
+                                    onChange={(e) => setLocalMinPrice(e.target.value)}
                                 />
                                 <input
                                     type="number"
                                     placeholder="До"
-                                    value={maxPrice}
-                                    onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                                    value={localMaxPrice}
+                                    onChange={(e) => setLocalMaxPrice(e.target.value)}
                                 />
                             </div>
                         </div>
