@@ -4,9 +4,9 @@ import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save
 import './Admin.css';
 
 export default function AdminOrders() {
-    const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [productSearchTerm, setProductSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
     const [editingOrder, setEditingOrder] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -33,7 +33,8 @@ export default function AdminOrders() {
             const res = await fetch(`${API_URL}/api/products`);
             if (res.ok) {
                 const data = await res.json();
-                setProducts(data.products || []);
+                // The API returns the array directly
+                setProducts(Array.isArray(data) ? data : []);
             }
         } catch (err) {
             console.error('Error fetching products:', err);
@@ -85,6 +86,7 @@ export default function AdminOrders() {
         const updatedItems = [...editingOrder.items, newItem];
         const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
         setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
+        setProductSearchTerm(''); // Clear search after adding
     };
 
     const removeItemFromOrder = (index) => {
@@ -108,6 +110,13 @@ export default function AdminOrders() {
         const matchesStatus = filterStatus === 'All' || o.status === filterStatus;
         return matchesSearch && matchesStatus;
     });
+
+    const filteredProducts = productSearchTerm.length > 1
+        ? products.filter(p =>
+            p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+            (p.sku && p.sku.toLowerCase().includes(productSearchTerm.toLowerCase()))
+        ).slice(0, 8)
+        : [];
 
     const getStatusLabel = (status) => {
         const labels = {
@@ -238,7 +247,7 @@ export default function AdminOrders() {
             </div>
 
             {isEditModalOpen && editingOrder && (
-                <div className="admin-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyCenter: 'center', zIndex: 1000, padding: '20px' }}>
+                <div className="admin-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
                     <div className="admin-modal" style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                             <h2 style={{ margin: 0 }}>Редагування замовлення {editingOrder.orderNumber}</h2>
@@ -282,21 +291,38 @@ export default function AdminOrders() {
                             ))}
                         </div>
 
-                        <div className="add-item-section" style={{ marginBottom: '30px', padding: '15px', border: '1px dashed #ddd', borderRadius: '8px' }}>
+                        <div className="add-item-section" style={{ marginBottom: '30px', position: 'relative' }}>
                             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Додати товар</label>
-                            <select
-                                onChange={(e) => {
-                                    const prod = products.find(p => p.id === parseInt(e.target.value));
-                                    if (prod) addItemToOrder(prod);
-                                    e.target.value = "";
-                                }}
-                                style={{ width: '100%' }}
-                            >
-                                <option value="">Оберіть товар для додавання...</option>
-                                {products.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} ({p.price} ₴)</option>
-                                ))}
-                            </select>
+                            <div style={{ position: 'relative' }}>
+                                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+                                <input
+                                    type="text"
+                                    placeholder="Почніть вводити назву або артикул товару..."
+                                    value={productSearchTerm}
+                                    onChange={(e) => setProductSearchTerm(e.target.value)}
+                                    style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                />
+                            </div>
+
+                            {filteredProducts.length > 0 && (
+                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #ddd', borderRadius: '8px', marginTop: '5px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                                    {filteredProducts.map(p => (
+                                        <div
+                                            key={p.id}
+                                            onClick={() => addItemToOrder(p)}
+                                            style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                            onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                                            onMouseLeave={(e) => e.target.style.background = 'white'}
+                                        >
+                                            <div>
+                                                <div style={{ fontWeight: 600 }}>{p.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#888' }}>SKU: {p.sku}</div>
+                                            </div>
+                                            <div style={{ fontWeight: 700, color: 'var(--admin-accent)' }}>{p.price} ₴</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #eee', paddingTop: '20px' }}>
