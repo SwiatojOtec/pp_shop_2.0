@@ -96,7 +96,7 @@ export default function ProductGrid() {
                                 </Link>
                                 <div className="price-block">
                                     {product.oldPrice && <span className="old-price">{product.oldPrice} ₴</span>}
-                                    <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`}>{product.price} ₴ / м²</span>
+                                    <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`}>{product.price} ₴ / {product.unit || 'м²'}</span>
                                 </div>
                                 <div className="stock-status in-stock">В наявності</div>
                             </div>

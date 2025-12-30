@@ -16,6 +16,7 @@ export default function ProductEdit() {
     const [formData, setFormData] = useState({
         name: '',
         price: '',
+        oldPrice: '',
         category: '',
         image: '',
         images: [],
@@ -89,6 +90,8 @@ export default function ProductEdit() {
                 const data = await res.json();
                 setFormData({
                     ...data,
+                    price: data.price || '',
+                    oldPrice: data.oldPrice || '',
                     images: data.images || [],
                     specs: data.specs || {}
                 });
@@ -346,13 +349,29 @@ export default function ProductEdit() {
                         <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Ціна та Категорія</h2>
                         <div className="admin-form">
                             <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label>Ціна (₴)</label>
+                                <label>{formData.badge === 'SALE' ? 'Акційна ціна (₴)' : 'Ціна (₴)'}</label>
                                 <input
                                     type="number"
                                     value={formData.price}
                                     onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                    placeholder="Поточна ціна"
                                 />
                             </div>
+                            {formData.badge === 'SALE' && (
+                                <div className="form-group" style={{ marginBottom: '20px', animation: 'fadeIn 0.3s' }}>
+                                    <label>Стара ціна (закреслена, ₴)</label>
+                                    <input
+                                        type="number"
+                                        value={formData.oldPrice}
+                                        onChange={e => setFormData({ ...formData, oldPrice: e.target.value })}
+                                        placeholder="Ціна до знижки"
+                                        style={{ border: '1px solid var(--admin-accent)' }}
+                                    />
+                                    <p style={{ fontSize: '0.7rem', color: 'var(--admin-accent)', marginTop: '5px' }}>
+                                        Ця ціна буде відображатися закресленою на сайті.
+                                    </p>
+                                </div>
+                            )}
                             <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>Наявність</label>
                                 <select
