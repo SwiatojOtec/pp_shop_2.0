@@ -1,5 +1,5 @@
 export const CATEGORY_MAP = {
-    'parketna_doshka': 'Паркетна дошка',
+    'parketna_doshka': 'Паркетна Дошка',
     'laminat': 'Ламінат',
     'vinilova_pidloha': 'Вінілова підлога',
     'pidvikonnya': 'Підвіконня',

@@ -82,9 +82,9 @@ export default function Header({ onCartClick }) {
           <ul className="nav-list">
             <li><Link to="/" className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>Головна</Link></li>
             <li><Link to="/shop" className={`nav-item ${location.pathname === '/shop' ? 'active' : ''}`}>Магазин</Link></li>
-            <li className="hide-mobile"><Link to="/shop?category=parketna_doshka" className="nav-item">Паркетна дошка</Link></li>
+            <li className="hide-mobile"><Link to="/shop?category=parketna_doshka" className="nav-item">Паркет</Link></li>
             <li className="hide-mobile"><Link to="/shop?category=laminat" className="nav-item">Ламінат</Link></li>
-            <li className="hide-mobile"><Link to="/shop?category=vinilova_pidloha" className="nav-item">Вінілова підлога</Link></li>
+            <li className="hide-mobile"><Link to="/shop?category=vinilova_pidloha" className="nav-item">Вініл</Link></li>
             <li className="hide-mobile"><Link to="/shop?category=pidvikonnya" className="nav-item">Підвіконня</Link></li>
             <li className="hide-mobile"><Link to="/shop?category=stinovi_paneli" className="nav-item">Стінові панелі</Link></li>
             <li className="hide-mobile"><Link to="/shop?category=plintusa" className="nav-item">Плінтуса</Link></li>
