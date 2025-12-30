@@ -1,15 +1,19 @@
 ﻿import { API_URL } from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
-import { Trash2, CheckCircle, Clock, Truck, Search, Filter } from 'lucide-react';
+import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save } from 'lucide-react';
 import './Admin.css';
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
+    const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
+    const [editingOrder, setEditingOrder] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
         fetchOrders();
+        fetchProducts();
     }, []);
 
     const fetchOrders = async () => {
@@ -18,13 +22,21 @@ export default function AdminOrders() {
             if (res.ok) {
                 const data = await res.json();
                 setOrders(Array.isArray(data) ? data : []);
-            } else {
-                console.error('Failed to fetch orders');
-                setOrders([]);
             }
         } catch (err) {
             console.error('Error fetching orders:', err);
-            setOrders([]);
+        }
+    };
+
+    const fetchProducts = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/products`);
+            if (res.ok) {
+                const data = await res.json();
+                setProducts(data.products || []);
+            }
+        } catch (err) {
+            console.error('Error fetching products:', err);
         }
     };
 
@@ -37,11 +49,55 @@ export default function AdminOrders() {
         fetchOrders();
     };
 
+    const handleSaveEdit = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/orders/${editingOrder.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingOrder)
+            });
+            if (res.ok) {
+                setIsEditModalOpen(false);
+                setEditingOrder(null);
+                fetchOrders();
+            }
+        } catch (err) {
+            alert('Помилка при збереженні');
+        }
+    };
+
     const handleDelete = async (id) => {
         if (window.confirm('Видалити замовлення?')) {
             await fetch(`${API_URL}/api/orders/${id}`, { method: 'DELETE' });
             fetchOrders();
         }
+    };
+
+    const addItemToOrder = (product) => {
+        const newItem = {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+            unit: product.unit,
+            packSize: product.packSize || 1
+        };
+        const updatedItems = [...editingOrder.items, newItem];
+        const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
+        setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
+    };
+
+    const removeItemFromOrder = (index) => {
+        const updatedItems = editingOrder.items.filter((_, i) => i !== index);
+        const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
+        setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
+    };
+
+    const updateItemQuantity = (index, qty) => {
+        const updatedItems = [...editingOrder.items];
+        updatedItems[index].quantity = parseFloat(qty) || 0;
+        const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
+        setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
     };
 
     const filteredOrders = orders.filter(o => {
@@ -162,6 +218,9 @@ export default function AdminOrders() {
                                 </td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button onClick={() => { setEditingOrder({ ...order }); setIsEditModalOpen(true); }} className="action-btn" title="Редагувати">
+                                            <Edit2 size={18} />
+                                        </button>
                                         <button onClick={() => handleDelete(order.id)} className="action-btn delete" title="Видалити">
                                             <Trash2 size={18} />
                                         </button>
@@ -177,6 +236,80 @@ export default function AdminOrders() {
                     </tbody>
                 </table>
             </div>
+
+            {isEditModalOpen && editingOrder && (
+                <div className="admin-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyCenter: 'center', zIndex: 1000, padding: '20px' }}>
+                    <div className="admin-modal" style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                            <h2 style={{ margin: 0 }}>Редагування замовлення {editingOrder.orderNumber}</h2>
+                            <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+                        </div>
+
+                        <div className="admin-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                            <div className="form-group">
+                                <label>Ім'я клієнта</label>
+                                <input type="text" value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label>Телефон</label>
+                                <input type="text" value={editingOrder.customerPhone} onChange={e => setEditingOrder({ ...editingOrder, customerPhone: e.target.value })} />
+                            </div>
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Адреса / Спосіб доставки</label>
+                                <input type="text" value={editingOrder.address} onChange={e => setEditingOrder({ ...editingOrder, address: e.target.value })} />
+                            </div>
+                        </div>
+
+                        <h3 style={{ marginBottom: '15px' }}>Товари в замовленні</h3>
+                        <div className="edit-order-items" style={{ marginBottom: '20px' }}>
+                            {editingOrder.items.map((item, idx) => (
+                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 40px', gap: '15px', alignItems: 'center', marginBottom: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '8px' }}>
+                                    <div style={{ fontWeight: 600 }}>{item.name}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <input
+                                            type="number"
+                                            value={item.quantity}
+                                            onChange={e => updateItemQuantity(idx, e.target.value)}
+                                            style={{ width: '70px', padding: '5px' }}
+                                        />
+                                        <span>{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
+                                    </div>
+                                    <div style={{ textAlign: 'right', fontWeight: 700 }}>
+                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
+                                    </div>
+                                    <button onClick={() => removeItemFromOrder(idx)} style={{ color: '#e63946', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="add-item-section" style={{ marginBottom: '30px', padding: '15px', border: '1px dashed #ddd', borderRadius: '8px' }}>
+                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Додати товар</label>
+                            <select
+                                onChange={(e) => {
+                                    const prod = products.find(p => p.id === parseInt(e.target.value));
+                                    if (prod) addItemToOrder(prod);
+                                    e.target.value = "";
+                                }}
+                                style={{ width: '100%' }}
+                            >
+                                <option value="">Оберіть товар для додавання...</option>
+                                {products.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name} ({p.price} ₴)</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #eee', paddingTop: '20px' }}>
+                            <div style={{ fontSize: '1.2rem' }}>
+                                Разом: <strong style={{ fontSize: '1.5rem', color: 'var(--admin-accent)' }}>{editingOrder.totalAmount.toLocaleString()} ₴</strong>
+                            </div>
+                            <button onClick={handleSaveEdit} className="btn btn-primary" style={{ padding: '12px 30px' }}>
+                                <Save size={20} /> Зберегти зміни
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

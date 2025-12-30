@@ -38,12 +38,12 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Update order status
+// Update order
 router.put('/:id', async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
-        await order.update({ status: req.body.status });
+        await order.update(req.body);
         res.json(order);
     } catch (err) {
         res.status(400).json({ message: err.message });

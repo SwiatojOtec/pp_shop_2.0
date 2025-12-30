@@ -18,6 +18,7 @@ export default function Checkout() {
         paymentMethod: 'invoice' // invoice
     });
     const [successOrder, setSuccessOrder] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     if (successOrder) {
         return (
