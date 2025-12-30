@@ -17,6 +17,7 @@ export default function Shop() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [quickViewProduct, setQuickViewProduct] = useState(null);
+    const [isSortOpen, setIsSortOpen] = useState(false);
 
     // Local state for price inputs to avoid immediate URL updates
     const [localMinPrice, setLocalMinPrice] = useState(searchParams.get('minPrice') || '');
@@ -31,6 +32,11 @@ export default function Shop() {
             setCategories(catData);
             setBrands(brandData);
         }).catch(err => console.error('Error fetching filters:', err));
+
+        // Close dropdown when clicking outside
+        const handleClickOutside = () => setIsSortOpen(false);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
     // Debounce price updates
@@ -114,7 +120,18 @@ export default function Shop() {
             newParams.delete(key);
         }
         setSearchParams(newParams);
+        setIsSortOpen(false);
     };
+
+    const sortOptions = [
+        { value: 'popular', label: 'За популярністю' },
+        { value: 'name_asc', label: 'По назві А-Я' },
+        { value: 'name_desc', label: 'По назві Я-А' },
+        { value: 'price_asc', label: 'Ціна: від дешевого' },
+        { value: 'price_desc', label: 'Ціна: від найдорожчого' }
+    ];
+
+    const currentSortLabel = sortOptions.find(opt => opt.value === sort)?.label || 'За популярністю';
 
     const sortedProducts = [...products].sort((a, b) => {
         switch (sort) {
@@ -146,32 +163,32 @@ export default function Shop() {
                     <h1 className="shop-title">Магазин</h1>
                     <div className="shop-controls">
                         <span className="product-count">Показано {products.length} товарів</span>
-                        <div className="sort-dropdown" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '0.9rem', color: '#666' }}>Сортувати:</span>
-                            <select
-                                value={sort}
-                                onChange={(e) => handleFilterChange('sort', e.target.value)}
-                                style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    fontWeight: 700,
-                                    fontSize: '0.9rem',
-                                    cursor: 'pointer',
-                                    outline: 'none',
-                                    padding: '5px'
-                                }}
-                            >
-                                <option value="popular">За популярністю</option>
-                                <option value="name_asc">По назві А-Я</option>
-                                <option value="name_desc">По назві Я-А</option>
-                                <option value="price_asc">Ціна: від дешевого</option>
-                                <option value="price_desc">Ціна: від найдорожчого</option>
-                            </select>
+                        <div className="custom-sort-container" onClick={(e) => e.stopPropagation()}>
+                            <span className="sort-label">Сортувати:</span>
+                            <div className={`custom-select ${isSortOpen ? 'open' : ''}`} onClick={() => setIsSortOpen(!isSortOpen)}>
+                                <div className="selected-option">
+                                    {currentSortLabel}
+                                    <ChevronDown size={16} className={`arrow-icon ${isSortOpen ? 'rotated' : ''}`} />
+                                </div>
+                                {isSortOpen && (
+                                    <div className="options-dropdown">
+                                        {sortOptions.map(option => (
+                                            <div
+                                                key={option.value}
+                                                className={`option-item ${sort === option.value ? 'active' : ''}`}
+                                                onClick={() => handleFilterChange('sort', option.value)}
+                                            >
+                                                {option.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {(categorySlug || search) && (
+                {(categorySlug || search || badge) && (
                     <div className="active-filters">
                         {categorySlug && (
                             <span className="filter-tag">
