@@ -116,6 +116,22 @@ export default function Shop() {
         setSearchParams(newParams);
     };
 
+    const sortedProducts = [...products].sort((a, b) => {
+        switch (sort) {
+            case 'name_asc':
+                return a.name.localeCompare(b.name);
+            case 'name_desc':
+                return b.name.localeCompare(a.name);
+            case 'price_asc':
+                return a.price - b.price;
+            case 'price_desc':
+                return b.price - a.price;
+            case 'popular':
+            default:
+                return (b.rating || 0) - (a.rating || 0);
+        }
+    });
+
     if (loading) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Завантаження товарів...</div>;
     if (error) return <div className="container" style={{ padding: '100px 0', textAlign: 'center', color: 'red' }}>{error}</div>;
 
@@ -130,8 +146,27 @@ export default function Shop() {
                     <h1 className="shop-title">Магазин</h1>
                     <div className="shop-controls">
                         <span className="product-count">Показано {products.length} товарів</span>
-                        <div className="sort-dropdown">
-                            Сортувати: <strong>За популярністю</strong> <ChevronDown size={16} />
+                        <div className="sort-dropdown" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#666' }}>Сортувати:</span>
+                            <select
+                                value={sort}
+                                onChange={(e) => handleFilterChange('sort', e.target.value)}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    fontWeight: 700,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                    padding: '5px'
+                                }}
+                            >
+                                <option value="popular">За популярністю</option>
+                                <option value="name_asc">По назві А-Я</option>
+                                <option value="name_desc">По назві Я-А</option>
+                                <option value="price_asc">Ціна: від дешевого</option>
+                                <option value="price_desc">Ціна: від найдорожчого</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -263,7 +298,7 @@ export default function Shop() {
 
                     <main className="shop-main">
                         <div className="product-grid">
-                            {products.map((product, index) => (
+                            {sortedProducts.map((product, index) => (
                                 <React.Fragment key={product._id || product.id}>
                                     <div className="product-card">
                                         <div className="product-image-container">

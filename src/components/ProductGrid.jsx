@@ -31,7 +31,7 @@ export default function ProductGrid() {
         ? products
         : products.filter(p => {
             if (activeTab === 'new') return p.badge === 'NEW';
-            if (activeTab === 'popular') return p.badge === 'HIT';
+            if (activeTab === 'top') return p.badge === 'TOP';
             if (activeTab === 'sale') return p.badge === 'SALE';
             return true;
         });
@@ -46,7 +46,7 @@ export default function ProductGrid() {
                     <div className="product-tabs">
                         <button className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>Всі</button>
                         <button className={`tab-btn ${activeTab === 'new' ? 'active' : ''}`} onClick={() => setActiveTab('new')}>Новинки</button>
-                        <button className={`tab-btn ${activeTab === 'popular' ? 'active' : ''}`} onClick={() => setActiveTab('popular')}>Хіти</button>
+                        <button className={`tab-btn ${activeTab === 'top' ? 'active' : ''}`} onClick={() => setActiveTab('top')}>ТОП</button>
                         <button className={`tab-btn ${activeTab === 'sale' ? 'active' : ''}`} onClick={() => setActiveTab('sale')}>Акції</button>
                     </div>
                 </div>
