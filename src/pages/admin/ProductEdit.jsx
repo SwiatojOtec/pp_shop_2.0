@@ -139,10 +139,18 @@ export default function ProductEdit() {
             const url = isNew ? `${API_URL}/api/products` : `${API_URL}/api/products/${id}`;
             const method = isNew ? 'POST' : 'PUT';
 
+            // Clean up data before sending
+            const dataToSend = {
+                ...formData,
+                price: formData.price === '' ? null : Number(formData.price),
+                oldPrice: (formData.oldPrice === '' || formData.badge !== 'SALE') ? null : Number(formData.oldPrice),
+                packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize)
+            };
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(dataToSend)
             });
 
             if (res.ok) {
