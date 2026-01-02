@@ -20,6 +20,12 @@ export default function ProductDetail() {
     const [m2Value, setM2Value] = useState('');
     const [activeTab, setActiveTab] = useState('desc');
 
+    // Window Sill Calculator State
+    const [sillWidth, setSillWidth] = useState('');
+    const [sillLength, setSillLength] = useState('');
+    const [calculatedSillPrice, setCalculatedSillPrice] = useState(0);
+    const [sillError, setSillError] = useState('');
+
     useEffect(() => {
         setLoading(true);
         fetch(`${API_URL}/api/products/${slug}`)
@@ -53,6 +59,78 @@ export default function ProductDetail() {
                 setLoading(false);
             });
     }, [slug]);
+
+    // Calculate Sill Price
+    useEffect(() => {
+        if (!product || !product.priceMatrix || product.priceMatrix.length === 0) return;
+
+        if (!sillWidth || !sillLength) {
+            setCalculatedSillPrice(0);
+            setSillError('');
+            return;
+        }
+
+        const width = Number(sillWidth);
+        const length = Number(sillLength);
+
+        if (width <= 0 || length <= 0) {
+            setSillError('Розміри повинні бути більші за 0');
+            return;
+        }
+
+        // Round up to nearest 50
+        const calcWidth = Math.ceil(width / 50) * 50;
+
+        // Find price for this width
+        // Sort matrix just in case, though we expect it sorted or we just find exact match
+        const match = product.priceMatrix.find(row => row.width === calcWidth);
+
+        if (!match) {
+            // Check if it's too big
+            const max = Math.max(...product.priceMatrix.map(r => r.width));
+            if (width > max) {
+                setSillError(`Максимальна ширина: ${max} мм`);
+                setCalculatedSillPrice(0);
+            } else {
+                // Should not happen if matrix is complete 100-600 step 50
+                setSillError('Нестандартний розмір, зверніться до менеджера');
+                setCalculatedSillPrice(0);
+            }
+        } else {
+            setSillError('');
+            // Price is per linear meter (1000mm)
+            // Total = (Price * Length) / 1000
+            const total = (match.price * length) / 1000;
+            setCalculatedSillPrice(Math.round(total));
+        }
+    }, [sillWidth, sillLength, product]);
+
+    const handleAddSillToCart = () => {
+        if (!product || !sillWidth || !sillLength || sillError) return;
+
+        const width = Number(sillWidth);
+        const length = Number(sillLength);
+        const calcWidth = Math.ceil(width / 50) * 50;
+
+        const customItem = {
+            ...product,
+            id: `${product.id}_${width}_${length}`,
+            originalId: product.id,
+            name: `${product.name} (${width}мм x ${length}мм)`,
+            price: calculatedSillPrice,
+            unit: 'шт',
+            packSize: 1,
+            customAttributes: {
+                width: width,
+                calcWidth: calcWidth,
+                length: length
+            }
+        };
+
+        addToCart(customItem, 1);
+        alert('Товар додано в кошик!');
+        // Reset or keep? Let's keep for now so they can add another similar one
+    };
 
     if (loading) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Завантаження...</div>;
     if (error) return <div className="container" style={{ padding: '100px 0', textAlign: 'center', color: 'red' }}>{error}</div>;
@@ -162,58 +240,112 @@ export default function ProductDetail() {
                             </div>
                         )}
 
-                        {product.unit === 'м²' && product.packSize > 0 && (
-                            <div className="pack-calculator" style={{ background: '#f9f9f9', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' }}>
-                                <h4 style={{ fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>Калькулятор упаковок:</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        {/* Window Sill Calculator */}
+                        {product.priceMatrix && product.priceMatrix.length > 0 ? (
+                            <div className="sill-calculator" style={{ background: '#f9f9f9', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' }}>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>Калькулятор підвіконня:</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
                                     <div className="calc-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>Площа (м²)</label>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>Ширина (мм)</label>
                                         <input
                                             type="number"
-                                            value={m2Value}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setM2Value(val);
-                                                const packs = Math.ceil(parseFloat(val) / product.packSize);
-                                                if (!isNaN(packs) && packs > 0) setQuantity(packs);
-                                            }}
+                                            value={sillWidth}
+                                            onChange={(e) => setSillWidth(Number(e.target.value))}
+                                            placeholder="Напр: 120"
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                        />
+                                        {sillWidth > 0 && (
+                                            <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '5px' }}>
+                                                Розрахункова ширина: <strong>{Math.ceil(sillWidth / 50) * 50} мм</strong>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="calc-group">
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>Довжина (мм)</label>
+                                        <input
+                                            type="number"
+                                            value={sillLength}
+                                            onChange={(e) => setSillLength(Number(e.target.value))}
+                                            placeholder="Напр: 1500"
                                             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
                                         />
                                     </div>
-                                    <div className="calc-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>К-сть упаковок</label>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '5px 10px', borderRadius: '8px', border: '1px solid #ddd' }}>
-                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Minus size={14} /></button>
-                                            <span style={{ flex: 1, textAlign: 'center', fontWeight: 700 }}>{quantity}</span>
-                                            <button onClick={() => setQuantity(quantity + 1)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
-                                        </div>
-                                    </div>
                                 </div>
-                                <div style={{ marginTop: '15px', fontSize: '0.85rem', color: '#444', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>Разом площа: <strong>{(quantity * product.packSize).toFixed(2)} м²</strong></span>
-                                    <span>В упаковці: <strong>{product.packSize} м²</strong></span>
-                                </div>
+
+                                {sillError && <div style={{ color: 'red', fontSize: '0.8rem', marginBottom: '10px' }}>{sillError}</div>}
+
                                 <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #ddd', textAlign: 'right' }}>
                                     <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                                        Сума: {(quantity * product.packSize * product.price).toLocaleString()} ₴
+                                        Сума: {calculatedSillPrice.toLocaleString()} ₴
                                     </span>
                                 </div>
-                            </div>
-                        )}
 
-                        <div className="purchase-section">
-                            {product.unit !== 'м²' && (
-                                <div className="quantity-control">
-                                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={18} /></button>
-                                    <input type="number" value={quantity} readOnly />
-                                    <button onClick={() => setQuantity(quantity + 1)}><Plus size={18} /></button>
+                                <button
+                                    className="btn btn-primary buy-btn"
+                                    onClick={handleAddSillToCart}
+                                    disabled={!sillWidth || !sillLength || !!sillError}
+                                    style={{ width: '100%', marginTop: '15px' }}
+                                >
+                                    <ShoppingCart size={20} />
+                                    Додати в кошик
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                {product.unit === 'м²' && product.packSize > 0 && (
+                                    <div className="pack-calculator" style={{ background: '#f9f9f9', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' }}>
+                                        <h4 style={{ fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>Калькулятор упаковок:</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                            <div className="calc-group">
+                                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>Площа (м²)</label>
+                                                <input
+                                                    type="number"
+                                                    value={m2Value}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setM2Value(val);
+                                                        const packs = Math.ceil(parseFloat(val) / product.packSize);
+                                                        if (!isNaN(packs) && packs > 0) setQuantity(packs);
+                                                    }}
+                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                                />
+                                            </div>
+                                            <div className="calc-group">
+                                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>К-сть упаковок</label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '5px 10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+                                                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Minus size={14} /></button>
+                                                    <span style={{ flex: 1, textAlign: 'center', fontWeight: 700 }}>{quantity}</span>
+                                                    <button onClick={() => setQuantity(quantity + 1)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ marginTop: '15px', fontSize: '0.85rem', color: '#444', display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Разом площа: <strong>{(quantity * product.packSize).toFixed(2)} м²</strong></span>
+                                            <span>В упаковці: <strong>{product.packSize} м²</strong></span>
+                                        </div>
+                                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #ddd', textAlign: 'right' }}>
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                                                Сума: {(quantity * product.packSize * product.price).toLocaleString()} ₴
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="purchase-section">
+                                    {product.unit !== 'м²' && (
+                                        <div className="quantity-control">
+                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={18} /></button>
+                                            <input type="number" value={quantity} readOnly />
+                                            <button onClick={() => setQuantity(quantity + 1)}><Plus size={18} /></button>
+                                        </div>
+                                    )}
+                                    <button className="btn btn-primary buy-btn" onClick={() => addToCart(product, quantity)} style={{ flex: 1 }}>
+                                        <ShoppingCart size={20} />
+                                        Додати в кошик
+                                    </button>
                                 </div>
-                            )}
-                            <button className="btn btn-primary buy-btn" onClick={() => addToCart(product, quantity)} style={{ flex: 1 }}>
-                                <ShoppingCart size={20} />
-                                Додати в кошик
-                            </button>
-                        </div>
+                            </>
+                        )}
 
                         <div className="trust-badges">
                             <div className="badge-item">

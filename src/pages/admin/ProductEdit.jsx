@@ -29,7 +29,9 @@ export default function ProductEdit() {
         packSize: 1.0,
         unit: 'м²',
         badge: '',
-        specs: {}
+        badge: '',
+        specs: {},
+        priceMatrix: []
     });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
@@ -93,7 +95,9 @@ export default function ProductEdit() {
                     price: data.price || '',
                     oldPrice: data.oldPrice || '',
                     images: data.images || [],
-                    specs: data.specs || {}
+                    images: data.images || [],
+                    specs: data.specs || {},
+                    priceMatrix: data.priceMatrix || []
                 });
             }
         } catch (err) {
@@ -206,6 +210,34 @@ export default function ProductEdit() {
         });
     };
 
+    // Price Matrix Helpers
+    const addPriceRow = () => {
+        setFormData(prev => ({
+            ...prev,
+            priceMatrix: [...prev.priceMatrix, { width: '', price: '' }]
+        }));
+    };
+
+    const removePriceRow = (index) => {
+        const newMatrix = [...formData.priceMatrix];
+        newMatrix.splice(index, 1);
+        setFormData(prev => ({ ...prev, priceMatrix: newMatrix }));
+    };
+
+    const updatePriceRow = (index, field, value) => {
+        const newMatrix = [...formData.priceMatrix];
+        newMatrix[index] = { ...newMatrix[index], [field]: Number(value) };
+        setFormData(prev => ({ ...prev, priceMatrix: newMatrix }));
+    };
+
+    const generateStandardSizes = () => {
+        const sizes = [];
+        for (let w = 100; w <= 600; w += 50) {
+            sizes.push({ width: w, price: 0 });
+        }
+        setFormData(prev => ({ ...prev, priceMatrix: sizes }));
+    };
+
     if (loading) return <div className="admin-content">Завантаження...</div>;
 
     return (
@@ -288,6 +320,53 @@ export default function ProductEdit() {
                                 <Plus size={20} />
                             </button>
                         </div>
+                    </div>
+
+                    <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Матриця цін (Підвіконня)</h2>
+                            <button type="button" onClick={generateStandardSizes} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 10px' }}>
+                                Генерувати стандартні (100-600)
+                            </button>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                            Додайте ширину (глибину) та ціну за погонний метр для цієї ширини.
+                            Клієнт вводить свою ширину, а система округлює до найближчого більшого значення.
+                        </p>
+
+                        <div className="price-matrix-list">
+                            {formData.priceMatrix.map((row, index) => (
+                                <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '10px' }}>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: '0.7rem' }}>Ширина (мм)</label>
+                                        <input
+                                            type="number"
+                                            value={row.width}
+                                            onChange={e => updatePriceRow(index, 'width', e.target.value)}
+                                            placeholder="150"
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label style={{ fontSize: '0.7rem' }}>Ціна (₴)</label>
+                                        <input
+                                            type="number"
+                                            value={row.price}
+                                            onChange={e => updatePriceRow(index, 'price', e.target.value)}
+                                            placeholder="250"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                        <button type="button" onClick={() => removePriceRow(index)} className="remove-btn" style={{ color: 'red', border: 'none', background: '#fee', padding: '10px', borderRadius: '8px', cursor: 'pointer' }}>
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button type="button" onClick={addPriceRow} className="btn btn-secondary" style={{ width: '100%', marginTop: '10px', display: 'flex', justifyContent: 'center', gap: '5px' }}>
+                            <Plus size={16} /> Додати розмір
+                        </button>
                     </div>
 
                     <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
