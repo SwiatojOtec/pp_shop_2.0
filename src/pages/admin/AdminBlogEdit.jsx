@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save, Bold, Italic, List, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
+import { transliterate } from '../../utils/transliterate';
 import './Admin.css';
 
 export default function AdminBlogEdit() {
@@ -46,12 +47,28 @@ export default function AdminBlogEdit() {
 
         // Auto-generate slug from title if slug is empty
         if (name === 'title' && isNew && !formData.slug) {
-            const slug = value.toLowerCase()
-                .replace(/[^a-z0-9а-яіїєґ\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-');
+            const slug = transliterate(value);
             setFormData(prev => ({ ...prev, slug }));
         }
+    };
+
+    const insertTag = (openTag, closeTag) => {
+        const textarea = document.getElementById('content-editor');
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = formData.content;
+        const before = text.substring(0, start);
+        const selection = text.substring(start, end);
+        const after = text.substring(end);
+
+        const newContent = before + openTag + selection + closeTag + after;
+        setFormData(prev => ({ ...prev, content: newContent }));
+
+        // Restore focus and cursor position
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start + openTag.length, end + openTag.length);
+        }, 0);
     };
 
     const handleSubmit = async (e) => {
@@ -180,17 +197,22 @@ export default function AdminBlogEdit() {
 
                         <div className="form-group">
                             <label>Повний текст статті</label>
+                            <div className="editor-toolbar" style={{ display: 'flex', gap: '5px', marginBottom: '5px', padding: '5px', background: '#f5f5f5', borderRadius: '8px 8px 0 0', border: '1px solid #ddd', borderBottom: 'none' }}>
+                                <button type="button" onClick={() => insertTag('<b>', '</b>')} title="Жирний" style={{ padding: '5px', cursor: 'pointer', border: 'none', background: 'none' }}><Bold size={18} /></button>
+                                <button type="button" onClick={() => insertTag('<i>', '</i>')} title="Курсив" style={{ padding: '5px', cursor: 'pointer', border: 'none', background: 'none' }}><Italic size={18} /></button>
+                                <button type="button" onClick={() => insertTag('<ul>\n  <li>', '</li>\n</ul>')} title="Список" style={{ padding: '5px', cursor: 'pointer', border: 'none', background: 'none' }}><List size={18} /></button>
+                                <button type="button" onClick={() => insertTag('<a href="">', '</a>')} title="Посилання" style={{ padding: '5px', cursor: 'pointer', border: 'none', background: 'none' }}><LinkIcon size={18} /></button>
+                                <button type="button" onClick={() => insertTag('<img src="" alt="">', '')} title="Зображення" style={{ padding: '5px', cursor: 'pointer', border: 'none', background: 'none' }}><ImageIcon size={18} /></button>
+                            </div>
                             <textarea
+                                id="content-editor"
                                 name="content"
                                 value={formData.content}
                                 onChange={handleChange}
                                 rows={15}
                                 required
-                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit' }}
+                                style={{ width: '100%', padding: '10px', borderRadius: '0 0 8px 8px', border: '1px solid #ddd', fontFamily: 'monospace' }}
                             />
-                            <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px' }}>
-                                Можна використовувати прості HTML теги, наприклад &lt;p&gt;, &lt;b&gt;, &lt;ul&gt;
-                            </p>
                         </div>
                     </div>
                 </div>
