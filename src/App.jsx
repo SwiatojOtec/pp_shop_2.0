@@ -9,6 +9,7 @@ import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import Contacts from './pages/Contacts';
 import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import InfoPage from './pages/InfoPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -40,6 +41,7 @@ function AppContent() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/policy" element={<InfoPage type="policy" />} />
           <Route path="/contract" element={<InfoPage type="contract" />} />
           <Route path="/delivery" element={<InfoPage type="delivery" />} />

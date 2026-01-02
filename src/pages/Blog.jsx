@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { API_URL } from '../apiConfig';
 import './Blog.css';
 
@@ -43,7 +44,7 @@ export default function Blog() {
                                     <span className="blog-card-date">{new Date(post.date).toLocaleDateString()}</span>
                                     <h2 className="blog-card-title">{post.title}</h2>
                                     <p className="blog-card-excerpt">{post.excerpt}</p>
-                                    <button className="blog-card-more">Читати далі</button>
+                                    <Link to={`/blog/${post.slug}`} className="blog-card-more">Читати далі</Link>
                                 </div>
                             </article>
                         ))}
