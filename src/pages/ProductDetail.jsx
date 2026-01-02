@@ -62,7 +62,7 @@ export default function ProductDetail() {
         <div className="product-page">
             <div className="container">
                 <nav className="breadcrumbs">
-                    <Link to="/">Головна</Link> / <Link to="/shop">Магазин</Link> / <span>{product.name}</span>
+                    <Link to="/">Головна</Link> / <Link to="/magazyn">Магазин</Link> / <span>{product.name}</span>
                 </nav>
 
                 <div className="product-main-grid">
@@ -150,7 +150,7 @@ export default function ProductDetail() {
                                     {variants.map(v => (
                                         <Link
                                             key={v.id}
-                                            to={`/shop/${getCategorySlug(v.category)}/${v.slug}`}
+                                            to={`/magazyn/${getCategorySlug(v.category)}/${v.slug}`}
                                             style={{ width: '45px', height: '45px', borderRadius: '50%', border: '1px solid #ddd', padding: '2px', transition: 'all 0.2s' }}
                                             onMouseOver={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
                                             onMouseOut={e => e.currentTarget.style.borderColor = '#ddd'}

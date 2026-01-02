@@ -12,10 +12,10 @@ export default function Footer() {
                 <div className="footer-col">
                     <h4 className="footer-title">Каталог</h4>
                     <ul>
-                        <li><a href="#">Паркетна дошка</a></li>
-                        <li><a href="#">Ламінат</a></li>
-                        <li><a href="#">Вініл</a></li>
-                        <li><a href="#">Аксесуари</a></li>
+                        <li><Link to="/magazyn/parketna_doshka">Паркетна дошка</Link></li>
+                        <li><Link to="/magazyn/laminat">Ламінат</Link></li>
+                        <li><Link to="/magazyn/vinilova_pidloha">Вініл</Link></li>
+                        <li><Link to="/magazyn">Всі товари</Link></li>
                     </ul>
                 </div>
                 <div className="footer-col">

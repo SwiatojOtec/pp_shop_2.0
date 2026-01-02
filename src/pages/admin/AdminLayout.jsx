@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText } from 'lucide-react';
 import './Admin.css';
 
 export default function AdminLayout({ children }) {
@@ -10,6 +10,7 @@ export default function AdminLayout({ children }) {
         { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Дашборд' },
         { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
+        { path: '/admin/blog', icon: <FileText size={20} />, label: 'Блог' },
         { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
     ];
 

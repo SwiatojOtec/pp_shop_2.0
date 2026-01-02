@@ -15,7 +15,7 @@ export default function Header({ onCartClick }) {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/magazyn?search=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -35,7 +35,7 @@ export default function Header({ onCartClick }) {
             </span>
           </div>
           <div className="top-bar-right">
-            <Link to="#">Блог</Link>
+            <Link to="/blog">Блог</Link>
             <Link to="#">Акції</Link>
             <Link to="/contacts">Контакти</Link>
             <span className="lang-switch">UA | EN</span>
@@ -81,14 +81,14 @@ export default function Header({ onCartClick }) {
         <div className="container">
           <ul className="nav-list">
             <li><Link to="/" className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>Головна</Link></li>
-            <li><Link to="/shop" className={`nav-item ${location.pathname === '/shop' ? 'active' : ''}`}>Магазин</Link></li>
-            <li className="hide-mobile"><Link to="/shop/parketna_doshka" className="nav-item">Паркет</Link></li>
-            <li className="hide-mobile"><Link to="/shop/laminat" className="nav-item">Ламінат</Link></li>
-            <li className="hide-mobile"><Link to="/shop/vinilova_pidloha" className="nav-item">Вініл</Link></li>
-            <li className="hide-mobile"><Link to="/shop/pidvikonnya" className="nav-item">Підвіконня</Link></li>
-            <li className="hide-mobile"><Link to="/shop/stinovi_paneli" className="nav-item">Стінові панелі</Link></li>
-            <li className="hide-mobile"><Link to="/shop/plintusa" className="nav-item">Плінтуса</Link></li>
-            <li><Link to="/shop?badge=SALE" className="nav-item sale">Розпродаж %</Link></li>
+            <li><Link to="/magazyn" className={`nav-item ${location.pathname === '/magazyn' ? 'active' : ''}`}>Магазин</Link></li>
+            <li className="hide-mobile"><Link to="/magazyn/parketna_doshka" className="nav-item">Паркет</Link></li>
+            <li className="hide-mobile"><Link to="/magazyn/laminat" className="nav-item">Ламінат</Link></li>
+            <li className="hide-mobile"><Link to="/magazyn/vinilova_pidloha" className="nav-item">Вініл</Link></li>
+            <li className="hide-mobile"><Link to="/magazyn/pidvikonnya" className="nav-item">Підвіконня</Link></li>
+            <li className="hide-mobile"><Link to="/magazyn/stinovi_paneli" className="nav-item">Стінові панелі</Link></li>
+            <li className="hide-mobile"><Link to="/magazyn/plintusa" className="nav-item">Плінтуса</Link></li>
+            <li><Link to="/magazyn?badge=SALE" className="nav-item sale">Розпродаж %</Link></li>
           </ul>
         </div>
       </nav>

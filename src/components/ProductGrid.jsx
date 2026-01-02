@@ -64,7 +64,7 @@ export default function ProductGrid() {
                                                     product.badge === 'TOP' ? 'Топ' : product.badge}
                                     </span>
                                 )}
-                                <Link to={`/shop/${getCategorySlug(product.category)}/${product.slug}`}>
+                                <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
                                     <img src={product.image} alt={product.name} className="product-image" />
                                 </Link>
                                 <button
@@ -92,7 +92,7 @@ export default function ProductGrid() {
                                 <button className="add-to-cart-btn" onClick={() => addToCart(product)}><Plus size={24} /></button>
                             </div>
                             <div className="product-info">
-                                <Link to={`/product/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <h3 className="product-name">{product.name}</h3>
                                 </Link>
                                 <div className="price-block">
@@ -107,7 +107,7 @@ export default function ProductGrid() {
 
                 {products.length > 8 && (
                     <div style={{ textAlign: 'center', marginTop: '40px' }}>
-                        <Link to="/shop" className="btn btn-primary">Дивитись всі товари</Link>
+                        <Link to="/magazyn" className="btn btn-primary">Дивитись всі товари</Link>
                     </div>
                 )}
             </div>

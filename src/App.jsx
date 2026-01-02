@@ -8,10 +8,13 @@ import Favorites from './pages/Favorites';
 import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import Contacts from './pages/Contacts';
+import Blog from './pages/Blog';
 import InfoPage from './pages/InfoPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import ProductEdit from './pages/admin/ProductEdit';
+import AdminBlog from './pages/admin/AdminBlog';
+import AdminBlogEdit from './pages/admin/AdminBlogEdit';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -30,12 +33,13 @@ function AppContent() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/shop/:categorySlug" element={<Shop />} />
-          <Route path="/shop/:categorySlug/:slug" element={<ProductDetail />} />
+          <Route path="/magazyn" element={<Shop />} />
+          <Route path="/magazyn/:categorySlug" element={<Shop />} />
+          <Route path="/magazyn/:categorySlug/:slug" element={<ProductDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/contacts" element={<Contacts />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/policy" element={<InfoPage type="policy" />} />
           <Route path="/contract" element={<InfoPage type="contract" />} />
           <Route path="/delivery" element={<InfoPage type="delivery" />} />
@@ -48,6 +52,8 @@ function AppContent() {
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="products/:id" element={<ProductEdit />} />
                 <Route path="orders" element={<AdminOrders />} />
+                <Route path="blog" element={<AdminBlog />} />
+                <Route path="blog/:id" element={<AdminBlogEdit />} />
                 <Route path="settings" element={<AdminCategories />} />
               </Routes>
             </AdminLayout>

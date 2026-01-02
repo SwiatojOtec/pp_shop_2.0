@@ -43,7 +43,7 @@ export default function Checkout() {
         return (
             <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>
                 <h2>Ваш кошик порожній</h2>
-                <Link to="/shop" className="btn btn-primary" style={{ marginTop: '20px' }}>До магазину</Link>
+                <Link to="/magazyn" className="btn btn-primary" style={{ marginTop: '20px' }}>До магазину</Link>
             </div>
         );
     }
@@ -87,7 +87,7 @@ export default function Checkout() {
     return (
         <div className="checkout-page">
             <div className="container">
-                <Link to="/shop" className="back-link">
+                <Link to="/magazyn" className="back-link">
                     <ChevronLeft size={20} /> Повернутися до покупок
                 </Link>
 

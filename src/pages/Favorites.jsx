@@ -35,7 +35,7 @@ export default function Favorites() {
                         <Heart size={120} className="empty-icon" />
                         <h2>Ваш список обраного порожній</h2>
                         <p>Додайте товари, які вам сподобалися, натиснувши на іконку серця</p>
-                        <Link to="/shop" className="btn">Перейти до магазину</Link>
+                        <Link to="/magazyn" className="btn">Перейти до магазину</Link>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@ export default function Favorites() {
                     {favorites.map(product => (
                         <div key={product._id || product.id} className="favorite-item">
                             <div className="favorite-image-container">
-                                <Link to={`/shop/${getCategorySlug(product.category)}/${product.slug}`}>
+                                <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
                                     <img
                                         src={product.image}
                                         alt={product.name}
@@ -77,7 +77,7 @@ export default function Favorites() {
                                 </button>
                             </div>
                             <div className="favorite-info">
-                                <Link to={`/shop/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <h3 className="favorite-name">{product.name}</h3>
                                 </Link>
                                 <div className="favorite-price">{product.price} ₴ / м²</div>
@@ -90,7 +90,7 @@ export default function Favorites() {
                                         В кошик
                                     </button>
                                     <Link
-                                        to={`/shop/${product.slug}`}
+                                        to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}
                                         className="view-product-btn"
                                         title="Переглянути товар"
                                     >

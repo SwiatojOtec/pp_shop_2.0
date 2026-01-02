@@ -121,7 +121,7 @@ export default function Shop() {
             newParams.delete('category'); // Remove from query if it was there
 
             const queryString = newParams.toString();
-            const path = newSlug ? `/shop/${newSlug}` : '/shop';
+            const path = newSlug ? `/magazyn/${newSlug}` : '/magazyn';
             navigate(queryString ? `${path}?${queryString}` : path);
             return;
         }
@@ -169,7 +169,7 @@ export default function Shop() {
         <div className="shop-page">
             <div className="container">
                 <nav className="breadcrumbs">
-                    <Link to="/">Головна</Link> / <Link to="/shop">Магазин</Link>
+                    <Link to="/">Головна</Link> / <Link to="/magazyn">Магазин</Link>
                     {category && <> / <span>{category}</span></>}
                 </nav>
 
@@ -219,7 +219,7 @@ export default function Shop() {
                                 {badge === 'SALE' ? 'Розпродаж' : badge} <X size={14} onClick={() => handleFilterChange('badge', '')} />
                             </span>
                         )}
-                        <button className="clear-all" onClick={() => navigate('/shop')}>Очистити все</button>
+                        <button className="clear-all" onClick={() => navigate('/magazyn')}>Очистити все</button>
                     </div>
                 )}
 
@@ -341,7 +341,7 @@ export default function Shop() {
                                                                 product.badge === 'TOP' ? 'Топ' : product.badge}
                                                 </span>
                                             )}
-                                            <Link to={`/shop/${getCategorySlug(product.category)}/${product.slug}`}>
+                                            <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
                                                 <img src={product.image} alt={product.name} className="product-image" />
                                             </Link>
                                             <button
@@ -367,7 +367,7 @@ export default function Shop() {
                                                     <span>{product.rating}.0 ({product.reviews})</span>
                                                 </div>
                                             </div>
-                                            <Link to={`/product/${product.slug}`}>
+                                            <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
                                                 <h3 className="product-name">{product.name}</h3>
                                             </Link>
                                             <div className="price-block">

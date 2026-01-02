@@ -12,28 +12,28 @@ const slides = [
         titleMain: 'ПАРКЕТ',
         subtitle: "Ідеальні лінії для вашого інтер'єру. Якість, що відчувається в кожному кроці.",
         image: heroFlooring,
-        link: '/shop/parketna_doshka'
+        link: '/magazyn/parketna_doshka'
     },
     {
         titleOutline: 'ЕЛЕГАНТНІ',
         titleMain: 'ПОДОКОННИКИ',
         subtitle: 'Стильне завершення вашого вікна. Натуральні матеріали та бездоганна обробка.',
         image: heroWindowsills,
-        link: '/shop/pidvikonnya'
+        link: '/magazyn/pidvikonnya'
     },
     {
         titleOutline: 'НАДІЙНИЙ',
         titleMain: 'ВІНІЛ',
         subtitle: 'Сучасне решение для будь-яких приміщень. 100% водостійкість та довговічність.',
         image: heroVinyl,
-        link: '/shop/vinilova_pidloha'
+        link: '/magazyn/vinilova_pidloha'
     },
     {
         titleOutline: 'ЯКІСНИЙ',
         titleMain: 'ЛАМІНАТ',
         subtitle: 'Широкий вибір декорів та текстур. Створіть затишок у вашому домі за лічені години.',
         image: heroLaminate,
-        link: '/shop/laminat'
+        link: '/magazyn/laminat'
     }
 ];
 
