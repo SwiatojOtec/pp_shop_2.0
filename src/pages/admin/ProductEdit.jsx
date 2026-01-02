@@ -322,52 +322,56 @@ export default function ProductEdit() {
                         </div>
                     </div>
 
-                    <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Матриця цін (Підвіконня)</h2>
-                            <button type="button" onClick={generateStandardSizes} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 10px' }}>
-                                Генерувати стандартні (100-600)
+                    {formData.category === 'Підвіконня' && (
+                        <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Матриця цін (Підвіконня)</h2>
+                                <button type="button" onClick={generateStandardSizes} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 10px' }}>
+                                    Генерувати стандартні (100-600)
+                                </button>
+                            </div>
+                            <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
+                                Додайте ширину (глибину) та ціну за погонний метр для цієї ширини.
+                                Клієнт вводить свою ширину, а система округлює до найближчого більшого значення.
+                            </p>
+
+                            <div className="price-matrix-list">
+                                {formData.priceMatrix.map((row, index) => (
+                                    <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '10px' }}>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <label style={{ fontSize: '0.7rem' }}>Ширина (мм)</label>
+                                            <input
+                                                type="number"
+                                                value={row.width}
+                                                onChange={e => updatePriceRow(index, 'width', e.target.value)}
+                                                placeholder="150"
+                                                style={{ border: '1px solid #ddd', padding: '8px', borderRadius: '6px', width: '100%', background: '#fff', color: '#333' }}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <label style={{ fontSize: '0.7rem' }}>Ціна (₴)</label>
+                                            <input
+                                                type="number"
+                                                value={row.price}
+                                                onChange={e => updatePriceRow(index, 'price', e.target.value)}
+                                                placeholder="250"
+                                                style={{ border: '1px solid #ddd', padding: '8px', borderRadius: '6px', width: '100%', background: '#fff', color: '#333' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                            <button type="button" onClick={() => removePriceRow(index)} className="remove-btn" style={{ color: 'red', border: 'none', background: '#fee', padding: '10px', borderRadius: '8px', cursor: 'pointer' }}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button type="button" onClick={addPriceRow} className="btn btn-secondary" style={{ width: '100%', marginTop: '10px', display: 'flex', justifyContent: 'center', gap: '5px' }}>
+                                <Plus size={16} /> Додати розмір
                             </button>
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
-                            Додайте ширину (глибину) та ціну за погонний метр для цієї ширини.
-                            Клієнт вводить свою ширину, а система округлює до найближчого більшого значення.
-                        </p>
-
-                        <div className="price-matrix-list">
-                            {formData.priceMatrix.map((row, index) => (
-                                <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '10px' }}>
-                                    <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ fontSize: '0.7rem' }}>Ширина (мм)</label>
-                                        <input
-                                            type="number"
-                                            value={row.width}
-                                            onChange={e => updatePriceRow(index, 'width', e.target.value)}
-                                            placeholder="150"
-                                        />
-                                    </div>
-                                    <div className="form-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ fontSize: '0.7rem' }}>Ціна (₴)</label>
-                                        <input
-                                            type="number"
-                                            value={row.price}
-                                            onChange={e => updatePriceRow(index, 'price', e.target.value)}
-                                            placeholder="250"
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                        <button type="button" onClick={() => removePriceRow(index)} className="remove-btn" style={{ color: 'red', border: 'none', background: '#fee', padding: '10px', borderRadius: '8px', cursor: 'pointer' }}>
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <button type="button" onClick={addPriceRow} className="btn btn-secondary" style={{ width: '100%', marginTop: '10px', display: 'flex', justifyContent: 'center', gap: '5px' }}>
-                            <Plus size={16} /> Додати розмір
-                        </button>
-                    </div>
+                    )}
 
                     <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
                         <h2 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800 }}>Галерея зображень</h2>
@@ -487,7 +491,14 @@ export default function ProductEdit() {
                                 <label>Категорія</label>
                                 <select
                                     value={formData.category}
-                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                    onChange={e => {
+                                        const newCategory = e.target.value;
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            category: newCategory,
+                                            unit: newCategory === 'Підвіконня' ? 'п.м.' : prev.unit
+                                        }));
+                                    }}
                                 >
                                     {categories.map(cat => (
                                         <option key={cat.id} value={cat.name}>{cat.name}</option>
@@ -512,6 +523,8 @@ export default function ProductEdit() {
                                 <select
                                     value={formData.unit}
                                     onChange={e => setFormData({ ...formData, unit: e.target.value })}
+                                    disabled={formData.category === 'Підвіконня'}
+                                    style={formData.category === 'Підвіконня' ? { background: '#f5f5f5', color: '#888' } : {}}
                                 >
                                     <option value="м²">м² (Квадратний метр)</option>
                                     <option value="шт">шт (Штука)</option>
@@ -519,17 +532,19 @@ export default function ProductEdit() {
                                     <option value="уп">уп (Упаковка)</option>
                                 </select>
                             </div>
-                            <div className="form-group" style={{ marginTop: '20px' }}>
-                                <label>Площа в упаковці ({formData.unit})</label>
-                                <input
-                                    type="number"
-                                    step="0.001"
-                                    value={formData.packSize}
-                                    onChange={e => setFormData({ ...formData, packSize: e.target.value })}
-                                    placeholder="Напр: 2.25"
-                                />
-                                <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Для розрахунку кратності пакунку.</p>
-                            </div>
+                            {formData.category !== 'Підвіконня' && (
+                                <div className="form-group" style={{ marginTop: '20px' }}>
+                                    <label>Площа в упаковці ({formData.unit})</label>
+                                    <input
+                                        type="number"
+                                        step="0.001"
+                                        value={formData.packSize}
+                                        onChange={e => setFormData({ ...formData, packSize: e.target.value })}
+                                        placeholder="Напр: 2.25"
+                                    />
+                                    <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Для розрахунку кратності пакунку.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
