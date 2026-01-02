@@ -121,7 +121,8 @@ export default function ProductEdit() {
                         price: template.price,
                         category: template.category,
                         desc: template.desc,
-                        specs: template.specs || {}
+                        specs: template.specs || {},
+                        priceMatrix: template.priceMatrix || []
                     }));
                     console.log('Данные подтянуты из коллекции:', groupId);
                 }
