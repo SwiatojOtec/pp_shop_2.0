@@ -184,6 +184,49 @@
     cursor: pointer;
 }
 
+/* Form Layout Helpers */
+.form-grid {
+    display: grid;
+    gap: 30px;
+}
+
+.form-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+}
+
+.form-section-title {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--admin-dark);
+    text-transform: uppercase;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #444;
+}
+
 /* Gallery Styles */
 .image-gallery-grid {
     display: grid;

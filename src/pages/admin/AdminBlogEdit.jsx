@@ -92,54 +92,58 @@ export default function AdminBlogEdit() {
                 </h1>
             </div>
 
-            <form onSubmit={handleSubmit} className="edit-form">
+            <form onSubmit={handleSubmit} className="edit-form admin-form">
                 <div className="form-grid">
                     <div className="form-section">
                         <h3 className="form-section-title">Основна інформація</h3>
 
-                        <div className="form-group">
-                            <label>Заголовок</label>
-                            <input
-                                type="text"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                required
-                            />
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Заголовок</label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Slug (URL адреса)</label>
+                                <input
+                                    type="text"
+                                    name="slug"
+                                    value={formData.slug}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
                         </div>
 
-                        <div className="form-group">
-                            <label>Slug (URL адреса)</label>
-                            <input
-                                type="text"
-                                name="slug"
-                                value={formData.slug}
-                                onChange={handleChange}
-                                required
-                            />
-                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Категорія</label>
+                                <input
+                                    type="text"
+                                    name="category"
+                                    value={formData.category}
+                                    onChange={handleChange}
+                                    placeholder="Наприклад: Поради, Тренди"
+                                    required
+                                />
+                            </div>
 
-                        <div className="form-group">
-                            <label>Категорія</label>
-                            <input
-                                type="text"
-                                name="category"
-                                value={formData.category}
-                                onChange={handleChange}
-                                placeholder="Наприклад: Поради, Тренди"
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Дата публікації</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleChange}
-                                required
-                            />
+                            <div className="form-group">
+                                <label>Дата публікації</label>
+                                <input
+                                    type="date"
+                                    name="date"
+                                    value={formData.date}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
                         </div>
 
                         <div className="form-group">
