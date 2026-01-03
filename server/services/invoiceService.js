@@ -119,17 +119,18 @@ const generateInvoice = async (order) => {
             doc.moveDown(1);
             doc.fontSize(9);
             const totalY = doc.y;
+            const totalAmount = Number(order.totalAmount) || 0;
             doc.text('Разом, грн:', 450, totalY, { width: 60, align: 'right' });
-            doc.text(order.totalAmount.toFixed(2), 515, totalY, { width: 50, align: 'right' });
+            doc.text(totalAmount.toFixed(2), 515, totalY, { width: 50, align: 'right' });
 
             doc.moveDown(0.5);
             if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
             doc.text('До сплати:', 450, doc.y, { width: 60, align: 'right' });
-            doc.text(order.totalAmount.toFixed(2), 515, doc.y, { width: 50, align: 'right' });
+            doc.text(totalAmount.toFixed(2), 515, doc.y, { width: 50, align: 'right' });
 
             doc.moveDown(2);
             if (fs.existsSync(fontPath)) doc.font(fontPath);
-            doc.text(`Всього найменувань ${order.items.length}, на суму ${order.totalAmount.toFixed(2)} грн.`);
+            doc.text(`Всього найменувань ${order.items.length}, на суму ${totalAmount.toFixed(2)} грн.`);
 
             // TODO: Add amount in words (Ukrainian) if needed
 
