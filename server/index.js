@@ -8,6 +8,8 @@ const currencyRoutes = require('./routes/currencyRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const brandRoutes = require('./routes/brandRoutes');
 const blogRoutes = require('./routes/blogRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+
 
 
 
@@ -47,6 +49,8 @@ app.use('/api/currencies', currencyRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/blog', blogRoutes);
+app.use('/api/contact', contactRoutes);
+
 
 
 

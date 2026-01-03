@@ -29,7 +29,6 @@ export default function ProductEdit() {
         packSize: 1.0,
         unit: 'м²',
         badge: '',
-        badge: '',
         specs: {},
         priceMatrix: []
     });
@@ -94,7 +93,6 @@ export default function ProductEdit() {
                     ...data,
                     price: data.price || '',
                     oldPrice: data.oldPrice || '',
-                    images: data.images || [],
                     images: data.images || [],
                     specs: data.specs || {},
                     priceMatrix: data.priceMatrix || []

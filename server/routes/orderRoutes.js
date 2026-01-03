@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 
+const { sendTelegramMessage } = require('../utils/telegram');
+
 // Create new order
 router.post('/', async (req, res) => {
     try {
@@ -21,6 +23,23 @@ router.post('/', async (req, res) => {
             items,
             totalAmount
         });
+
+        // Send Telegram Notification
+        const message = `
+📦 <b>Нове замовлення: ${orderNumber}</b>
+👤 Клієнт: ${customerName}
+📞 Телефон: ${customerPhone}
+📧 Email: ${customerEmail || 'не вказано'}
+🚚 Доставка: ${deliveryMethod}
+📍 Адреса: ${address || 'не вказано'}
+💳 Оплата: ${paymentMethod}
+💰 Сума: ${totalAmount} грн
+
+🛒 Товари:
+${items.map(item => `- ${item.name} x ${item.quantity} (${item.price} грн)`).join('\n')}
+        `;
+
+        await sendTelegramMessage(message);
 
         res.status(201).json(order);
     } catch (err) {

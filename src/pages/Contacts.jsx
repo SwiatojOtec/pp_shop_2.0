@@ -1,8 +1,51 @@
-import React from 'react';
-import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Phone, Mail, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { API_URL } from '../apiConfig';
 import './Contacts.css';
 
 export default function Contacts() {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        message: ''
+    });
+    const [status, setStatus] = useState({ type: '', message: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setStatus({ type: '', message: '' });
+
+        try {
+            const response = await fetch(`${API_URL}/api/contact`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setStatus({ type: 'success', message: 'Дякуємо! Ваше повідомлення надіслано.' });
+                setFormData({ name: '', email: '', message: '' });
+            } else {
+                setStatus({ type: 'error', message: data.message || 'Щось пішло не так. Спробуйте пізніше.' });
+            }
+        } catch (error) {
+            setStatus({ type: 'error', message: 'Помилка з\'єднання з сервером.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="contacts-page">
             <div className="container">
@@ -57,18 +100,51 @@ export default function Contacts() {
 
                     <div className="contact-form-container">
                         <h2 className="form-title">Напишіть нам</h2>
-                        <form className="contact-form">
+                        <form className="contact-form" onSubmit={handleSubmit}>
                             <div className="form-group">
-                                <input type="text" placeholder="Ваше ім'я" required />
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="Ваше ім'я"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    required
+                                />
                             </div>
                             <div className="form-group">
-                                <input type="email" placeholder="Ваш Email" required />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Ваш Email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    required
+                                />
                             </div>
                             <div className="form-group">
-                                <textarea placeholder="Ваше повідомлення" rows="5" required></textarea>
+                                <textarea
+                                    name="message"
+                                    placeholder="Ваше повідомлення"
+                                    rows="5"
+                                    value={formData.message}
+                                    onChange={handleChange}
+                                    required
+                                ></textarea>
                             </div>
-                            <button type="submit" className="btn btn-primary submit-btn">
-                                <Send size={20} /> Надіслати
+
+                            {status.message && (
+                                <div className={`form-status ${status.type}`}>
+                                    {status.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                                    {status.message}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                className="btn btn-primary submit-btn"
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? 'Надсилається...' : <><Send size={20} /> Надіслати</>}
                             </button>
                         </form>
                     </div>
