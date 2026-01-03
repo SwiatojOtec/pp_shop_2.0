@@ -227,36 +227,62 @@ if (token) {
                 state.discount = discount;
                 state.totalAmount = state.totalAmount * (1 - discount / 100);
                 state.step = 'awaiting_customer_name';
-                await bot.sendMessage(chatId, `✅ Знижка ${discount}% додана.\n👤 Тепер введіть <b>ПІБ</b> покупця:`, { parse_mode: 'HTML' });
+
+                const opts = { parse_mode: 'HTML' };
+                if (state.orderId) {
+                    opts.reply_markup = {
+                        inline_keyboard: [[{ text: `✅ Залишити: ${state.customerName}`, callback_data: 'keep_existing_name' }]]
+                    };
+                }
+                await bot.sendMessage(chatId, `✅ Знижка ${discount}% додана.\n👤 Тепер введіть <b>ПІБ</b> покупця:`, opts);
             } else if (state.step === 'awaiting_customer_name') {
                 state.customerName = msg.text;
                 state.step = 'awaiting_customer_phone';
-                await bot.sendMessage(chatId, `👤 Клієнт: <b>${state.customerName}</b>\n📱 Тепер введіть <b>номер телефону</b> клієнта:`, { parse_mode: 'HTML' });
+
+                const opts = { parse_mode: 'HTML' };
+                if (state.orderId) {
+                    opts.reply_markup = {
+                        inline_keyboard: [[{ text: `✅ Залишити: ${state.customerPhone}`, callback_data: 'keep_existing_phone' }]]
+                    };
+                }
+                await bot.sendMessage(chatId, `👤 Клієнт: <b>${state.customerName}</b>\n📱 Тепер введіть <b>номер телефону</b> клієнта:`, opts);
             } else if (state.step === 'awaiting_customer_phone') {
                 state.customerPhone = msg.text;
                 await bot.sendMessage(chatId, '⏳ Генерую замовлення та рахунок...');
 
                 try {
-                    // 1. Generate order number
-                    const now = new Date();
-                    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    const countToday = await Order.count({
-                        where: { createdAt: { [Op.gte]: startOfDay } }
-                    });
-                    const orderNumber = `${countToday + 1}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+                    let order;
+                    if (state.orderId) {
+                        order = await Order.findByPk(state.orderId);
+                        await order.update({
+                            customerName: state.customerName,
+                            customerPhone: state.customerPhone,
+                            totalAmount: state.totalAmount,
+                            discount: state.discount || 0,
+                            items: state.items
+                        });
+                    } else {
+                        // 1. Generate order number
+                        const now = new Date();
+                        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const countToday = await Order.count({
+                            where: { createdAt: { [Op.gte]: startOfDay } }
+                        });
+                        const orderNumber = `${countToday + 1}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-                    // 2. Create Order in DB
-                    const order = await Order.create({
-                        orderNumber,
-                        customerName: state.customerName,
-                        customerPhone: state.customerPhone,
-                        address: 'Самовивіз (Магазин)',
-                        deliveryMethod: 'pickup',
-                        paymentMethod: 'invoice',
-                        totalAmount: state.totalAmount,
-                        discount: state.discount || 0,
-                        items: state.items
-                    });
+                        // 2. Create Order in DB
+                        order = await Order.create({
+                            orderNumber,
+                            customerName: state.customerName,
+                            customerPhone: state.customerPhone,
+                            address: 'Самовивіз (Магазин)',
+                            deliveryMethod: 'pickup',
+                            paymentMethod: 'invoice',
+                            totalAmount: state.totalAmount,
+                            discount: state.discount || 0,
+                            items: state.items
+                        });
+                    }
 
                     // 3. Generate and send PDF
                     const pdfBuffer = await generateInvoice(order);
@@ -309,6 +335,42 @@ if (token) {
             } catch (error) {
                 console.error('Error in callback_query:', error);
                 bot.sendMessage(chatId, 'Сталася помилка при генерації рахунку.');
+            }
+        }
+
+        if (data.startsWith('edit_order_')) {
+            const orderId = data.replace('edit_order_', '');
+            try {
+                const order = await Order.findByPk(orderId);
+                if (!order) return bot.sendMessage(chatId, 'Помилка: Замовлення не знайдено.');
+
+                userState[chatId] = {
+                    step: 'awaiting_next_action',
+                    items: order.items,
+                    totalAmount: parseFloat(order.totalAmount),
+                    customerName: order.customerName,
+                    customerPhone: order.customerPhone,
+                    orderId: order.id,
+                    orderNumber: order.orderNumber
+                };
+
+                await bot.answerCallbackQuery(callbackQuery.id);
+
+                let itemsList = order.items.map((it, i) => `${i + 1}. ${it.name} x ${it.quantity}`).join('\n');
+
+                await bot.sendMessage(chatId, `✏️ <b>Редагування замовлення №${order.orderNumber}</b>\n\nПоточні товари:\n${itemsList}\n\nЩо бажаєте зробити?`, {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '➕ Додати ще товар', callback_data: 'add_more' }],
+                            [{ text: '📄 Оформити рахунок', callback_data: 'invoice_confirm' }],
+                            [{ text: '❌ Скасувати', callback_data: 'invoice_cancel' }]
+                        ]
+                    }
+                });
+            } catch (error) {
+                console.error('Error in edit_order:', error);
+                bot.sendMessage(chatId, 'Сталася помилка при завантаженні замовлення.');
             }
         }
 
@@ -376,7 +438,71 @@ if (token) {
                 state.discount = 0;
                 state.step = 'awaiting_customer_name';
                 await bot.answerCallbackQuery(callbackQuery.id);
-                await bot.sendMessage(chatId, '👤 Введіть <b>ПІБ</b> покупця:', { parse_mode: 'HTML' });
+
+                const opts = { parse_mode: 'HTML' };
+                if (state.orderId) {
+                    opts.reply_markup = {
+                        inline_keyboard: [[{ text: `✅ Залишити: ${state.customerName}`, callback_data: 'keep_existing_name' }]]
+                    };
+                }
+                await bot.sendMessage(chatId, '👤 Введіть <b>ПІБ</b> покупця:', opts);
+            }
+        }
+
+        if (data === 'keep_existing_name') {
+            const state = userState[chatId];
+            if (state && state.step === 'awaiting_customer_name') {
+                state.step = 'awaiting_customer_phone';
+                await bot.answerCallbackQuery(callbackQuery.id);
+
+                const opts = { parse_mode: 'HTML' };
+                if (state.orderId) {
+                    opts.reply_markup = {
+                        inline_keyboard: [[{ text: `✅ Залишити: ${state.customerPhone}`, callback_data: 'keep_existing_phone' }]]
+                    };
+                }
+                await bot.sendMessage(chatId, `👤 Клієнт: <b>${state.customerName}</b>\n📱 Тепер введіть <b>номер телефону</b> клієнта:`, opts);
+            }
+        }
+
+        if (data === 'keep_existing_phone') {
+            const state = userState[chatId];
+            if (state && state.step === 'awaiting_customer_phone') {
+                await bot.answerCallbackQuery(callbackQuery.id);
+                // Trigger the finalization logic by sending a dummy message or calling the handler
+                // For simplicity, let's just send a message and the user can press it or we can call the logic.
+                // Better: simulate a message receive or just run the logic.
+                // Since we are in callback_query, we can't easily "jump" to the message handler logic without refactoring.
+                // Let's just send a message "Confirming..." and then run the logic.
+
+                await bot.sendMessage(chatId, '⏳ Оновлюю замовлення та генерую рахунок...');
+
+                try {
+                    const order = await Order.findByPk(state.orderId);
+                    await order.update({
+                        customerName: state.customerName,
+                        customerPhone: state.customerPhone,
+                        totalAmount: state.totalAmount,
+                        discount: state.discount || 0,
+                        items: state.items
+                    });
+
+                    const pdfBuffer = await generateInvoice(order);
+                    const fileName = `Invoice_${order.orderNumber.replace(/\//g, '_')}.pdf`;
+
+                    await bot.sendDocument(chatId, pdfBuffer, {
+                        caption: `✅ Рахунок №${order.orderNumber} оновлено!`
+                    }, {
+                        filename: fileName,
+                        contentType: 'application/pdf'
+                    });
+
+                    await bot.sendMessage(chatId, 'Повернутися до головного меню:', mainMenu);
+                    delete userState[chatId];
+                } catch (error) {
+                    console.error('Error updating order from keep_existing_phone:', error);
+                    bot.sendMessage(chatId, `❌ Помилка при оновленні рахунку: ${error.message}`);
+                }
             }
         }
 

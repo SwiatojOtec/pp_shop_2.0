@@ -57,7 +57,8 @@ ${items.map(item => `- ${item.name} x ${item.quantity} (${Number(item.price).toF
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: '🧾 Сформувати рахунок', callback_data: `gen_invoice_${order.id}` }
+                        { text: '🧾 Сформувати рахунок', callback_data: `gen_invoice_${order.id}` },
+                        { text: '✏️ Редагувати', callback_data: `edit_order_${order.id}` }
                     ]
                 ]
             }
