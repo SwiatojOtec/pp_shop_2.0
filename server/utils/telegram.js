@@ -131,7 +131,7 @@ if (token) {
                     totalAmount: totalPrice,
                     itemDetails: {
                         name: p.name,
-                        price: p.price * packSize,
+                        price: p.price, // Base price per m2
                         quantity: packsNeeded,
                         unit: 'уп.',
                         sku: p.sku,
