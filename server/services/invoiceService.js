@@ -136,19 +136,22 @@ const generateInvoice = async (order) => {
             const valueX = 500;
             const rowWidth = 65;
 
-            doc.text('Разом, грн:', labelX, doc.y, { width: 100, align: 'right' });
-            doc.text(subtotal.toFixed(2), valueX, doc.y, { width: rowWidth, align: 'right' });
+            let currentY = doc.y;
+            doc.text('Разом, грн:', labelX, currentY, { width: 100, align: 'right' });
+            doc.text(subtotal.toFixed(2), valueX, currentY, { width: rowWidth, align: 'right' });
 
             if (discountPercent > 0) {
                 doc.moveDown(0.5);
-                doc.text(`Знижка (${discountPercent}%):`, labelX, doc.y, { width: 100, align: 'right' });
-                doc.text((subtotal - finalTotal).toFixed(2), valueX, doc.y, { width: rowWidth, align: 'right' });
+                currentY = doc.y;
+                doc.text(`Знижка (${discountPercent}%):`, labelX, currentY, { width: 100, align: 'right' });
+                doc.text((subtotal - finalTotal).toFixed(2), valueX, currentY, { width: rowWidth, align: 'right' });
             }
 
             doc.moveDown(0.5);
+            currentY = doc.y;
             if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
-            doc.text('До сплати:', labelX, doc.y, { width: 100, align: 'right' });
-            doc.text(finalTotal.toFixed(2), valueX, doc.y, { width: rowWidth, align: 'right' });
+            doc.text('До сплати:', labelX, currentY, { width: 100, align: 'right' });
+            doc.text(finalTotal.toFixed(2), valueX, currentY, { width: rowWidth, align: 'right' });
 
             doc.moveDown(2);
             if (fs.existsSync(fontPath)) doc.font(fontPath);
