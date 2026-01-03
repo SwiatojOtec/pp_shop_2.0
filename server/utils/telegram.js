@@ -51,8 +51,13 @@ if (token) {
             const product = await Product.findByPk(productId);
 
             if (product) {
-                userState[chatId] = { step: 'awaiting_qty', product };
-                await bot.sendMessage(chatId, `🔢 Вибрано: <b>${product.name}</b>\nЦіна: ${product.price} грн/${product.unit}\nУпаковка: ${product.packSize} ${product.unit}\n\nВведіть необхідну кількість у <b>${product.unit}</b>:`, { parse_mode: 'HTML' });
+                if (product.priceMatrix && product.priceMatrix.length > 0) {
+                    userState[chatId] = { step: 'awaiting_sill_width', product };
+                    await bot.sendMessage(chatId, `🪟 Вибрано підвіконня: <b>${product.name}</b>\n\nВведіть <b>ширину</b> підвіконня в мм (напр. 200):`, { parse_mode: 'HTML' });
+                } else {
+                    userState[chatId] = { step: 'awaiting_qty', product };
+                    await bot.sendMessage(chatId, `🔢 Вибрано: <b>${product.name}</b>\nЦіна: ${product.price} грн/${product.unit}\nУпаковка: ${product.packSize} ${product.unit}\n\nВведіть необхідну кількість у <b>${product.unit}</b>:`, { parse_mode: 'HTML' });
+                }
             }
         }
     });
@@ -111,6 +116,51 @@ if (token) {
 📏 Разом: ${totalQty.toFixed(2)} ${p.unit}
 💰 Ціна за ${p.unit}: ${p.price} грн
 💵 <b>Сума до сплати: ${totalPrice.toFixed(2)} грн</b>
+            `;
+
+            await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
+            delete userState[chatId];
+        } else if (state.step === 'awaiting_sill_width') {
+            const width = parseInt(msg.text);
+            if (isNaN(width) || width <= 0) {
+                return bot.sendMessage(chatId, '❌ Введіть коректну ширину в мм:');
+            }
+
+            state.width = width;
+            state.step = 'awaiting_sill_length';
+            await bot.sendMessage(chatId, `✅ Ширина: ${width} мм\nТепер введіть <b>довжину</b> підвіконня в мм (напр. 1500):`, { parse_mode: 'HTML' });
+        } else if (state.step === 'awaiting_sill_length') {
+            const length = parseInt(msg.text);
+            if (isNaN(length) || length <= 0) {
+                return bot.sendMessage(chatId, '❌ Введіть коректну довжину в мм:');
+            }
+
+            const p = state.product;
+            const width = state.width;
+            const calcWidth = Math.ceil(width / 50) * 50;
+
+            const match = p.priceMatrix.find(row => row.width === calcWidth);
+
+            if (!match) {
+                const max = Math.max(...p.priceMatrix.map(r => r.width));
+                if (width > max) {
+                    await bot.sendMessage(chatId, `❌ Помилка: Максимальна ширина для цього товару ${max} мм.`);
+                } else {
+                    await bot.sendMessage(chatId, '❌ Помилка: Нестандартний розмір. Зверніться до менеджера.');
+                }
+                delete userState[chatId];
+                return;
+            }
+
+            const totalPrice = Math.round((match.price * length) / 1000);
+
+            const result = `
+📊 <b>Результат розрахунку (Підвіконня):</b>
+📦 Товар: ${p.name}
+📏 Розмір: ${width}мм x ${length}мм
+📐 Розрахункова ширина: ${calcWidth}мм
+💰 Ціна за м.п.: ${match.price} грн
+💵 <b>Сума до сплати: ${totalPrice} грн</b>
             `;
 
             await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
