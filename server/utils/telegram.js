@@ -122,8 +122,31 @@ if (token) {
                 `;
 
                 await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
-                await bot.sendMessage(chatId, 'Повернутися до головного меню:', mainMenu);
-                delete userState[chatId];
+
+                // Ask for invoice
+                userState[chatId] = {
+                    step: 'awaiting_invoice_confirm',
+                    product: p,
+                    quantity: packsNeeded, // Store packs for vinyl
+                    totalAmount: totalPrice,
+                    itemDetails: {
+                        name: p.name,
+                        price: p.price * packSize,
+                        quantity: packsNeeded,
+                        unit: 'уп.',
+                        sku: p.sku,
+                        packSize: packSize
+                    }
+                };
+
+                await bot.sendMessage(chatId, '📄 <b>Бажаєте сформувати рахунок?</b>', {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '✅ Так', callback_data: 'invoice_confirm' }, { text: '❌ Ні', callback_data: 'invoice_cancel' }]
+                        ]
+                    }
+                });
             } else if (state.step === 'awaiting_sill_width') {
                 const width = parseInt(msg.text);
                 if (isNaN(width) || width <= 0) {
@@ -169,8 +192,77 @@ if (token) {
                 `;
 
                 await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
-                await bot.sendMessage(chatId, 'Повернутися до головного меню:', mainMenu);
-                delete userState[chatId];
+
+                // Ask for invoice
+                userState[chatId] = {
+                    step: 'awaiting_invoice_confirm',
+                    product: p,
+                    totalAmount: totalPrice,
+                    itemDetails: {
+                        name: `${p.name} (${width}x${length}мм)`,
+                        price: totalPrice,
+                        quantity: 1,
+                        unit: 'шт',
+                        sku: p.sku,
+                        packSize: 1
+                    }
+                };
+
+                await bot.sendMessage(chatId, '📄 <b>Бажаєте сформувати рахунок?</b>', {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '✅ Так', callback_data: 'invoice_confirm' }, { text: '❌ Ні', callback_data: 'invoice_cancel' }]
+                        ]
+                    }
+                });
+            } else if (state.step === 'awaiting_customer_name') {
+                state.customerName = msg.text;
+                state.step = 'awaiting_customer_phone';
+                await bot.sendMessage(chatId, `👤 Клієнт: <b>${state.customerName}</b>\n📱 Тепер введіть <b>номер телефону</b> клієнта:`, { parse_mode: 'HTML' });
+            } else if (state.step === 'awaiting_customer_phone') {
+                state.customerPhone = msg.text;
+                await bot.sendMessage(chatId, '⏳ Генерую замовлення та рахунок...');
+
+                try {
+                    // 1. Generate order number
+                    const now = new Date();
+                    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const countToday = await Order.count({
+                        where: { createdAt: { [Op.gte]: startOfDay } }
+                    });
+                    const orderNumber = `${countToday + 1}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+                    // 2. Create Order in DB
+                    const order = await Order.create({
+                        orderNumber,
+                        customerName: state.customerName,
+                        customerPhone: state.customerPhone,
+                        address: 'Самовивіз (Магазин)',
+                        deliveryMethod: 'pickup',
+                        paymentMethod: 'invoice',
+                        totalAmount: state.totalAmount,
+                        items: [state.itemDetails]
+                    });
+
+                    // 3. Generate and send PDF
+                    const pdfBuffer = await generateInvoice(order);
+                    const fileName = `Invoice_${order.orderNumber.replace(/\//g, '_')}.pdf`;
+
+                    await bot.sendDocument(chatId, pdfBuffer, {
+                        caption: `✅ Рахунок №${order.orderNumber} сформовано!`
+                    }, {
+                        filename: fileName,
+                        contentType: 'application/pdf'
+                    });
+
+                    await bot.sendMessage(chatId, 'Повернутися до головного меню:', mainMenu);
+                    delete userState[chatId];
+
+                } catch (error) {
+                    console.error('Error creating invoice from calc:', error);
+                    bot.sendMessage(chatId, '❌ Помилка при створенні рахунку.');
+                }
             }
         }
     });
@@ -227,6 +319,21 @@ if (token) {
                     await bot.sendMessage(chatId, `🔢 Вибрано: <b>${product.name}</b>\nЦіна: ${product.price} грн/${product.unit}\nУпаковка: ${product.packSize} ${product.unit}\n\nВведіть необхідну кількість у <b>${product.unit}</b>:`, { parse_mode: 'HTML', ...cancelKeyboard });
                 }
             }
+        }
+
+        if (data === 'invoice_confirm') {
+            const state = userState[chatId];
+            if (state && state.step === 'awaiting_invoice_confirm') {
+                state.step = 'awaiting_customer_name';
+                await bot.answerCallbackQuery(callbackQuery.id);
+                await bot.sendMessage(chatId, '👤 Введіть <b>ПІБ</b> покупця:', { parse_mode: 'HTML' });
+            }
+        }
+
+        if (data === 'invoice_cancel') {
+            delete userState[chatId];
+            await bot.answerCallbackQuery(callbackQuery.id, { text: 'Скасовано' });
+            await bot.sendMessage(chatId, 'Добре, розрахунок завершено.', mainMenu);
         }
     });
 
