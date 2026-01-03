@@ -271,7 +271,7 @@ if (token) {
 
                 } catch (error) {
                     console.error('Error creating invoice from calc:', error);
-                    bot.sendMessage(chatId, '❌ Помилка при створенні рахунку.');
+                    bot.sendMessage(chatId, `❌ Помилка при створенні рахунку: ${error.message}`);
                 }
             }
         }

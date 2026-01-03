@@ -147,7 +147,7 @@ const generateInvoice = async (order) => {
 
             doc.moveDown(2);
             if (fs.existsSync(fontPath)) doc.font(fontPath);
-            doc.text(`Всього найменувань ${order.items.length}, на суму ${totalAmount.toFixed(2)} грн.`, 30, doc.y, { width: 535 });
+            doc.text(`Всього найменувань ${order.items.length}, на суму ${finalTotal.toFixed(2)} грн.`, 30, doc.y, { width: 535 });
 
             // TODO: Add amount in words (Ukrainian) if needed
 
