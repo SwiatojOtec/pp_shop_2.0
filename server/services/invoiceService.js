@@ -1,6 +1,7 @@
 const PDFDocument = require('pdfkit-table');
 const fs = require('fs');
 const path = require('path');
+const { numberToWordsUA } = require('../utils/numberToWordsUA');
 
 const generateInvoice = async (order) => {
     return new Promise((resolve, reject) => {
@@ -131,23 +132,30 @@ const generateInvoice = async (order) => {
                 subtotal = finalTotal / (1 - discountPercent / 100);
             }
 
-            doc.text('Разом, грн:', 450, totalY, { width: 60, align: 'right' });
-            doc.text(subtotal.toFixed(2), 515, totalY, { width: 50, align: 'right' });
+            const labelX = 400;
+            const valueX = 500;
+            const rowWidth = 65;
+
+            doc.text('Разом, грн:', labelX, doc.y, { width: 100, align: 'right' });
+            doc.text(subtotal.toFixed(2), valueX, doc.y, { width: rowWidth, align: 'right' });
 
             if (discountPercent > 0) {
                 doc.moveDown(0.5);
-                doc.text(`Знижка (${discountPercent}%):`, 450, doc.y, { width: 60, align: 'right' });
-                doc.text((subtotal - finalTotal).toFixed(2), 515, doc.y, { width: 50, align: 'right' });
+                doc.text(`Знижка (${discountPercent}%):`, labelX, doc.y, { width: 100, align: 'right' });
+                doc.text((subtotal - finalTotal).toFixed(2), valueX, doc.y, { width: rowWidth, align: 'right' });
             }
 
             doc.moveDown(0.5);
             if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
-            doc.text('До сплати:', 450, doc.y, { width: 60, align: 'right' });
-            doc.text(finalTotal.toFixed(2), 515, doc.y, { width: 50, align: 'right' });
+            doc.text('До сплати:', labelX, doc.y, { width: 100, align: 'right' });
+            doc.text(finalTotal.toFixed(2), valueX, doc.y, { width: rowWidth, align: 'right' });
 
             doc.moveDown(2);
             if (fs.existsSync(fontPath)) doc.font(fontPath);
-            doc.text(`Всього найменувань ${order.items.length}, на суму ${finalTotal.toFixed(2)} грн.`, 30, doc.y, { width: 535 });
+            doc.text(`Всього найменувань ${order.items.length}, на суму:`, 30, doc.y);
+            doc.moveDown(0.2);
+            if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
+            doc.text(numberToWordsUA(finalTotal), 30, doc.y, { width: 535 });
 
             // TODO: Add amount in words (Ukrainian) if needed
 
