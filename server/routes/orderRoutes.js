@@ -39,7 +39,15 @@ router.post('/', async (req, res) => {
 ${items.map(item => `- ${item.name} x ${item.quantity} (${item.price} грн)`).join('\n')}
         `;
 
-        await sendTelegramMessage(message);
+        await sendTelegramMessage(message, {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: '🧾 Сформувати рахунок', callback_data: `gen_invoice_${order.id}` }
+                    ]
+                ]
+            }
+        });
 
         res.status(201).json(order);
     } catch (err) {
