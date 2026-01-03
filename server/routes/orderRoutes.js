@@ -9,8 +9,22 @@ router.post('/', async (req, res) => {
     try {
         const { customerName, customerPhone, customerEmail, address, deliveryMethod, paymentMethod, items, totalAmount } = req.body;
 
-        // Generate order number: PP- + random 5 digits
-        const orderNumber = `PP-${Math.floor(10000 + Math.random() * 90000)}`;
+        // Generate order number: [Count Today + 1]/[Month]/[Year]
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const countToday = await Order.count({
+            where: {
+                createdAt: {
+                    [require('sequelize').Op.gte]: startOfDay
+                }
+            }
+        });
+
+        const dailyNumber = countToday + 1;
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const orderNumber = `${dailyNumber}/${month}/${year}`;
 
         const order = await Order.create({
             orderNumber,

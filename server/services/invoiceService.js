@@ -61,7 +61,7 @@ const generateInvoice = async (order) => {
             if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
             doc.fontSize(14);
             const date = new Date(order.createdAt).toLocaleDateString('uk-UA');
-            doc.text(`Рахунок на оплату №${order.orderNumber.replace('PP-', '')} від ${date}р.`, 30, doc.y, { align: 'left' });
+            doc.text(`Рахунок на оплату №${order.orderNumber} від ${date}р.`, 30, doc.y, { align: 'left' });
             doc.moveDown(0.5);
             doc.rect(30, doc.y, 535, 1.5).fill('#000');
             doc.moveDown(1);
@@ -95,16 +95,19 @@ const generateInvoice = async (order) => {
                     { label: "Сума", property: 'total', width: 55 },
                 ],
                 datas: order.items.map((item, i) => {
-                    const price = Number(item.price) || 0;
+                    const pricePerM2 = Number(item.price) || 0;
+                    const packSize = Number(item.packSize) || 1;
                     const quantity = Number(item.quantity) || 0;
+                    const pricePerUnit = pricePerM2 * packSize;
+
                     return {
                         index: i + 1,
                         sku: item.sku || '-',
                         name: item.name,
                         quantity: quantity,
-                        unit: item.unit || 'м²',
-                        price: price.toFixed(2),
-                        total: (price * quantity).toFixed(2)
+                        unit: item.unit === 'м²' ? 'уп.' : (item.unit || 'шт.'),
+                        price: pricePerUnit.toFixed(2),
+                        total: (pricePerUnit * quantity).toFixed(2)
                     };
                 })
             };
@@ -131,7 +134,7 @@ const generateInvoice = async (order) => {
 
             doc.moveDown(2);
             if (fs.existsSync(fontPath)) doc.font(fontPath);
-            doc.text(`Всього найменувань ${order.items.length}, на суму ${totalAmount.toFixed(2)} грн.`);
+            doc.text(`Всього найменувань ${order.items.length}, на суму ${totalAmount.toFixed(2)} грн.`, 30, doc.y, { width: 535 });
 
             // TODO: Add amount in words (Ukrainian) if needed
 
