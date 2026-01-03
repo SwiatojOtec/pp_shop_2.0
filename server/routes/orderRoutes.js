@@ -33,10 +33,10 @@ router.post('/', async (req, res) => {
 🚚 Доставка: ${deliveryMethod}
 📍 Адреса: ${address || 'не вказано'}
 💳 Оплата: ${paymentMethod}
-💰 Сума: ${totalAmount} грн
+💰 Сума: ${Number(totalAmount).toFixed(2)} грн
 
 🛒 Товари:
-${items.map(item => `- ${item.name} x ${item.quantity} (${item.price} грн)`).join('\n')}
+${items.map(item => `- ${item.name} x ${item.quantity} (${Number(item.price).toFixed(2)} грн)`).join('\n')}
         `;
 
         await sendTelegramMessage(message, {

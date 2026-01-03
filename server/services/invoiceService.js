@@ -93,15 +93,19 @@ const generateInvoice = async (order) => {
                     { label: "Ціна", property: 'price', width: 50 },
                     { label: "Сума", property: 'total', width: 50 },
                 ],
-                datas: order.items.map((item, i) => ({
-                    index: i + 1,
-                    sku: item.sku || '-',
-                    name: item.name,
-                    quantity: item.quantity,
-                    unit: item.unit || 'м²',
-                    price: item.price.toFixed(2),
-                    total: (item.price * item.quantity).toFixed(2)
-                }))
+                datas: order.items.map((item, i) => {
+                    const price = Number(item.price) || 0;
+                    const quantity = Number(item.quantity) || 0;
+                    return {
+                        index: i + 1,
+                        sku: item.sku || '-',
+                        name: item.name,
+                        quantity: quantity,
+                        unit: item.unit || 'м²',
+                        price: price.toFixed(2),
+                        total: (price * quantity).toFixed(2)
+                    };
+                })
             };
 
             doc.table(table, {
