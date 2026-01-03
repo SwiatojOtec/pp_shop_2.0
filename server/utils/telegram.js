@@ -216,6 +216,15 @@ if (token) {
                         ]
                     }
                 });
+            } else if (state.step === 'awaiting_discount_value') {
+                const discount = parseFloat(msg.text.replace(',', '.'));
+                if (isNaN(discount) || discount < 0 || discount > 100) {
+                    return bot.sendMessage(chatId, '❌ Введіть коректне число від 0 до 100:');
+                }
+                state.discount = discount;
+                state.totalAmount = state.totalAmount * (1 - discount / 100);
+                state.step = 'awaiting_customer_name';
+                await bot.sendMessage(chatId, `✅ Знижка ${discount}% додана.\n👤 Тепер введіть <b>ПІБ</b> покупця:`, { parse_mode: 'HTML' });
             } else if (state.step === 'awaiting_customer_name') {
                 state.customerName = msg.text;
                 state.step = 'awaiting_customer_phone';
@@ -242,6 +251,7 @@ if (token) {
                         deliveryMethod: 'pickup',
                         paymentMethod: 'invoice',
                         totalAmount: state.totalAmount,
+                        discount: state.discount || 0,
                         items: [state.itemDetails]
                     });
 
@@ -324,6 +334,32 @@ if (token) {
         if (data === 'invoice_confirm') {
             const state = userState[chatId];
             if (state && state.step === 'awaiting_invoice_confirm') {
+                state.step = 'awaiting_discount_confirm';
+                await bot.answerCallbackQuery(callbackQuery.id);
+                await bot.sendMessage(chatId, '🏷️ <b>Бажаєте додати знижку?</b>', {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '✅ Так', callback_data: 'discount_confirm' }, { text: '❌ Ні', callback_data: 'discount_skip' }]
+                        ]
+                    }
+                });
+            }
+        }
+
+        if (data === 'discount_confirm') {
+            const state = userState[chatId];
+            if (state && state.step === 'awaiting_discount_confirm') {
+                state.step = 'awaiting_discount_value';
+                await bot.answerCallbackQuery(callbackQuery.id);
+                await bot.sendMessage(chatId, '📉 Введіть значення знижки у <b>%</b> (напр. 5):', { parse_mode: 'HTML' });
+            }
+        }
+
+        if (data === 'discount_skip') {
+            const state = userState[chatId];
+            if (state && state.step === 'awaiting_discount_confirm') {
+                state.discount = 0;
                 state.step = 'awaiting_customer_name';
                 await bot.answerCallbackQuery(callbackQuery.id);
                 await bot.sendMessage(chatId, '👤 Введіть <b>ПІБ</b> покупця:', { parse_mode: 'HTML' });

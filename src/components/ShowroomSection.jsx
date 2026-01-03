@@ -35,7 +35,7 @@ export default function ShowroomSection() {
                             <MapPin className="info-icon" />
                             <div>
                                 <h4>Адреса</h4>
-                                <p>вул. Жовтнева, 79, Петропавлівська Борщагівка</p>
+                                <p>вул. Козацька, 79, Петропавлівська Борщагівка</p>
                             </div>
                         </div>
                         <div className="info-item">

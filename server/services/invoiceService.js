@@ -123,14 +123,27 @@ const generateInvoice = async (order) => {
             doc.moveDown(1);
             doc.fontSize(9);
             const totalY = doc.y;
-            const totalAmount = Number(order.totalAmount) || 0;
+            const finalTotal = Number(order.totalAmount) || 0;
+            const discountPercent = Number(order.discount) || 0;
+
+            let subtotal = finalTotal;
+            if (discountPercent > 0) {
+                subtotal = finalTotal / (1 - discountPercent / 100);
+            }
+
             doc.text('Разом, грн:', 450, totalY, { width: 60, align: 'right' });
-            doc.text(totalAmount.toFixed(2), 515, totalY, { width: 50, align: 'right' });
+            doc.text(subtotal.toFixed(2), 515, totalY, { width: 50, align: 'right' });
+
+            if (discountPercent > 0) {
+                doc.moveDown(0.5);
+                doc.text(`Знижка (${discountPercent}%):`, 450, doc.y, { width: 60, align: 'right' });
+                doc.text((subtotal - finalTotal).toFixed(2), 515, doc.y, { width: 50, align: 'right' });
+            }
 
             doc.moveDown(0.5);
             if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
             doc.text('До сплати:', 450, doc.y, { width: 60, align: 'right' });
-            doc.text(totalAmount.toFixed(2), 515, doc.y, { width: 50, align: 'right' });
+            doc.text(finalTotal.toFixed(2), 515, doc.y, { width: 50, align: 'right' });
 
             doc.moveDown(2);
             if (fs.existsSync(fontPath)) doc.font(fontPath);

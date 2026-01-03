@@ -61,7 +61,7 @@ export default function Contacts() {
                             <div className="info-icon"><MapPin size={32} /></div>
                             <div className="info-content">
                                 <h3>Адреса Шоуруму</h3>
-                                <p>вулиця Жовтнева, 79</p>
+                                <p>вулиця Козацька, 79</p>
                                 <p>Петропавлівська Борщагівка, Київська обл.</p>
                                 <p>08130, Україна</p>
                             </div>
