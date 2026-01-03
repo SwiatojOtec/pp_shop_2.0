@@ -1,12 +1,15 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { generateInvoice } = require('../services/invoiceService');
 const Order = require('../models/Order');
+const Product = require('../models/Product');
+const { Op } = require('sequelize');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.TELEGRAM_CHAT_ID;
 
 let bot;
+const userState = {}; // To track calculator state
 
 if (token) {
     bot = new TelegramBot(token, { polling: true });
@@ -28,7 +31,7 @@ if (token) {
                 }
 
                 const pdfBuffer = await generateInvoice(order);
-                const fileName = `Invoice_${order.orderNumber}.pdf`;
+                const fileName = `Invoice_${order.orderNumber.replace(/\//g, '_')}.pdf`;
 
                 await bot.sendDocument(chatId, pdfBuffer, {
                     caption: `📄 Рахунок для замовлення ${order.orderNumber}`
@@ -42,9 +45,80 @@ if (token) {
                 bot.sendMessage(chatId, 'Сталася помилка при генерації рахунку.');
             }
         }
+
+        if (data.startsWith('calc_prod_')) {
+            const productId = data.replace('calc_prod_', '');
+            const product = await Product.findByPk(productId);
+
+            if (product) {
+                userState[chatId] = { step: 'awaiting_qty', product };
+                await bot.sendMessage(chatId, `🔢 Вибрано: <b>${product.name}</b>\nЦіна: ${product.price} грн/${product.unit}\nУпаковка: ${product.packSize} ${product.unit}\n\nВведіть необхідну кількість у <b>${product.unit}</b>:`, { parse_mode: 'HTML' });
+            }
+        }
     });
 
-    // Handle commands
+    // Handle /calc command
+    bot.onText(/\/calc/, async (msg) => {
+        await bot.sendMessage(chatId, '🔍 Введіть назву товару для пошуку:');
+        userState[chatId] = { step: 'awaiting_search' };
+    });
+
+    // Handle text messages for calculator
+    bot.on('message', async (msg) => {
+        if (msg.text && msg.text.startsWith('/')) return;
+
+        const state = userState[chatId];
+        if (!state) return;
+
+        if (state.step === 'awaiting_search') {
+            const products = await Product.findAll({
+                where: {
+                    name: { [Op.iLike]: `%${msg.text}%` }
+                },
+                limit: 5
+            });
+
+            if (products.length === 0) {
+                return bot.sendMessage(chatId, '❌ Товарів не знайдено. Спробуйте іншу назву:');
+            }
+
+            const buttons = products.map(p => ([{
+                text: `${p.name} (${p.price} грн)`,
+                callback_data: `calc_prod_${p.id}`
+            }]));
+
+            await bot.sendMessage(chatId, 'Оберіть товар:', {
+                reply_markup: { inline_keyboard: buttons }
+            });
+            delete userState[chatId];
+        } else if (state.step === 'awaiting_qty') {
+            const qty = parseFloat(msg.text.replace(',', '.'));
+            if (isNaN(qty)) {
+                return bot.sendMessage(chatId, '❌ Будь ласка, введіть число:');
+            }
+
+            const p = state.product;
+            const packSize = parseFloat(p.packSize) || 1;
+            const packsNeeded = Math.ceil(qty / packSize);
+            const totalQty = packsNeeded * packSize;
+            const totalPrice = totalQty * parseFloat(p.price);
+
+            const result = `
+📊 <b>Результат розрахунку:</b>
+📦 Товар: ${p.name}
+📐 Потрібно: ${qty} ${p.unit}
+🏗️ Упаковок: <b>${packsNeeded} шт</b>
+📏 Разом: ${totalQty.toFixed(2)} ${p.unit}
+💰 Ціна за ${p.unit}: ${p.price} грн
+💵 <b>Сума до сплати: ${totalPrice.toFixed(2)} грн</b>
+            `;
+
+            await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
+            delete userState[chatId];
+        }
+    });
+
+    // Handle /invoice command
     bot.onText(/\/invoice (.+)/, async (msg, match) => {
         const orderNumber = match[1].trim();
 
@@ -56,7 +130,7 @@ if (token) {
 
             await bot.sendMessage(chatId, 'Генерую рахунок...');
             const pdfBuffer = await generateInvoice(order);
-            const fileName = `Invoice_${order.orderNumber}.pdf`;
+            const fileName = `Invoice_${order.orderNumber.replace(/\//g, '_')}.pdf`;
 
             await bot.sendDocument(chatId, pdfBuffer, {
                 caption: `📄 Рахунок для замовлення ${order.orderNumber}`
