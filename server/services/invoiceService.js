@@ -37,7 +37,7 @@ const generateInvoice = async (order) => {
 
             doc.text('Одержувач', 35, tableTop + 5);
             if (fs.existsSync(fontBoldPath)) doc.font(fontBoldPath);
-            doc.text('Фізична особа-підприємець Панікрат\'єв Микола Олександрович', 205, tableTop + 5);
+            doc.text('Фізична особа-підприємець Панкрат\'єв Микола Олександрович', 205, tableTop + 5);
             if (fs.existsSync(fontPath)) doc.font(fontPath);
 
             doc.text('ІПН', 35, tableTop + 45);
