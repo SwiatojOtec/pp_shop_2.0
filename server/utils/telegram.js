@@ -43,7 +43,7 @@ if (token) {
                     resize_keyboard: true
                 }
             });
-            userState[chatId] = { step: 'awaiting_search' };
+            userState[chatId] = { step: 'awaiting_search', items: [], totalAmount: 0 };
             return;
         }
 
@@ -123,27 +123,28 @@ if (token) {
 
                 await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
 
-                // Ask for invoice
-                userState[chatId] = {
-                    step: 'awaiting_invoice_confirm',
-                    product: p,
-                    quantity: packsNeeded, // Store packs for vinyl
-                    totalAmount: totalPrice,
-                    itemDetails: {
-                        name: p.name,
-                        price: p.price, // Base price per m2
-                        quantity: packsNeeded,
-                        unit: 'уп.',
-                        sku: p.sku,
-                        packSize: packSize
-                    }
+                const item = {
+                    name: p.name,
+                    price: p.price, // Base price per m2
+                    quantity: packsNeeded,
+                    unit: 'уп.',
+                    sku: p.sku,
+                    packSize: packSize,
+                    total: totalPrice
                 };
 
-                await bot.sendMessage(chatId, '📄 <b>Бажаєте сформувати рахунок?</b>', {
+                state.items = state.items || [];
+                state.items.push(item);
+                state.totalAmount = (state.totalAmount || 0) + totalPrice;
+                state.step = 'awaiting_next_action';
+
+                await bot.sendMessage(chatId, '🛒 <b>Товар додано до списку.</b>\nБажаєте додати ще щось чи сформувати рахунок?', {
                     parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: '✅ Так', callback_data: 'invoice_confirm' }, { text: '❌ Ні', callback_data: 'invoice_cancel' }]
+                            [{ text: '➕ Додати ще товар', callback_data: 'add_more' }],
+                            [{ text: '📄 Оформити рахунок', callback_data: 'invoice_confirm' }],
+                            [{ text: '❌ Скасувати все', callback_data: 'invoice_cancel' }]
                         ]
                     }
                 });
@@ -193,26 +194,28 @@ if (token) {
 
                 await bot.sendMessage(chatId, result, { parse_mode: 'HTML' });
 
-                // Ask for invoice
-                userState[chatId] = {
-                    step: 'awaiting_invoice_confirm',
-                    product: p,
-                    totalAmount: totalPrice,
-                    itemDetails: {
-                        name: `${p.name} (${width}x${length}мм)`,
-                        price: totalPrice,
-                        quantity: 1,
-                        unit: 'шт',
-                        sku: p.sku,
-                        packSize: 1
-                    }
+                const item = {
+                    name: `${p.name} (${width}x${length}мм)`,
+                    price: totalPrice,
+                    quantity: 1,
+                    unit: 'шт',
+                    sku: p.sku,
+                    packSize: 1,
+                    total: totalPrice
                 };
 
-                await bot.sendMessage(chatId, '📄 <b>Бажаєте сформувати рахунок?</b>', {
+                state.items = state.items || [];
+                state.items.push(item);
+                state.totalAmount = (state.totalAmount || 0) + totalPrice;
+                state.step = 'awaiting_next_action';
+
+                await bot.sendMessage(chatId, '🛒 <b>Товар додано до списку.</b>\nБажаєте додати ще щось чи сформувати рахунок?', {
                     parse_mode: 'HTML',
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: '✅ Так', callback_data: 'invoice_confirm' }, { text: '❌ Ні', callback_data: 'invoice_cancel' }]
+                            [{ text: '➕ Додати ще товар', callback_data: 'add_more' }],
+                            [{ text: '📄 Оформити рахунок', callback_data: 'invoice_confirm' }],
+                            [{ text: '❌ Скасувати все', callback_data: 'invoice_cancel' }]
                         ]
                     }
                 });
@@ -252,7 +255,7 @@ if (token) {
                         paymentMethod: 'invoice',
                         totalAmount: state.totalAmount,
                         discount: state.discount || 0,
-                        items: [state.itemDetails]
+                        items: state.items
                     });
 
                     // 3. Generate and send PDF
@@ -322,18 +325,29 @@ if (token) {
                 };
 
                 if (product.priceMatrix && product.priceMatrix.length > 0) {
-                    userState[chatId] = { step: 'awaiting_sill_width', product };
+                    const state = userState[chatId];
+                    userState[chatId] = { ...state, step: 'awaiting_sill_width', product };
                     await bot.sendMessage(chatId, `🪟 Вибрано підвіконня: <b>${product.name}</b>\n\nВведіть <b>ширину</b> підвіконня в мм (напр. 200):`, { parse_mode: 'HTML', ...cancelKeyboard });
                 } else {
-                    userState[chatId] = { step: 'awaiting_qty', product };
+                    const state = userState[chatId];
+                    userState[chatId] = { ...state, step: 'awaiting_qty', product };
                     await bot.sendMessage(chatId, `🔢 Вибрано: <b>${product.name}</b>\nЦіна: ${product.price} грн/${product.unit}\nУпаковка: ${product.packSize} ${product.unit}\n\nВведіть необхідну кількість у <b>${product.unit}</b>:`, { parse_mode: 'HTML', ...cancelKeyboard });
                 }
             }
         }
 
+        if (data === 'add_more') {
+            const state = userState[chatId];
+            if (state) {
+                state.step = 'awaiting_search';
+                await bot.answerCallbackQuery(callbackQuery.id);
+                await bot.sendMessage(chatId, '🔍 Введіть назву наступного товару для пошуку:');
+            }
+        }
+
         if (data === 'invoice_confirm') {
             const state = userState[chatId];
-            if (state && state.step === 'awaiting_invoice_confirm') {
+            if (state && (state.step === 'awaiting_invoice_confirm' || state.step === 'awaiting_next_action')) {
                 state.step = 'awaiting_discount_confirm';
                 await bot.answerCallbackQuery(callbackQuery.id);
                 await bot.sendMessage(chatId, '🏷️ <b>Бажаєте додати знижку?</b>', {
