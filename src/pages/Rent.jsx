@@ -18,6 +18,7 @@ export default function Rent() {
     const { showToast } = useToast();
     const [products, setProducts] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [rentCategories, setRentCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -35,6 +36,14 @@ export default function Rent() {
                 setBrands(brandData);
             })
             .catch(err => console.error('Error fetching brands:', err));
+
+        // Fetch rent categories for sidebar filter
+        fetch(`${API_URL}/api/rent-categories`)
+            .then(res => res.json())
+            .then((catData) => {
+                setRentCategories(catData);
+            })
+            .catch(err => console.error('Error fetching rent categories:', err));
 
         // Close dropdown when clicking outside
         const handleClickOutside = () => setIsSortOpen(false);
@@ -73,7 +82,7 @@ export default function Rent() {
     const minPrice = searchParams.get('minPrice') || '';
     const maxPrice = searchParams.get('maxPrice') || '';
     const badge = searchParams.get('badge') || '';
-    const toolType = searchParams.get('Тип інструменту') || '';
+    const toolType = searchParams.get('category') || '';
 
     useEffect(() => {
         setLoading(true);
@@ -195,7 +204,7 @@ export default function Rent() {
                         )}
                         {toolType && (
                             <span className="filter-tag">
-                                Тип: {toolType} <X size={14} onClick={() => handleFilterChange('Тип інструменту', '')} />
+                                Тип: {toolType} <X size={14} onClick={() => handleFilterChange('category', '')} />
                             </span>
                         )}
                         {badge && (
@@ -217,14 +226,14 @@ export default function Rent() {
                         <div className="filter-group">
                             <h4 className="filter-title">Тип інструменту</h4>
                             <div className="filter-options">
-                                {getUniqueSpecValues('Тип інструменту').map((val, idx) => (
-                                    <label key={idx} className="filter-label">
+                                {rentCategories.map((cat) => (
+                                    <label key={cat.id} className="filter-label">
                                         <input
                                             type="checkbox"
-                                            checked={toolType === val}
-                                            onChange={() => handleFilterChange('Тип інструменту', toolType === val ? '' : val)}
+                                            checked={toolType === cat.name}
+                                            onChange={() => handleFilterChange('category', toolType === cat.name ? '' : cat.name)}
                                         />
-                                        <span>{val}</span>
+                                        <span>{cat.name}</span>
                                     </label>
                                 ))}
                             </div>
