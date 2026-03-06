@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Brand = sequelize.define('Brand', {
+const RentCategory = sequelize.define('RentCategory', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -12,23 +12,16 @@ const Brand = sequelize.define('Brand', {
         allowNull: false,
         unique: true
     },
-    logo: {
-        type: DataTypes.STRING, // URL to brand logo
-        allowNull: true
-    },
     slug: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
     },
-    isShop: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
-    },
-    isRent: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
+    group: {
+        type: DataTypes.STRING, // Для адмін-групування (папки)
+        allowNull: true
     }
 });
 
-module.exports = Brand;
+module.exports = RentCategory;
+

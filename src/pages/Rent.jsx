@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Filter, ChevronDown, Plus, X, Heart, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
+import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
-import { getCategoryName, getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
 import './Shop.css';
 
-export default function Shop() {
-    const { categorySlug: pathCategorySlug } = useParams();
+const RENT_CATEGORY_NAME = 'Оренда інструменту';
+
+export default function Rent() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { addToCart } = useCart();
+    const { addToCart, cartItems } = useCart();
     const { toggleFavorite, isFavorite } = useFavorites();
+    const { showToast } = useToast();
     const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,14 +28,13 @@ export default function Shop() {
     const [localMaxPrice, setLocalMaxPrice] = useState(searchParams.get('maxPrice') || '');
 
     useEffect(() => {
-        // Fetch categories and brands
-        Promise.all([
-            fetch(`${API_URL}/api/categories`).then(res => res.json()),
-            fetch(`${API_URL}/api/brands?context=shop`).then(res => res.json())
-        ]).then(([catData, brandData]) => {
-            setCategories(catData);
-            setBrands(brandData);
-        }).catch(err => console.error('Error fetching filters:', err));
+        // Fetch brands for sidebar filter (rent only)
+        fetch(`${API_URL}/api/brands?context=rent`)
+            .then(res => res.json())
+            .then((brandData) => {
+                setBrands(brandData);
+            })
+            .catch(err => console.error('Error fetching brands:', err));
 
         // Close dropdown when clicking outside
         const handleClickOutside = () => setIsSortOpen(false);
@@ -52,11 +53,10 @@ export default function Shop() {
             if (localMaxPrice) newParams.set('maxPrice', localMaxPrice);
             else newParams.delete('maxPrice');
 
-            // Only update if values actually changed to avoid infinite loops
             if (newParams.toString() !== searchParams.toString()) {
                 setSearchParams(newParams);
             }
-        }, 800); // 800ms delay
+        }, 800);
 
         return () => clearTimeout(timer);
     }, [localMinPrice, localMaxPrice]);
@@ -68,31 +68,25 @@ export default function Shop() {
     }, [searchParams]);
 
     // Filter states from URL
-    const categorySlug = pathCategorySlug || searchParams.get('category') || '';
-    const category = getCategoryName(categorySlug);
     const search = searchParams.get('search') || '';
     const sort = searchParams.get('sort') || 'popular';
     const minPrice = searchParams.get('minPrice') || '';
     const maxPrice = searchParams.get('maxPrice') || '';
     const badge = searchParams.get('badge') || '';
+    const toolType = searchParams.get('Тип інструменту') || '';
 
     useEffect(() => {
         setLoading(true);
         const params = Object.fromEntries(searchParams.entries());
-        // Магазин показує тільки товар, не оренду
-        params.isRent = 'false';
 
-        // Use category from path if present, otherwise from searchParams
-        const activeCategorySlug = pathCategorySlug || params.category;
-        if (activeCategorySlug) {
-            params.category = getCategoryName(activeCategorySlug);
-        }
+        // Вказуємо, що це сторінка оренди
+        params.isRent = 'true';
 
         const query = new URLSearchParams(params).toString();
 
         fetch(`${API_URL}/api/products?${query}`)
             .then(res => {
-                if (!res.ok) throw new Error('Помилка завантаження товарів');
+                if (!res.ok) throw new Error('Помилка завантаження інструментів');
                 return res.json();
             })
             .then(data => {
@@ -103,7 +97,7 @@ export default function Shop() {
                 setError(err.message);
                 setLoading(false);
             });
-    }, [searchParams, pathCategorySlug]);
+    }, [searchParams]);
 
     // Get unique values for specs to show in filters
     const getUniqueSpecValues = (specKey) => {
@@ -117,17 +111,6 @@ export default function Shop() {
     };
 
     const handleFilterChange = (key, value) => {
-        if (key === 'category') {
-            const newSlug = value ? getCategorySlug(value) : '';
-            const newParams = new URLSearchParams(searchParams);
-            newParams.delete('category'); // Remove from query if it was there
-
-            const queryString = newParams.toString();
-            const path = newSlug ? `/magazyn/${newSlug}` : '/magazyn';
-            navigate(queryString ? `${path}?${queryString}` : path);
-            return;
-        }
-
         const newParams = new URLSearchParams(searchParams);
         if (value) {
             newParams.set(key, value);
@@ -164,21 +147,20 @@ export default function Shop() {
         }
     });
 
-    if (loading) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Завантаження товарів...</div>;
+    if (loading) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Завантаження інструментів...</div>;
     if (error) return <div className="container" style={{ padding: '100px 0', textAlign: 'center', color: 'red' }}>{error}</div>;
 
     return (
         <div className="shop-page">
             <div className="container">
                 <nav className="breadcrumbs">
-                    <Link to="/">Головна</Link> / <Link to="/magazyn">Магазин</Link>
-                    {category && <> / <span>{category}</span></>}
+                    <Link to="/">Головна</Link> / <span>{RENT_CATEGORY_NAME}</span>
                 </nav>
 
                 <div className="shop-header">
-                    <h1 className="shop-title">{category || 'Магазин'}</h1>
+                    <h1 className="shop-title">{RENT_CATEGORY_NAME}</h1>
                     <div className="shop-controls">
-                        <span className="product-count">Показано {products.length} товарів</span>
+                        <span className="product-count">Показано {products.length} позицій в оренду</span>
                         <div className="custom-sort-container" onClick={(e) => e.stopPropagation()}>
                             <span className="sort-label">Сортувати:</span>
                             <div className={`custom-select ${isSortOpen ? 'open' : ''}`} onClick={() => setIsSortOpen(!isSortOpen)}>
@@ -204,16 +186,16 @@ export default function Shop() {
                     </div>
                 </div>
 
-                {(categorySlug || search || badge) && (
+                {(search || badge || toolType) && (
                     <div className="active-filters">
-                        {categorySlug && (
-                            <span className="filter-tag">
-                                {category} <X size={14} onClick={() => handleFilterChange('category', '')} />
-                            </span>
-                        )}
                         {search && (
                             <span className="filter-tag">
                                 Пошук: {search} <X size={14} onClick={() => handleFilterChange('search', '')} />
+                            </span>
+                        )}
+                        {toolType && (
+                            <span className="filter-tag">
+                                Тип: {toolType} <X size={14} onClick={() => handleFilterChange('Тип інструменту', '')} />
                             </span>
                         )}
                         {badge && (
@@ -221,7 +203,7 @@ export default function Shop() {
                                 {badge === 'SALE' ? 'Розпродаж' : badge} <X size={14} onClick={() => handleFilterChange('badge', '')} />
                             </span>
                         )}
-                        <button className="clear-all" onClick={() => navigate('/magazyn')}>Очистити все</button>
+                        <button className="clear-all" onClick={() => navigate('/orenda')}>Очистити все</button>
                     </div>
                 )}
 
@@ -233,16 +215,16 @@ export default function Shop() {
                         </div>
 
                         <div className="filter-group">
-                            <h4 className="filter-title">Категорія</h4>
+                            <h4 className="filter-title">Тип інструменту</h4>
                             <div className="filter-options">
-                                {categories.map((cat) => (
-                                    <label key={cat.id} className="filter-label">
+                                {getUniqueSpecValues('Тип інструменту').map((val, idx) => (
+                                    <label key={idx} className="filter-label">
                                         <input
                                             type="checkbox"
-                                            checked={category === cat.name}
-                                            onChange={() => handleFilterChange('category', category === cat.name ? '' : cat.name)}
+                                            checked={toolType === val}
+                                            onChange={() => handleFilterChange('Тип інструменту', toolType === val ? '' : val)}
                                         />
-                                        <span>{cat.name}</span>
+                                        <span>{val}</span>
                                     </label>
                                 ))}
                             </div>
@@ -265,38 +247,6 @@ export default function Shop() {
                         </div>
 
                         <div className="filter-group">
-                            <h4 className="filter-title">Товщина</h4>
-                            <div className="filter-options">
-                                {getUniqueSpecValues('Товщина').map((val, idx) => (
-                                    <label key={idx} className="filter-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={searchParams.get('Товщина') === val}
-                                            onChange={() => handleFilterChange('Товщина', searchParams.get('Товщина') === val ? '' : val)}
-                                        />
-                                        <span>{val}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="filter-group">
-                            <h4 className="filter-title">Клас зносостійкості</h4>
-                            <div className="filter-options">
-                                {getUniqueSpecValues('Клас зносостійкості').map((val, idx) => (
-                                    <label key={idx} className="filter-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={searchParams.get('Клас зносостійкості') === val}
-                                            onChange={() => handleFilterChange('Клас зносостійкості', searchParams.get('Клас зносостійкості') === val ? '' : val)}
-                                        />
-                                        <span>{val}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="filter-group">
                             <h4 className="filter-title">Спеціальні пропозиції</h4>
                             <div className="filter-options">
                                 <label className="filter-label">
@@ -311,7 +261,7 @@ export default function Shop() {
                         </div>
 
                         <div className="price-filter">
-                            <h4 className="filter-title">Ціна, ₴</h4>
+                            <h4 className="filter-title">Ціна оренди, ₴</h4>
                             <div className="price-inputs">
                                 <input
                                     type="number"
@@ -331,75 +281,54 @@ export default function Shop() {
 
                     <main className="shop-main">
                         <div className="product-grid">
-                            {sortedProducts.map((product, index) => (
-                                <React.Fragment key={product._id || product.id}>
-                                    <div className="product-card">
-                                        <div className="product-image-container">
-                                            {product.badge && (
-                                                <span className={`badge badge-${product.badge.toLowerCase()}`}>
-                                                    {product.badge === 'SALE' ? 'Розпродаж' :
-                                                        product.badge === 'NEW' ? 'Новинка' :
-                                                            product.badge === 'HOT' ? 'Хіт' :
-                                                                product.badge === 'TOP' ? 'Топ' : product.badge}
-                                                </span>
-                                            )}
-                                            <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
-                                                <img src={product.image} alt={product.name} className="product-image" />
-                                            </Link>
-                                            <button
-                                                className={`wishlist-btn ${isFavorite(product._id || product.id) ? 'active' : ''}`}
-                                                onClick={() => toggleFavorite(product)}
-                                            >
-                                                <Heart size={20} fill={isFavorite(product._id || product.id) ? "currentColor" : "none"} />
-                                            </button>
-                                            <button className="quick-view-btn" onClick={() => setQuickViewProduct(product)}>
-                                                Швидкий перегляд
-                                            </button>
-                                            <button className="add-to-cart-btn" onClick={() => addToCart(product)}><Plus size={24} /></button>
+                            {sortedProducts.map((product) => (
+                                <div key={product._id || product.id} className="product-card">
+                                    <div className="product-image-container">
+                                        {product.badge && (
+                                            <span className={`badge badge-${product.badge.toLowerCase()}`}>
+                                                {product.badge === 'SALE' ? 'Розпродаж' :
+                                                    product.badge === 'NEW' ? 'Новинка' :
+                                                        product.badge === 'HOT' ? 'Хіт' :
+                                                            product.badge === 'TOP' ? 'Топ' : product.badge}
+                                            </span>
+                                        )}
+                                        <Link to={`/orenda/${product.slug}`}>
+                                            <img src={product.image} alt={product.name} className="product-image" />
+                                        </Link>
+                                        <button
+                                            className={`wishlist-btn ${isFavorite(product._id || product.id) ? 'active' : ''}`}
+                                            onClick={() => toggleFavorite(product)}
+                                        >
+                                            <Heart size={20} fill={isFavorite(product._id || product.id) ? "currentColor" : "none"} />
+                                        </button>
+                                        <button className="quick-view-btn" onClick={() => setQuickViewProduct(product)}>
+                                            Швидкий перегляд
+                                        </button>
+                                        <button className="add-to-cart-btn" onClick={() => addToCartWithToast(product, 1, cartItems, addToCart, showToast)}><Plus size={24} /></button>
+                                    </div>
+                                    <div className="product-info">
+                                        <div className="product-meta">
+                                            <div className="product-rating">
+                                                <Star size={12} fill="var(--color-primary)" color="var(--color-primary)" />
+                                                <span>{product.rating}.0 ({product.reviews})</span>
+                                            </div>
                                         </div>
-                                        <div className="product-info">
-                                            <div className="product-meta">
-                                                <div className="color-swatches">
-                                                    {product.colors?.map((c, i) => (
-                                                        <span key={i} className="swatch" style={{ backgroundColor: c }}></span>
-                                                    ))}
+                                        <Link to={`/orenda/${product.slug}`}>
+                                            <h3 className="product-name">{product.name}</h3>
+                                        </Link>
+                                        <div className="price-block">
+                                            {product.oldPrice && <span className="old-price" style={{ marginRight: '10px', fontSize: '0.9rem' }}>{product.oldPrice} ₴</span>}
+                                            <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`} style={{ fontWeight: 700 }}>
+                                                {product.price} ₴ / доба
+                                            </span>
+                                            {typeof product.quantityAvailable === 'number' && (
+                                                <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#4b5563' }}>
+                                                    В наявності: <strong>{product.quantityAvailable}</strong> {product.unit || 'шт'}
                                                 </div>
-                                                <div className="product-rating">
-                                                    <Star size={12} fill="var(--color-primary)" color="var(--color-primary)" />
-                                                    <span>{product.rating}.0 ({product.reviews})</span>
-                                                </div>
-                                            </div>
-                                            <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
-                                                <h3 className="product-name">{product.name}</h3>
-                                            </Link>
-                                            <div className="price-block">
-                                                {product.oldPrice && <span className="old-price" style={{ marginRight: '10px', fontSize: '0.9rem' }}>{product.oldPrice} ₴</span>}
-                                                <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`} style={{ fontWeight: 700 }}>
-                                                    {product.price} ₴ / {product.unit || 'м²'}
-                                                </span>
-                                            </div>
-                                            <div className="stock-status" style={{
-                                                fontSize: '0.8rem',
-                                                marginTop: '5px',
-                                                color: product.stockStatus === 'out_of_stock'
-                                                    ? '#ef4444'
-                                                    : product.stockStatus === 'on_order'
-                                                        ? '#f59e0b'
-                                                        : product.stockStatus === 'available_later'
-                                                            ? '#0ea5e9'
-                                                            : '#22c55e'
-                                            }}>
-                                                {product.stockStatus === 'out_of_stock'
-                                                    ? 'Немає в наявності'
-                                                    : product.stockStatus === 'on_order'
-                                                        ? 'Під замовлення'
-                                                        : product.stockStatus === 'available_later'
-                                                            ? `Буде доступно з ${product.availableFrom || 'дата уточнюється'}`
-                                                            : 'В наявності'}
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
-                                </React.Fragment>
+                                </div>
                             ))}
                         </div>
                     </main>
@@ -426,14 +355,28 @@ export default function Shop() {
                                         </span>
                                     )}
                                     <span className={`modal-price ${quickViewProduct.oldPrice ? 'sale-price' : ''}`} style={{ fontSize: '1.8rem', fontWeight: 800 }}>
-                                        {quickViewProduct.price} ₴ / {quickViewProduct.unit || 'м²'}
+                                        {quickViewProduct.price} ₴ / доба
                                     </span>
                                 </div>
-                                <p className="modal-desc">{quickViewProduct.desc}</p>
+                                {quickViewProduct.specs && Object.keys(quickViewProduct.specs).length > 0 ? (
+                                    <div className="modal-specs">
+                                        {Object.entries(quickViewProduct.specs).slice(0, 7).map(([label, value], i) => (
+                                            <div key={i} className="modal-spec-row">
+                                                <span className="modal-spec-label">{label}</span>
+                                                <span className="modal-spec-value">{value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="modal-desc">{quickViewProduct.desc}</p>
+                                )}
                                 <div className="modal-actions">
-                                    <button className="btn btn-primary add-btn" onClick={() => addToCart(quickViewProduct)}>
+                                    <button className="btn btn-primary add-btn" onClick={() => addToCartWithToast(quickViewProduct, 1, cartItems, addToCart, showToast)}>
                                         В кошик
                                     </button>
+                                    <Link to={`/orenda/${quickViewProduct.slug}`} className="btn" onClick={() => setQuickViewProduct(null)}>
+                                        Детальніше
+                                    </Link>
                                 </div>
                             </div>
                         </div>
@@ -443,3 +386,4 @@ export default function Shop() {
         </div>
     );
 }
+

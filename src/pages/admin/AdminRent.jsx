@@ -5,10 +5,12 @@ import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
 import './Admin.css';
 import { useAuth } from '../../context/AuthContext';
 
-export default function AdminProducts() {
+const RENT_CATEGORY_NAME = 'Оренда інструменту';
+
+export default function AdminRent() {
     const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterCategory, setFilterCategory] = useState('All');
+    const [filterType, setFilterType] = useState('All');
     const navigate = useNavigate();
     const { token } = useAuth();
 
@@ -18,16 +20,16 @@ export default function AdminProducts() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/products?isRent=false`);
+            const res = await fetch(`${API_URL}/api/products?isRent=true`);
             if (res.ok) {
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);
             } else {
-                console.error('Failed to fetch products');
+                console.error('Failed to fetch rent tools');
                 setProducts([]);
             }
         } catch (err) {
-            console.error('Error fetching products:', err);
+            console.error('Error fetching rent tools:', err);
             setProducts([]);
         }
     };
@@ -35,12 +37,13 @@ export default function AdminProducts() {
     const filteredProducts = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = filterCategory === 'All' || p.category === filterCategory;
-        return matchesSearch && matchesCategory;
+        const type = p.specs?.['Тип інструменту'] || '';
+        const matchesType = filterType === 'All' || type === filterType;
+        return matchesSearch && matchesType;
     });
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Ви впевнені?')) return;
+        if (!window.confirm('Ви впевнені, що хочете видалити цей інструмент з оренди?')) return;
         try {
             const headers = {};
             if (token) {
@@ -49,18 +52,32 @@ export default function AdminProducts() {
             await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE', headers });
             fetchProducts();
         } catch (err) {
-            console.error('Error deleting product:', err);
+            console.error('Error deleting rent product:', err);
         }
     };
+
+    const toolTypes = Array.from(
+        new Set(
+            products
+                .map(p => p.specs?.['Тип інструменту'])
+                .filter(Boolean)
+        )
+    );
 
     return (
         <div className="admin-products">
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>Товари</h1>
-                <button className="btn btn-primary" onClick={() => navigate('/admin/products/new')}>
-                    <Plus size={20} /> Додати товар
+                <h1 className="admin-title" style={{ margin: 0 }}>Оренда інструменту</h1>
+                <button className="btn btn-primary" onClick={() => navigate('/admin/rent/new')}>
+                    <Plus size={20} /> Додати інструмент
                 </button>
             </div>
+
+            <p style={{ marginBottom: '15px', color: '#555', fontSize: '0.9rem' }}>
+                Тут відображаються тільки товари з категорією <strong>{RENT_CATEGORY_NAME}</strong>.
+                Для нового інструменту виберіть цю категорію в картці товару та за бажанням заповніть характеристику
+                <strong> "Тип інструменту"</strong> (наприклад: Дрелі, Пили, Шліфмашини).
+            </p>
 
             <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
                 <div className="search-box" style={{ flex: 1, position: 'relative' }}>
@@ -76,18 +93,14 @@ export default function AdminProducts() {
                 <div className="filter-box" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Filter size={18} style={{ color: '#999' }} />
                     <select
-                        value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value)}
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
                     >
-                        <option value="All">Всі категорії</option>
-                        <option value="Паркетна Дошка">Паркетна Дошка</option>
-                        <option value="Ламінат">Ламінат</option>
-                        <option value="Вінілова підлога">Вінілова підлога</option>
-                        <option value="Підвіконня">Підвіконня</option>
-                        <option value="Стінові панелі">Стінові панелі</option>
-                        <option value="Плінтуса">Плінтуса</option>
-                        <option value="Оренда інструменту">Оренда інструменту</option>
+                        <option value="All">Всі типи</option>
+                        {toolTypes.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
                     </select>
                 </div>
             </div>
@@ -99,9 +112,10 @@ export default function AdminProducts() {
                             <th>Зображення</th>
                             <th>SKU</th>
                             <th>Назва</th>
-                            <th>Ціна</th>
-                            <th>Категорія</th>
-                            <th>Мітка</th>
+                            <th>Ціна оренди</th>
+                            <th>К-сть в наявності</th>
+                            <th>Тип інструменту</th>
+                            <th>Бренд</th>
                             <th>Дії</th>
                         </tr>
                     </thead>
@@ -111,18 +125,13 @@ export default function AdminProducts() {
                                 <td><img src={product.image} alt={product.name} className="admin-table-img" /></td>
                                 <td><code style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>{product.sku}</code></td>
                                 <td>{product.name}</td>
-                                <td>{product.price} ₴</td>
-                                <td>{product.category}</td>
-                                <td>
-                                    {product.badge && (
-                                        <span className={`status-badge ${product.badge.toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                                            {product.badge}
-                                        </span>
-                                    )}
-                                </td>
+                                <td>{product.price} ₴ / доба</td>
+                                <td>{typeof product.quantityAvailable === 'number' ? product.quantityAvailable : '—'}</td>
+                                <td>{product.specs?.['Тип інструменту'] || '—'}</td>
+                                <td>{product.brand || '—'}</td>
                                 <td>
                                     <div className="table-actions">
-                                        <button onClick={() => navigate(`/admin/products/${product.id}`)} className="action-btn edit"><Edit2 size={18} /></button>
+                                        <button onClick={() => navigate(`/admin/rent/${product.id}`)} className="action-btn edit"><Edit2 size={18} /></button>
                                         <button onClick={() => handleDelete(product.id)} className="action-btn delete"><Trash2 size={18} /></button>
                                     </div>
                                 </td>
@@ -130,7 +139,7 @@ export default function AdminProducts() {
                         ))}
                         {filteredProducts.length === 0 && (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Товарів не знайдено</td>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Інструментів в оренді поки немає</td>
                             </tr>
                         )}
                     </tbody>
@@ -139,3 +148,4 @@ export default function AdminProducts() {
         </div>
     );
 }
+

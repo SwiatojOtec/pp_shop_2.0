@@ -11,6 +11,7 @@ import Contacts from './pages/Contacts';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import InfoPage from './pages/InfoPage';
+import Rent from './pages/Rent';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import ProductEdit from './pages/admin/ProductEdit';
@@ -18,10 +19,32 @@ import AdminBlog from './pages/admin/AdminBlog';
 import AdminBlogEdit from './pages/admin/AdminBlogEdit';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminCategories from './pages/admin/AdminCategories';
+import AdminRent from './pages/admin/AdminRent';
+import AdminRentEdit from './pages/admin/AdminRentEdit';
 import AdminLayout from './pages/admin/AdminLayout';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminRegister from './pages/admin/AdminRegister';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminProfile from './pages/admin/AdminProfile';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import Cart from './components/Cart';
+
+function RequireAdmin({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="admin-content" style={{ padding: '80px', textAlign: 'center' }}>Перевірка доступу...</div>;
+  }
+
+  if (!user) {
+    return <AdminLogin />;
+  }
+
+  return children;
+}
 
 function AppContent() {
   const [isCartOpen, setIsCartOpen] = React.useState(false);
@@ -37,6 +60,8 @@ function AppContent() {
           <Route path="/magazyn" element={<Shop />} />
           <Route path="/magazyn/:categorySlug" element={<Shop />} />
           <Route path="/magazyn/:categorySlug/:slug" element={<ProductDetail />} />
+          <Route path="/orenda" element={<Rent />} />
+          <Route path="/orenda/:slug" element={<ProductDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/contacts" element={<Contacts />} />
@@ -47,19 +72,118 @@ function AppContent() {
           <Route path="/delivery" element={<InfoPage type="delivery" />} />
 
           {/* Admin Routes */}
-          <Route path="/admin/*" element={
-            <AdminLayout>
-              <Routes>
-                <Route index element={<AdminDashboard />} />
-                <Route path="products" element={<AdminProducts />} />
-                <Route path="products/:id" element={<ProductEdit />} />
-                <Route path="orders" element={<AdminOrders />} />
-                <Route path="blog" element={<AdminBlog />} />
-                <Route path="blog/:id" element={<AdminBlogEdit />} />
-                <Route path="settings" element={<AdminCategories />} />
-              </Routes>
-            </AdminLayout>
-          } />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminDashboard />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/profile"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminProfile />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminProducts />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/products/:id"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <ProductEdit />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/rent"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminRent />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/rent/:id"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminRentEdit />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminOrders />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/blog"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminBlog />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/blog/:id"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminBlogEdit />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminCategories />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminUsers />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
         </Routes>
       </main>
       {!isAdmin && <Footer />}
@@ -70,13 +194,17 @@ function AppContent() {
 
 function App() {
   return (
-    <CartProvider>
-      <FavoritesProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </FavoritesProvider>
-    </CartProvider>
+    <ToastProvider>
+      <CartProvider>
+        <FavoritesProvider>
+          <AuthProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </AuthProvider>
+        </FavoritesProvider>
+      </CartProvider>
+    </ToastProvider>
   );
 }
 

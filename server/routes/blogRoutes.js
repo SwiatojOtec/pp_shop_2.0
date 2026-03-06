@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const BlogPost = require('../models/BlogPost');
 const { Op } = require('sequelize');
+const { authMiddleware, requireRole } = require('../middleware/auth');
 
 // Get all posts
 router.get('/', async (req, res) => {
@@ -55,8 +56,8 @@ router.get('/:idOrSlug', async (req, res) => {
     }
 });
 
-// Create post
-router.post('/', async (req, res) => {
+// Create post (admin only)
+router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const post = await BlogPost.create(req.body);
         res.status(201).json(post);
@@ -66,8 +67,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update post
-router.put('/:id', async (req, res) => {
+// Update post (admin only)
+router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const post = await BlogPost.findByPk(req.params.id);
         if (!post) {
@@ -81,8 +82,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete post
-router.delete('/:id', async (req, res) => {
+// Delete post (admin only)
+router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const post = await BlogPost.findByPk(req.params.id);
         if (!post) {

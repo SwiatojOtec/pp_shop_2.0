@@ -80,8 +80,30 @@ export default function Header({ onCartClick }) {
       <nav className="main-nav">
         <div className="container">
           <ul className="nav-list">
-            <li><Link to="/" className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}>Головна</Link></li>
-            <li><Link to="/magazyn" className={`nav-item ${location.pathname === '/magazyn' ? 'active' : ''}`}>Магазин</Link></li>
+            <li>
+              <Link
+                to="/"
+                className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}
+              >
+                Головна
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/magazyn"
+                className={`nav-item ${location.pathname.startsWith('/magazyn') ? 'active' : ''}`}
+              >
+                Магазин
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/orenda"
+                className={`nav-item ${location.pathname.startsWith('/orenda') ? 'active' : ''}`}
+              >
+                Оренда
+              </Link>
+            </li>
             <li className="hide-mobile"><Link to="/magazyn/parketna_doshka" className="nav-item">Паркет</Link></li>
             <li className="hide-mobile"><Link to="/magazyn/laminat" className="nav-item">Ламінат</Link></li>
             <li className="hide-mobile"><Link to="/magazyn/vinilova_pidloha" className="nav-item">Вініл</Link></li>

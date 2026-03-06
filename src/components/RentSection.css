@@ -1,0 +1,127 @@
+.rent-section {
+    padding: var(--spacing-xl) 0;
+    background: var(--color-light);
+}
+
+.rent-info-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: var(--spacing-lg);
+    align-items: flex-start;
+}
+
+.rent-products-block {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--color-grey);
+}
+
+.rent-text {
+    font-size: 1.05rem;
+    color: #555;
+    margin-bottom: var(--spacing-md);
+    max-width: 560px;
+}
+
+.rent-highlights {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.rent-item {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: #fff;
+    border: 1px solid var(--color-grey);
+}
+
+.rent-item h3 {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.rent-item p {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.rent-icon {
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.rent-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.rent-note {
+    font-size: 0.9rem;
+    color: #777;
+    max-width: 560px;
+}
+
+.rent-aside {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.rent-card {
+    background: var(--color-dark);
+    color: #fff;
+    padding: var(--spacing-lg);
+    border-radius: 4px;
+    width: 100%;
+    max-width: 360px;
+}
+
+.rent-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.rent-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--spacing-sm);
+}
+
+.rent-card li {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.rent-card-note {
+    font-size: 0.85rem;
+    color: #ddd;
+}
+
+@media (max-width: 992px) {
+    .rent-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rent-aside {
+        justify-content: flex-start;
+    }
+
+    .rent-card {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .rent-actions {
+        flex-direction: column;
+    }
+
+    .rent-highlights {
+        grid-template-columns: 1fr;
+    }
+}
+

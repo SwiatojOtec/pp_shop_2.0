@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/db');
+// Ініціалізація основного Telegram-бота (для калькулятора/рахунків)
+require('./utils/telegram');
+// Ініціалізація окремого бота для оренди (обмежені права)
+require('./utils/telegramRent');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const currencyRoutes = require('./routes/currencyRoutes');
@@ -9,10 +13,9 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const brandRoutes = require('./routes/brandRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const contactRoutes = require('./routes/contactRoutes');
-
-
-
-
+const rentCategoryRoutes = require('./routes/rentCategoryRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const app = express();
 
 // Middleware
@@ -50,10 +53,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/contact', contactRoutes);
-
-
-
-
+app.use('/api/rent-categories', rentCategoryRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 // Database Connection and Sync
 const PORT = process.env.PORT || 5000;
 

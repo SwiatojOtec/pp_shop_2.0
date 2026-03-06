@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Save, ArrowLeft, Plus, Trash2, Image as ImageIcon,
@@ -6,9 +6,10 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { transliterate } from '../../utils/transliterate';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
-export default function ProductEdit() {
+export default function ProductEdit({ context = 'products' }) {
     const { id } = useParams();
     const navigate = useNavigate();
     const isNew = id === 'new';
@@ -30,15 +31,26 @@ export default function ProductEdit() {
         unit: 'м²',
         badge: '',
         specs: {},
-        priceMatrix: []
+        priceMatrix: [],
+        availableFrom: '',
+        kitItems: [],
+        quantityAvailable: ''
     });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
     const [newSpec, setNewSpec] = useState({ key: '', value: '' });
+    const { token } = useAuth();
+
+    const isRentContext = context === 'rent';
 
     useEffect(() => {
+        // Для нових інструментів оренди за замовчуванням ставимо "шт"
+        if (isRentContext && isNew) {
+            setFormData(prev => ({ ...prev, unit: 'шт', packSize: 1 }));
+        }
+
         fetchCategories();
         fetchBrands();
         if (!isNew) {
@@ -48,7 +60,8 @@ export default function ProductEdit() {
 
     const fetchCategories = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/categories`);
+            const url = isRentContext ? `${API_URL}/api/rent-categories` : `${API_URL}/api/categories`;
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setCategories(data);
@@ -95,7 +108,10 @@ export default function ProductEdit() {
                     oldPrice: data.oldPrice || '',
                     images: data.images || [],
                     specs: data.specs || {},
-                    priceMatrix: data.priceMatrix || []
+                    priceMatrix: data.priceMatrix || [],
+                    availableFrom: data.availableFrom || '',
+                    kitItems: data.kitItems || [],
+                    quantityAvailable: data.quantityAvailable ?? ''
                 });
             }
         } catch (err) {
@@ -147,17 +163,30 @@ export default function ProductEdit() {
                 ...formData,
                 price: formData.price === '' ? null : Number(formData.price),
                 oldPrice: (formData.oldPrice === '' || formData.badge !== 'SALE') ? null : Number(formData.oldPrice),
-                packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize)
+                packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize),
+                availableFrom: formData.availableFrom || null,
+                badge: isRentContext ? null : formData.badge,
+                quantityAvailable: formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable)
             };
+
+            const payload = {
+                ...dataToSend,
+                isRent: isRentContext
+            };
+
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
 
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dataToSend)
+                headers,
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-                navigate('/admin/products');
+                navigate(isRentContext ? '/admin/rent' : '/admin/products');
             } else {
                 const errorData = await res.json();
                 alert(`Помилка: ${errorData.message || 'Не вдалося зберегти товар'}`);
@@ -237,20 +266,39 @@ export default function ProductEdit() {
         setFormData(prev => ({ ...prev, priceMatrix: sizes }));
     };
 
+    const isSillCategory = formData.category === 'Підвіконня';
+
     if (loading) return <div className="admin-content">Завантаження...</div>;
 
     return (
         <div className="product-edit-page">
             <div className="admin-breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#666', fontSize: '0.9rem' }}>
-                <Link to="/admin/products" style={{ color: 'inherit', textDecoration: 'none' }}>Товари</Link>
+                <Link
+                    to={isRentContext ? '/admin/rent' : '/admin/products'}
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                >
+                    {isRentContext ? 'Оренда' : 'Товари'}
+                </Link>
                 <ChevronRight size={14} />
-                <span style={{ color: 'var(--admin-dark)', fontWeight: 700 }}>{isNew ? 'Новий товар' : formData.name}</span>
+                <span style={{ color: 'var(--admin-dark)', fontWeight: 700 }}>
+                    {isNew ? (isRentContext ? 'Новий інструмент' : 'Новий товар') : formData.name}
+                </span>
             </div>
 
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <button onClick={() => navigate('/admin/products')} className="action-btn" style={{ width: '40px', height: '40px' }}><ArrowLeft size={20} /></button>
-                    <h1 className="admin-title" style={{ margin: 0 }}>{isNew ? 'Додати новий товар' : 'Редагувати товар'}</h1>
+                    <button
+                        onClick={() => navigate(isRentContext ? '/admin/rent' : '/admin/products')}
+                        className="action-btn"
+                        style={{ width: '40px', height: '40px' }}
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <h1 className="admin-title" style={{ margin: 0 }}>
+                        {isNew
+                            ? (isRentContext ? 'Додати новий інструмент' : 'Додати новий товар')
+                            : (isRentContext ? 'Редагувати інструмент' : 'Редагувати товар')}
+                    </h1>
                 </div>
                 <button onClick={handleSubmit} className="btn btn-primary">
                     <Save size={20} /> Зберегти зміни
@@ -321,7 +369,73 @@ export default function ProductEdit() {
                         </div>
                     </div>
 
-                    {formData.category === 'Підвіконня' && (
+                    {isRentContext && (
+                        <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
+                            <h2 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800 }}>Комплектація</h2>
+                            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
+                                Список того, що входить до комплекту при оренді цього інструменту. Наприклад: &quot;Піка 400 мм&quot;, &quot;Кейс&quot;, &quot;Додаткова ручка&quot;.
+                            </p>
+                            <div className="specs-list" style={{ marginBottom: '15px' }}>
+                                {Array.isArray(formData.kitItems) && formData.kitItems.length > 0 ? (
+                                    formData.kitItems.map((item, index) => (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', background: '#f9f9f9', padding: '8px 10px', borderRadius: '8px' }}>
+                                            <span style={{ flex: 1 }}>{item}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = [...formData.kitItems];
+                                                    next.splice(index, 1);
+                                                    setFormData(prev => ({ ...prev, kitItems: next }));
+                                                }}
+                                                className="remove-btn"
+                                                style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ fontSize: '0.8rem', color: '#999' }}>Поки що немає елементів комплекту.</div>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Наприклад: Піка 400 мм"
+                                    value={newSpec.value} // тимчасово використовуємо newSpec.value як буфер
+                                    onChange={e => setNewSpec(prev => ({ ...prev, value: e.target.value }))}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const val = newSpec.value.trim();
+                                            if (!val) return;
+                                            const next = Array.isArray(formData.kitItems) ? [...formData.kitItems] : [];
+                                            next.push(val);
+                                            setFormData(prev => ({ ...prev, kitItems: next }));
+                                            setNewSpec(prev => ({ ...prev, value: '' }));
+                                        }
+                                    }}
+                                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                        const val = newSpec.value.trim();
+                                        if (!val) return;
+                                        const next = Array.isArray(formData.kitItems) ? [...formData.kitItems] : [];
+                                        next.push(val);
+                                        setFormData(prev => ({ ...prev, kitItems: next }));
+                                        setNewSpec(prev => ({ ...prev, value: '' }));
+                                    }}
+                                >
+                                    <Plus size={18} /> Додати в комплект
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {isSillCategory && (
                         <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                                 <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Матриця цін (Підвіконня)</h2>
@@ -464,40 +578,84 @@ export default function ProductEdit() {
                             )}
                             <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>Наявність</label>
-                                <select
-                                    value={formData.stockStatus}
-                                    onChange={e => setFormData({ ...formData, stockStatus: e.target.value })}
-                                >
-                                    <option value="in_stock">В наявності</option>
-                                    <option value="on_order">Під замовлення</option>
-                                    <option value="out_of_stock">Немає в наявності</option>
-                                </select>
+                                {!isRentContext ? (
+                                    <select
+                                        value={formData.stockStatus}
+                                        onChange={e => setFormData({ ...formData, stockStatus: e.target.value })}
+                                    >
+                                        <option value="in_stock">В наявності</option>
+                                        <option value="on_order">Під замовлення</option>
+                                        <option value="out_of_stock">Немає в наявності</option>
+                                    </select>
+                                ) : (
+                                    <>
+                                        <select
+                                            value={formData.stockStatus}
+                                            onChange={e => setFormData({ ...formData, stockStatus: e.target.value })}
+                                        >
+                                            <option value="in_stock">В наявності</option>
+                                            <option value="out_of_stock">Немає в наявності</option>
+                                            <option value="available_later">Буде доступно з дати</option>
+                                        </select>
+                                        {formData.stockStatus === 'available_later' && (
+                                            <div style={{ marginTop: '10px' }}>
+                                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
+                                                    Доступно з
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={formData.availableFrom || ''}
+                                                    onChange={e => setFormData({ ...formData, availableFrom: e.target.value })}
+                                                />
+                                            </div>
+                                        )}
+                                        <div style={{ marginTop: '12px' }}>
+                                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
+                                                Кількість доступних одиниць на складі
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.quantityAvailable}
+                                                onChange={e => setFormData({ ...formData, quantityAvailable: e.target.value })}
+                                                placeholder="Наприклад: 5"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label>Мітка (Badge)</label>
-                                <select
-                                    value={formData.badge || ''}
-                                    onChange={e => setFormData({ ...formData, badge: e.target.value })}
-                                >
-                                    <option value="">Без мітки</option>
-                                    <option value="SALE">Розпродаж %</option>
-                                    <option value="NEW">Новинка</option>
-                                    <option value="HOT">Хіт продажу</option>
-                                    <option value="TOP">Топ вибір</option>
-                                </select>
-                            </div>
+                            {!isRentContext && (
+                                <div className="form-group" style={{ marginBottom: '20px' }}>
+                                    <label>Мітка (Badge)</label>
+                                    <select
+                                        value={formData.badge || ''}
+                                        onChange={e => setFormData({ ...formData, badge: e.target.value })}
+                                    >
+                                        <option value="">Без мітки</option>
+                                        <option value="SALE">Розпродаж %</option>
+                                        <option value="NEW">Новинка</option>
+                                        <option value="HOT">Хіт продажу</option>
+                                        <option value="TOP">Топ вибір</option>
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group" style={{ marginBottom: '20px' }}>
                                 <label>Категорія</label>
                                 <select
-                                    value={formData.category}
-                                    onChange={e => {
-                                        const newCategory = e.target.value;
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            category: newCategory,
-                                            unit: newCategory === 'Підвіконня' ? 'п.м.' : prev.unit
-                                        }));
-                                    }}
+                                        value={formData.category}
+                                        onChange={e => {
+                                            const newCategory = e.target.value;
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                category: newCategory,
+                                                unit:
+                                                    newCategory === 'Підвіконня'
+                                                        ? 'п.м.'
+                                                        : isRentContext
+                                                            ? prev.unit || 'шт'
+                                                            : prev.unit
+                                            }));
+                                        }}
                                 >
                                     {categories.map(cat => (
                                         <option key={cat.id} value={cat.name}>{cat.name}</option>
@@ -522,16 +680,25 @@ export default function ProductEdit() {
                                 <select
                                     value={formData.unit}
                                     onChange={e => setFormData({ ...formData, unit: e.target.value })}
-                                    disabled={formData.category === 'Підвіконня'}
-                                    style={formData.category === 'Підвіконня' ? { background: '#f5f5f5', color: '#888' } : {}}
+                                    disabled={isSillCategory}
+                                    style={isSillCategory ? { background: '#f5f5f5', color: '#888' } : {}}
                                 >
-                                    <option value="м²">м² (Квадратний метр)</option>
-                                    <option value="шт">шт (Штука)</option>
-                                    <option value="п.м.">п.м. (Погонний метр)</option>
-                                    <option value="уп">уп (Упаковка)</option>
+                                    {isRentContext ? (
+                                        <>
+                                            <option value="шт">шт (Штука)</option>
+                                            <option value="м²">м² (Квадратний метр, наприклад будівельні риштування)</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="м²">м² (Квадратний метр)</option>
+                                            <option value="шт">шт (Штука)</option>
+                                            <option value="п.м.">п.м. (Погонний метр)</option>
+                                            <option value="уп">уп (Упаковка)</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
-                            {formData.category !== 'Підвіконня' && (
+                            {!isSillCategory && !isRentContext && (
                                 <div className="form-group" style={{ marginTop: '20px' }}>
                                     <label>Площа в упаковці ({formData.unit})</label>
                                     <input
@@ -547,42 +714,44 @@ export default function ProductEdit() {
                         </div>
                     </div>
 
-                    <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                        <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Ідентифікатори</h2>
-                        <div className="admin-form">
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label>Group ID (Колекція)</label>
-                                <input
-                                    type="text"
-                                    value={formData.groupId || ''}
-                                    onChange={e => setFormData({ ...formData, groupId: e.target.value })}
-                                    onBlur={e => fetchExistingGroupData(e.target.value)}
-                                    placeholder="Напр: chevron_oak_2024"
-                                />
-                                <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Однаковий ID об'єднує товари в одну колекцію.</p>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label>SKU</label>
-                                <input
-                                    type="text"
-                                    value={formData.sku}
-                                    disabled
-                                    placeholder="Генерується автоматично"
-                                    style={{ background: '#f5f5f5', color: '#666' }}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Slug (URL)</label>
-                                <input
-                                    type="text"
-                                    value={formData.slug}
-                                    onChange={e => setFormData({ ...formData, slug: e.target.value })}
-                                    placeholder="test_laminatu"
-                                />
-                                <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '5px' }}>Генерується автоматично з назви, але можна змінити.</p>
+                    {!isRentContext && (
+                        <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+                            <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Ідентифікатори</h2>
+                            <div className="admin-form">
+                                <div className="form-group" style={{ marginBottom: '20px' }}>
+                                    <label>Group ID (Колекція)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.groupId || ''}
+                                        onChange={e => setFormData({ ...formData, groupId: e.target.value })}
+                                        onBlur={e => fetchExistingGroupData(e.target.value)}
+                                        placeholder="Напр: chevron_oak_2024"
+                                    />
+                                    <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px' }}>Однаковий ID об'єднує товари в одну колекцію.</p>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '20px' }}>
+                                    <label>SKU</label>
+                                    <input
+                                        type="text"
+                                        value={formData.sku}
+                                        disabled
+                                        placeholder="Генерується автоматично"
+                                        style={{ background: '#f5f5f5', color: '#666' }}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Slug (URL)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.slug}
+                                        onChange={e => setFormData({ ...formData, slug: e.target.value })}
+                                        placeholder="test_laminatu"
+                                    />
+                                    <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '5px' }}>Генерується автоматично з назви, але можна змінити.</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

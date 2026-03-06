@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
+import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
@@ -11,7 +13,8 @@ export default function ProductGrid() {
     const [activeTab, setActiveTab] = useState('all');
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { addToCart } = useCart();
+    const { addToCart, cartItems } = useCart();
+    const { showToast } = useToast();
     const { toggleFavorite, isFavorite } = useFavorites();
 
     useEffect(() => {
@@ -28,9 +31,11 @@ export default function ProductGrid() {
             });
     }, []);
 
+    const shopProducts = products.filter(p => !p.isRent);
+
     const filteredProducts = activeTab === 'all'
-        ? products
-        : products.filter(p => {
+        ? shopProducts
+        : shopProducts.filter(p => {
             if (activeTab === 'new') return p.badge === 'NEW';
             if (activeTab === 'top') return p.badge === 'TOP';
             if (activeTab === 'sale') return p.badge === 'SALE';
@@ -89,7 +94,7 @@ export default function ProductGrid() {
                                 >
                                     <Heart size={20} fill={isFavorite(product._id || product.id) ? "currentColor" : "none"} />
                                 </button>
-                                <button className="add-to-cart-btn" onClick={() => addToCart(product)}><Plus size={24} /></button>
+                                <button className="add-to-cart-btn" onClick={() => addToCartWithToast(product, 1, cartItems, addToCart, showToast)}><Plus size={24} /></button>
                             </div>
                             <div className="product-info">
                                 <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -105,7 +110,7 @@ export default function ProductGrid() {
                     ))}
                 </div>
 
-                {products.length > 8 && (
+                {shopProducts.length > 8 && (
                     <div style={{ textAlign: 'center', marginTop: '40px' }}>
                         <Link to="/magazyn" className="btn btn-primary">Дивитись всі товари</Link>
                     </div>

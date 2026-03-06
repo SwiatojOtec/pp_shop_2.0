@@ -47,9 +47,23 @@ export default function Cart({ isOpen, onClose }) {
                                         </div>
                                         <div className="item-controls">
                                             <div className="qty-btns">
-                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={14} /></button>
-                                                <span>{item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
-                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={14} /></button>
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>
+                                                    <Minus size={14} />
+                                                </button>
+                                                <span>
+                                                    {item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}
+                                                    {item.isRent && typeof item.quantityAvailable === 'number' && (
+                                                        <span style={{ marginLeft: 6, fontSize: '0.7rem', color: '#6b7280' }}>
+                                                            / макс {item.quantityAvailable}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <button
+                                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                    disabled={item.isRent && typeof item.quantityAvailable === 'number' && item.quantity >= item.quantityAvailable}
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
                                             </div>
                                             <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
                                                 {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴

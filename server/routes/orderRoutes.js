@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-
+const { authMiddleware, requireRole } = require('../middleware/auth');
 const { sendTelegramMessage } = require('../utils/telegram');
 
 // Create new order
@@ -70,8 +70,8 @@ ${items.map(item => `- ${item.name} x ${item.quantity} (${Number(item.price).toF
     }
 });
 
-// Get all orders (for admin later)
-router.get('/', async (req, res) => {
+// Get all orders (admin only)
+router.get('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
         res.json(orders);
@@ -80,8 +80,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Update order
-router.put('/:id', async (req, res) => {
+// Update order (admin only)
+router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -92,8 +92,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete order
-router.delete('/:id', async (req, res) => {
+// Delete order (admin only)
+router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });

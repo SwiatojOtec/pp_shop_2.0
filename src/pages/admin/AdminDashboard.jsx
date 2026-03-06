@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
 export default function AdminDashboard() {
+    const { user } = useAuth();
     const [stats, setStats] = useState({
         products: 0,
         orders: 0,
@@ -45,7 +47,9 @@ export default function AdminDashboard() {
         <div className="admin-dashboard">
             <div className="dashboard-header">
                 <h1 className="admin-title">Огляд магазину</h1>
-                <p className="admin-subtitle">Вітаємо, Микола! Ось що відбувається у вашому магазині сьогодні.</p>
+                <p className="admin-subtitle">
+                    Вітаємо{user ? `, ${user.name}${user.lastName ? ' ' + user.lastName : ''}` : ''}! Ось що відбувається у вашому магазині сьогодні.
+                </p>
             </div>
 
             <div className="stats-grid">

@@ -94,6 +94,22 @@ const Product = sequelize.define('Product', {
     stockStatus: {
         type: DataTypes.STRING,
         defaultValue: 'in_stock' // in_stock, on_order, out_of_stock
+    },
+    availableFrom: {
+        type: DataTypes.DATEONLY, // Для оренди: дата, коли знову буде доступно
+        allowNull: true
+    },
+    isRent: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    kitItems: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: [] // Для оренди: перелік елементів комплекту
+    },
+    quantityAvailable: {
+        type: DataTypes.INTEGER,
+        allowNull: true // Для оренди: скільки одиниць доступно
     }
 });
 

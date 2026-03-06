@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
 const { transliterate } = require('../utils/transliterate');
+const { authMiddleware, requireRole } = require('../middleware/auth');
 
 // Get all categories
 router.get('/', async (req, res) => {
@@ -13,8 +14,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Create category
-router.post('/', async (req, res) => {
+// Create category (admin only)
+router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const { name } = req.body;
         // Proper transliteration for Cyrillic names
@@ -27,8 +28,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Delete category
-router.delete('/:id', async (req, res) => {
+// Delete category (admin only)
+router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {
         const category = await Category.findByPk(req.params.id);
         if (!category) return res.status(404).json({ message: 'Category not found' });

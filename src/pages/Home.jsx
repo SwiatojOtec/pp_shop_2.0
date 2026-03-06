@@ -5,6 +5,7 @@ import FeaturesStrip from '../components/FeaturesStrip';
 import CategoryGrid from '../components/CategoryGrid';
 import ProductGrid from '../components/ProductGrid';
 import ProjectsGallery from '../components/ProjectsGallery';
+import RentSection from '../components/RentSection';
 import ShowroomSection from '../components/ShowroomSection';
 import ConsultationBlock from '../components/ConsultationBlock';
 
@@ -17,6 +18,7 @@ export default function Home() {
             <CategoryGrid />
             <ProductGrid />
             <ProjectsGallery />
+            <RentSection />
             <ShowroomSection />
             <ConsultationBlock />
         </>

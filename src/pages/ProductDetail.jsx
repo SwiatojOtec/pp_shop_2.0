@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus } from 'lucide-react';
+import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus, Phone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
+import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
@@ -9,7 +11,8 @@ import './ProductDetail.css';
 
 export default function ProductDetail() {
     const { slug } = useParams();
-    const { addToCart } = useCart();
+    const { addToCart, cartItems } = useCart();
+    const { showToast } = useToast();
     const { toggleFavorite, isFavorite } = useFavorites();
     const [product, setProduct] = useState(null);
     const [variants, setVariants] = useState([]);
@@ -132,9 +135,183 @@ export default function ProductDetail() {
         // Reset or keep? Let's keep for now so they can add another similar one
     };
 
+    const getMaxRentQuantity = () => {
+        if (!product || !product.isRent) return null;
+        if (typeof product.quantityAvailable !== 'number') return null;
+        if (product.quantityAvailable <= 0) return 0;
+        return product.quantityAvailable;
+    };
+
     if (loading) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Завантаження...</div>;
     if (error) return <div className="container" style={{ padding: '100px 0', textAlign: 'center', color: 'red' }}>{error}</div>;
     if (!product) return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Товар не знайдено</div>;
+
+    const isRent = product.isRent;
+
+    // Rent-specific compact layout
+    if (isRent) {
+        return (
+            <div className="product-page">
+                <div className="container">
+                    <nav className="breadcrumbs">
+                        <Link to="/">Головна</Link> / <Link to="/orenda">Оренда</Link> / <span>{product.name}</span>
+                    </nav>
+
+                    {/* Title row — above the grid, always visible */}
+                    <div className="rent-title-row">
+                        <h1 className="rent-product-title">{product.name}</h1>
+                        <div className="rent-meta-row">
+                            <span className="product-sku">SKU: {product.sku}</span>
+                        </div>
+                    </div>
+
+                    <div className="rent-product-grid">
+                        {/* LEFT: image */}
+                        <div className="rent-gallery">
+                            <div className="rent-main-image-wrap">
+                                <img src={activeImg} alt={product.name} className="rent-main-image" />
+                                <button
+                                    className={`wishlist-btn-large ${isFavorite(product._id || product.id) ? 'active' : ''}`}
+                                    onClick={() => toggleFavorite(product)}
+                                    style={{ top: '12px', right: '12px', width: '38px', height: '38px' }}
+                                >
+                                    <Heart size={18} fill={isFavorite(product._id || product.id) ? "currentColor" : "none"} />
+                                </button>
+                            </div>
+                            {product.images && product.images.length > 0 && (
+                                <div className="rent-thumbs">
+                                    <div
+                                        className={`thumb-item ${activeImg === product.image ? 'active' : ''}`}
+                                        onClick={() => setActiveImg(product.image)}
+                                    >
+                                        <img src={product.image} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                    {product.images.map((img, i) => (
+                                        <div
+                                            key={i}
+                                            className={`thumb-item ${activeImg === img ? 'active' : ''}`}
+                                            onClick={() => setActiveImg(img)}
+                                        >
+                                            <img src={img} alt={`Thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* MIDDLE: specs + description */}
+                        <div className="rent-specs-col">
+                            {product.specs && Object.keys(product.specs).length > 0 && (
+                                <div className="rent-specs-table">
+                                    <div className="rent-specs-header">Технічні характеристики</div>
+                                    {Object.entries(product.specs).map(([label, value], i) => (
+                                        <div key={i} className="rent-spec-row">
+                                            <span className="rent-spec-label">{label}</span>
+                                            <span className="rent-spec-value">{value}</span>
+                                        </div>
+                                    ))}
+                                    <div className="rent-spec-row">
+                                        <span className="rent-spec-label">Категорія</span>
+                                        <span className="rent-spec-value">{product.category}</span>
+                                    </div>
+                                    {product.brand && (
+                                        <div className="rent-spec-row">
+                                            <span className="rent-spec-label">Бренд</span>
+                                            <span className="rent-spec-value">{product.brand}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {product.desc && (
+                                <div className="rent-desc-block">
+                                    <p className="rent-desc-text">{product.desc}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* RIGHT: price + kit + buy */}
+                        <div className="rent-sidebar">
+                            <div className="rent-price-box">
+                                <div className="rent-price">
+                                    {product.price} ₴ <span className="rent-price-unit">/ доба</span>
+                                </div>
+                                {product.oldPrice && (
+                                    <div className="price-old" style={{ fontSize: '1.1rem' }}>{product.oldPrice} ₴</div>
+                                )}
+                                <div className="rent-qty-available">
+                                    {product.stockStatus === 'out_of_stock' && (
+                                        <span style={{ color: '#ef4444', fontWeight: 700 }}>Немає в наявності</span>
+                                    )}
+                                    {product.stockStatus === 'on_order' && (
+                                        <span style={{ color: '#f59e0b', fontWeight: 700 }}>Під замовлення</span>
+                                    )}
+                                    {product.stockStatus === 'available_later' && (
+                                        <span style={{ color: '#0ea5e9', fontWeight: 700 }}>
+                                            Буде доступно з{' '}
+                                            {product.availableFrom
+                                                ? new Date(product.availableFrom).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                                : 'дата уточнюється'}
+                                        </span>
+                                    )}
+                                    {(!product.stockStatus || product.stockStatus === 'in_stock') && (
+                                        typeof product.quantityAvailable === 'number'
+                                            ? <>В наявності: <strong>{product.quantityAvailable}</strong> {product.unit || 'шт'}</>
+                                            : <span style={{ color: '#22c55e', fontWeight: 700 }}>В наявності</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {Array.isArray(product.kitItems) && product.kitItems.length > 0 && (
+                                <div className="kit-block">
+                                    <h3 className="kit-title">До комплекту входять:</h3>
+                                    <ul className="kit-list">
+                                        {product.kitItems.map((item, index) => (
+                                            <li key={index}>{item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <div className="purchase-section" style={{ marginBottom: '16px' }}>
+                                <div className="quantity-control">
+                                    <button onClick={() => setQuantity(prev => Math.max(1, prev - 1))}>
+                                        <Minus size={18} />
+                                    </button>
+                                    <input type="number" value={quantity} readOnly />
+                                    <button
+                                        onClick={() => {
+                                            const maxRentQty = getMaxRentQuantity();
+                                            setQuantity(prev => {
+                                                const next = prev + 1;
+                                                return maxRentQty != null ? Math.min(next, maxRentQty) : next;
+                                            });
+                                        }}
+                                    >
+                                        <Plus size={18} />
+                                    </button>
+                                </div>
+                                <button
+                                    className="btn btn-primary buy-btn"
+                                    onClick={() => addToCartWithToast(product, quantity, cartItems, addToCart, showToast)}
+                                    style={{ flex: 1 }}
+                                    disabled={getMaxRentQuantity() === 0}
+                                >
+                                    <ShoppingCart size={20} />
+                                    {product.stockStatus === 'available_later' ? 'Забронювати' : 'Замовити'}
+                                </button>
+                            </div>
+
+                            <a href="tel:0670064044" className="rent-phone-link">
+                                <Phone size={15} />
+                                067 006 40 44
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="product-page">
@@ -191,11 +368,21 @@ export default function ProductDetail() {
                             <div className="stock-status-badge" style={{
                                 fontSize: '0.85rem',
                                 fontWeight: 700,
-                                color: product.stockStatus === 'out_of_stock' ? '#ef4444' :
-                                    product.stockStatus === 'on_order' ? '#f59e0b' : '#22c55e'
+                                color: product.stockStatus === 'out_of_stock'
+                                    ? '#ef4444'
+                                    : product.stockStatus === 'on_order'
+                                        ? '#f59e0b'
+                                        : product.stockStatus === 'available_later'
+                                            ? '#0ea5e9'
+                                            : '#22c55e'
                             }}>
-                                {product.stockStatus === 'out_of_stock' ? 'Немає в наявності' :
-                                    product.stockStatus === 'on_order' ? 'Під замовлення' : 'В наявності'}
+                                {product.stockStatus === 'out_of_stock'
+                                    ? 'Немає в наявності'
+                                    : product.stockStatus === 'on_order'
+                                        ? 'Під замовлення'
+                                        : product.stockStatus === 'available_later'
+                                            ? `Буде доступно з ${product.availableFrom || 'дата уточнюється'}`
+                                            : 'В наявності'}
                             </div>
                             <div className="product-rating">
                                 <Star size={16} fill="var(--color-primary)" color="var(--color-primary)" />
@@ -207,14 +394,31 @@ export default function ProductDetail() {
 
                         <div className="price-section">
                             <div className="price-current">
-                                {product.price} ₴ <span className="unit">/ {product.unit || 'м²'}</span>
+                                {product.price} ₴ <span className="unit">/ {product.isRent ? 'доба' : (product.unit || 'м²')}</span>
                             </div>
                             {product.oldPrice && (
                                 <div className="price-old">{product.oldPrice} ₴</div>
                             )}
                         </div>
 
+                        {product.isRent && typeof product.quantityAvailable === 'number' && (
+                            <div style={{ marginBottom: '12px', fontSize: '0.9rem', color: '#4b5563' }}>
+                                В наявності для оренди: <strong>{product.quantityAvailable}</strong> {product.unit || 'шт'}
+                            </div>
+                        )}
+
                         <p className="short-desc">{product.desc}</p>
+
+                        {product.isRent && Array.isArray(product.kitItems) && product.kitItems.length > 0 && (
+                            <div className="kit-block">
+                                <h3 className="kit-title">До комплекту входять:</h3>
+                                <ul className="kit-list">
+                                    {product.kitItems.map((item, index) => (
+                                        <li key={index}>{item}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
                         {variants.length > 0 && (
                             <div className="product-variants" style={{ marginBottom: '25px' }}>
@@ -334,12 +538,36 @@ export default function ProductDetail() {
                                 <div className="purchase-section">
                                     {product.unit !== 'м²' && (
                                         <div className="quantity-control">
-                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus size={18} /></button>
+                                            <button
+                                                onClick={() => {
+                                                    setQuantity(prev => Math.max(1, prev - 1));
+                                                }}
+                                            >
+                                                <Minus size={18} />
+                                            </button>
                                             <input type="number" value={quantity} readOnly />
-                                            <button onClick={() => setQuantity(quantity + 1)}><Plus size={18} /></button>
+                                            <button
+                                                onClick={() => {
+                                                    const maxRentQty = getMaxRentQuantity();
+                                                    setQuantity(prev => {
+                                                        const next = prev + 1;
+                                                        if (maxRentQty != null) {
+                                                            return Math.min(next, maxRentQty);
+                                                        }
+                                                        return next;
+                                                    });
+                                                }}
+                                            >
+                                                <Plus size={18} />
+                                            </button>
                                         </div>
                                     )}
-                                    <button className="btn btn-primary buy-btn" onClick={() => addToCart(product, quantity)} style={{ flex: 1 }}>
+                                    <button
+                                        className="btn btn-primary buy-btn"
+                                        onClick={() => addToCartWithToast(product, quantity, cartItems, addToCart, showToast)}
+                                        style={{ flex: 1 }}
+                                        disabled={product.isRent && getMaxRentQuantity() === 0}
+                                    >
                                         <ShoppingCart size={20} />
                                         Додати в кошик
                                     </button>
@@ -347,20 +575,22 @@ export default function ProductDetail() {
                             </>
                         )}
 
-                        <div className="trust-badges">
-                            <div className="badge-item">
-                                <ShieldCheck size={20} />
-                                <span>2 роки гарантії</span>
+                        {!product.isRent && (
+                            <div className="trust-badges">
+                                <div className="badge-item">
+                                    <ShieldCheck size={20} />
+                                    <span>2 роки гарантії</span>
+                                </div>
+                                <div className="badge-item">
+                                    <Truck size={20} />
+                                    <span>Швидка доставка</span>
+                                </div>
+                                <div className="badge-item">
+                                    <RotateCcw size={20} />
+                                    <span>14 днів на повернення</span>
+                                </div>
                             </div>
-                            <div className="badge-item">
-                                <Truck size={20} />
-                                <span>Швидка доставка</span>
-                            </div>
-                            <div className="badge-item">
-                                <RotateCcw size={20} />
-                                <span>14 днів на повернення</span>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 

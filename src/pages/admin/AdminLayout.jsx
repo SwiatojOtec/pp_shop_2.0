@@ -1,18 +1,49 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, UserCircle2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
 export default function AdminLayout({ children }) {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+    const role = user?.role || 'rent';
+    const fullName = user ? `${user.name || ''}${user.lastName ? ' ' + user.lastName : ''}`.trim() : 'Адмін';
+    const initials = user && user.name ? user.name.charAt(0).toUpperCase() : 'A';
 
-    const menuItems = [
+    const allMenuItems = [
         { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Дашборд' },
+        { path: '/admin/profile', icon: <UserCircle2 size={20} />, label: 'Мій кабінет' },
         { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
+        { path: '/admin/rent', icon: <Wrench size={20} />, label: 'Оренда' },
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
         { path: '/admin/blog', icon: <FileText size={20} />, label: 'Блог' },
         { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
+        ...(role === 'owner' ? [{ path: '/admin/users', icon: <Users size={20} />, label: 'Користувачі' }] : [])
     ];
+
+    const allowedPathsForRent = ['/admin', '/admin/profile', '/admin/rent'];
+
+    const menuItems = role === 'rent'
+        ? allMenuItems.filter(item => allowedPathsForRent.includes(item.path))
+        : allMenuItems;
+
+    useEffect(() => {
+        if (role === 'rent') {
+            const path = location.pathname;
+            const isAllowed =
+                path === '/admin' ||
+                path === '/admin/' ||
+                path === '/admin/profile' ||
+                path === '/admin/rent' ||
+                path.startsWith('/admin/rent/');
+
+            if (!isAllowed) {
+                navigate('/admin/rent', { replace: true });
+            }
+        }
+    }, [role, location.pathname, navigate]);
 
     return (
         <div className="admin-layout">
@@ -40,7 +71,13 @@ export default function AdminLayout({ children }) {
                         <Home size={20} />
                         <span>На сайт</span>
                     </Link>
-                    <button className="nav-link logout-btn">
+                    <button
+                        className="nav-link logout-btn"
+                        onClick={() => {
+                            logout();
+                            navigate('/admin/login');
+                        }}
+                    >
                         <LogOut size={20} />
                         <span>Вийти</span>
                     </button>
@@ -53,8 +90,13 @@ export default function AdminLayout({ children }) {
                         <input type="text" placeholder="Пошук по адмінці..." />
                     </div>
                     <div className="topbar-user">
-                        <div className="user-avatar">M</div>
-                        <span>Микола</span>
+                        <div className="user-avatar">{initials}</div>
+                        <div className="topbar-user-info">
+                            <span className="topbar-user-name">{fullName}</span>
+                            {role === 'rent' && (
+                                <span className="topbar-user-role">Менеджер з оренди</span>
+                            )}
+                        </div>
                     </div>
                 </header>
                 <div className="admin-content">

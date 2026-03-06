@@ -22,12 +22,24 @@ export function CartProvider({ children }) {
         setCartItems(prev => {
             const safePrev = Array.isArray(prev) ? prev : [];
             const existing = safePrev.find(item => item.id === product.id);
+
+            const hasLimit = product && product.isRent && typeof product.quantityAvailable === 'number';
+            const maxAllowed = hasLimit ? product.quantityAvailable : Infinity;
+            const currentQty = existing ? existing.quantity : 0;
+            const desiredQty = currentQty + quantity;
+            const finalQty = Math.min(desiredQty, maxAllowed);
+
+            // Якщо вже досягнуто максимум – не змінюємо кошик
+            if (finalQty <= currentQty) {
+                return safePrev;
+            }
+
             if (existing) {
                 return safePrev.map(item =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+                    item.id === product.id ? { ...item, quantity: finalQty } : item
                 );
             }
-            return [...safePrev, { ...product, quantity }];
+            return [...safePrev, { ...product, quantity: finalQty }];
         });
     };
 
@@ -37,9 +49,18 @@ export function CartProvider({ children }) {
 
     const updateQuantity = (id, quantity) => {
         if (quantity < 1) return;
-        setCartItems(prev => (Array.isArray(prev) ? prev.map(item =>
-            item.id === id ? { ...item, quantity } : item
-        ) : []));
+        setCartItems(prev => {
+            const safePrev = Array.isArray(prev) ? prev : [];
+            return safePrev.map(item => {
+                if (item.id !== id) return item;
+
+                const hasLimit = item && item.isRent && typeof item.quantityAvailable === 'number';
+                const maxAllowed = hasLimit ? item.quantityAvailable : Infinity;
+                const clampedQty = Math.min(quantity, maxAllowed);
+
+                return { ...item, quantity: clampedQty };
+            });
+        });
     };
 
     const clearCart = () => setCartItems([]);

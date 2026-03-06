@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
-
+const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 
 // Get all products with filtering and search
 
 router.get('/', async (req, res) => {
     try {
-        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId } = req.query;
+        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent } = req.query;
         let where = {};
 
         if (search) {
@@ -35,6 +35,16 @@ router.get('/', async (req, res) => {
             where.groupId = groupId;
         }
 
+        // Separate магазин vs оренда
+        // Фільтр за isRent застосовуємо тільки, якщо параметр явно переданий
+        if (isRent === 'true') {
+            where.isRent = true;
+        } else if (isRent === 'false') {
+            where.isRent = {
+                [Op.or]: [false, null]
+            };
+        }
+
         if (minPrice || maxPrice) {
             where.price = {};
             if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
@@ -42,7 +52,7 @@ router.get('/', async (req, res) => {
         }
 
         // Handle dynamic spec filters (anything else in query)
-        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId'];
+        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent'];
         Object.keys(req.query).forEach(key => {
             if (!standardParams.includes(key) && req.query[key]) {
                 // For JSONB specs filtering
@@ -87,8 +97,8 @@ router.get('/by-id/:id', async (req, res) => {
     }
 });
 
-// Create product
-router.post('/', async (req, res) => {
+// Create product (admin only)
+router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
     try {
         const data = req.body;
 
@@ -113,8 +123,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update product
-router.put('/:id', async (req, res) => {
+// Update product (admin only)
+router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
@@ -126,8 +136,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete product
-router.delete('/:id', async (req, res) => {
+// Delete product (admin only)
+router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
