@@ -20,6 +20,10 @@ const RentCategory = sequelize.define('RentCategory', {
     group: {
         type: DataTypes.STRING, // Для адмін-групування (папки)
         allowNull: true
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
     }
 });
 

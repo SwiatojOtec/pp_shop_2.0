@@ -26,6 +26,23 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, 
     }
 });
 
+// Toggle isActive flag (admin only)
+router.patch('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+    try {
+        const category = await RentCategory.findByPk(req.params.id);
+        if (!category) return res.status(404).json({ message: 'Category not found' });
+
+        if (req.body.isActive !== undefined) {
+            category.isActive = req.body.isActive;
+        }
+
+        await category.save();
+        res.json(category);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
 // Update rent category (admin only)
 router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
     try {

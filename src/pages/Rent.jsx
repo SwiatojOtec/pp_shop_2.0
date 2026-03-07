@@ -37,11 +37,11 @@ export default function Rent() {
             })
             .catch(err => console.error('Error fetching brands:', err));
 
-        // Fetch rent categories for sidebar filter
+        // Fetch rent categories for sidebar filter (only active ones)
         fetch(`${API_URL}/api/rent-categories`)
             .then(res => res.json())
             .then((catData) => {
-                setRentCategories(catData);
+                setRentCategories(catData.filter(c => c.isActive !== false));
             })
             .catch(err => console.error('Error fetching rent categories:', err));
 

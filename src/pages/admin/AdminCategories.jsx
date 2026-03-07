@@ -158,6 +158,23 @@ export default function AdminSettings() {
         }
     };
 
+    const handleToggleRentCategory = async (id, value) => {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch(`${API_URL}/api/rent-categories/${id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ isActive: value })
+            });
+            if (res.ok) {
+                setRentCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: value } : c));
+            }
+        } catch (err) {
+            console.error('Error toggling rent category:', err);
+        }
+    };
+
     const handleToggleBrand = async (id, field, value) => {
         try {
             const headers = { 'Content-Type': 'application/json' };
@@ -310,6 +327,7 @@ export default function AdminSettings() {
                                                         <th>Назва</th>
                                                         <th>Slug</th>
                                                         <th>Група</th>
+                                                        <th style={{ textAlign: 'center' }}>На сайті</th>
                                                         <th style={{ textAlign: 'right' }}>Дії</th>
                                                     </tr>
                                                 </thead>
@@ -326,6 +344,16 @@ export default function AdminSettings() {
                                                                     placeholder="Група..."
                                                                     style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #ddd', width: '100%' }}
                                                                 />
+                                                            </td>
+                                                            <td style={{ textAlign: 'center' }}>
+                                                                <label className="brand-toggle">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={cat.isActive !== false}
+                                                                        onChange={e => handleToggleRentCategory(cat.id, e.target.checked)}
+                                                                    />
+                                                                    <span className="brand-toggle-slider" />
+                                                                </label>
                                                             </td>
                                                             <td style={{ textAlign: 'right' }}>
                                                                 <button onClick={() => handleDeleteRentCategory(cat.id)} className="action-btn delete">
