@@ -21,6 +21,8 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminRent from './pages/admin/AdminRent';
 import AdminRentEdit from './pages/admin/AdminRentEdit';
+import AdminRentalApplications from './pages/admin/AdminRentalApplications';
+import AdminRentalApplicationForm from './pages/admin/AdminRentalApplicationForm';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminRegister from './pages/admin/AdminRegister';
@@ -130,6 +132,36 @@ function AppContent() {
               <RequireAdmin>
                 <AdminLayout>
                   <AdminRentEdit />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/rental-applications"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminRentalApplications />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/rental-applications/new"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminRentalApplicationForm />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/rental-applications/:id"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminRentalApplicationForm />
                 </AdminLayout>
               </RequireAdmin>
             }

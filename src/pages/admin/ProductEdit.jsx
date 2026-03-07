@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     Save, ArrowLeft, Plus, Trash2, Image as ImageIcon,
@@ -34,13 +34,24 @@ export default function ProductEdit({ context = 'products' }) {
         priceMatrix: [],
         availableFrom: '',
         kitItems: [],
-        quantityAvailable: ''
+        quantityAvailable: '',
+        relatedProducts: [],
+        serialNumber: '',
+        inventoryNumber: '',
+        technicalCondition: '',
+        weightPerUnit: '',
+        weightTotal: '',
+        replacementCost: '',
+        securityDeposit: ''
     });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
     const [newSpec, setNewSpec] = useState({ key: '', value: '' });
+    const [relatedSearch, setRelatedSearch] = useState('');
+    const [relatedResults, setRelatedResults] = useState([]);
+    const relatedSearchTimeout = useRef(null);
     const { token } = useAuth();
 
     const isRentContext = context === 'rent';
@@ -102,6 +113,15 @@ export default function ProductEdit({ context = 'products' }) {
             const res = await fetch(`${API_URL}/api/products/by-id/${id}`);
             if (res.ok) {
                 const data = await res.json();
+                // Load related products as full objects for display
+                let relatedProductObjects = [];
+                if (data.relatedProducts && data.relatedProducts.length > 0) {
+                    const relRes = await Promise.all(
+                        data.relatedProducts.map(pid => fetch(`${API_URL}/api/products/by-id/${pid}`).then(r => r.ok ? r.json() : null))
+                    );
+                    relatedProductObjects = relRes.filter(Boolean).map(p => ({ id: p.id, name: p.name, image: p.image, slug: p.slug }));
+                }
+
                 setFormData({
                     ...data,
                     price: data.price || '',
@@ -111,7 +131,8 @@ export default function ProductEdit({ context = 'products' }) {
                     priceMatrix: data.priceMatrix || [],
                     availableFrom: data.availableFrom || '',
                     kitItems: data.kitItems || [],
-                    quantityAvailable: data.quantityAvailable ?? ''
+                    quantityAvailable: data.quantityAvailable ?? '',
+                    relatedProducts: relatedProductObjects
                 });
             }
         } catch (err) {
@@ -166,7 +187,11 @@ export default function ProductEdit({ context = 'products' }) {
                 packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize),
                 availableFrom: formData.availableFrom || null,
                 badge: isRentContext ? null : formData.badge,
-                quantityAvailable: formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable)
+                quantityAvailable: formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable),
+                // Store only IDs in DB, not full objects
+                relatedProducts: Array.isArray(formData.relatedProducts)
+                    ? formData.relatedProducts.map(r => (typeof r === 'object' ? r.id : r))
+                    : []
             };
 
             const payload = {
@@ -431,6 +456,81 @@ export default function ProductEdit({ context = 'products' }) {
                                 >
                                     <Plus size={18} /> Додати в комплект
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {isRentContext && (
+                        <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)', marginBottom: '30px' }}>
+                            <h2 style={{ fontSize: '1.1rem', marginBottom: '8px', fontWeight: 800 }}>З цим товаром також беруть</h2>
+                            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '16px' }}>
+                                Вкажіть товари, які клієнти часто орендують разом з цим інструментом.
+                            </p>
+
+                            {/* Selected related products */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                                {Array.isArray(formData.relatedProducts) && formData.relatedProducts.length > 0 ? (
+                                    formData.relatedProducts.map(item => (
+                                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 10px', fontSize: '0.85rem' }}>
+                                            {item.image && <img src={item.image} alt="" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} />}
+                                            <span style={{ fontWeight: 600 }}>{item.name}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, relatedProducts: prev.relatedProducts.filter(r => r.id !== item.id) }))}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53e3e', padding: '0 2px', lineHeight: 1 }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span style={{ fontSize: '0.8rem', color: '#999' }}>Товарів не вибрано</span>
+                                )}
+                            </div>
+
+                            {/* Search input */}
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Пошук товару за назвою..."
+                                    value={relatedSearch}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setRelatedSearch(val);
+                                        clearTimeout(relatedSearchTimeout.current);
+                                        if (val.trim().length < 2) { setRelatedResults([]); return; }
+                                        relatedSearchTimeout.current = setTimeout(async () => {
+                                            const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(val)}&isRent=true`);
+                                            const data = res.ok ? await res.json() : [];
+                                            const existing = (formData.relatedProducts || []).map(r => r.id);
+                                            setRelatedResults(data.filter(p => p.id !== (id ? parseInt(id) : null) && !existing.includes(p.id)).slice(0, 6));
+                                        }, 300);
+                                    }}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                />
+                                {relatedResults.length > 0 && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, marginTop: '4px' }}>
+                                        {relatedResults.map(p => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setFormData(prev => ({ ...prev, relatedProducts: [...(prev.relatedProducts || []), { id: p.id, name: p.name, image: p.image, slug: p.slug }] }));
+                                                    setRelatedSearch('');
+                                                    setRelatedResults([]);
+                                                }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                                onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                                            >
+                                                <img src={p.image} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{p.category} · {p.price} ₴/доба</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -713,6 +813,79 @@ export default function ProductEdit({ context = 'products' }) {
                             )}
                         </div>
                     </div>
+
+                    {isRentContext && (
+                        <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+                            <h2 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800 }}>Додаткова інформація</h2>
+                            <div className="admin-form">
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
+                                    <label>Серійний номер</label>
+                                    <input
+                                        type="text"
+                                        value={formData.serialNumber || ''}
+                                        onChange={e => setFormData({ ...formData, serialNumber: e.target.value })}
+                                        placeholder="Напр: SN-2024-001"
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
+                                    <label>Інвентарний номер</label>
+                                    <input
+                                        type="text"
+                                        value={formData.inventoryNumber || ''}
+                                        onChange={e => setFormData({ ...formData, inventoryNumber: e.target.value })}
+                                        placeholder={formData.sku ? `Буде: ${formData.sku}` : 'Заповнюється автоматично зі SKU'}
+                                    />
+                                    {isNew && !formData.inventoryNumber && (
+                                        <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '4px' }}>Автоматично підставиться SKU після збереження</p>
+                                    )}
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
+                                    <label>Технічний стан</label>
+                                    <select
+                                        value={formData.technicalCondition || ''}
+                                        onChange={e => setFormData({ ...formData, technicalCondition: e.target.value })}
+                                    >
+                                        <option value="">Оберіть стан</option>
+                                        <option value="Новий">Новий</option>
+                                        <option value="Відмінний">Відмінний</option>
+                                        <option value="Добрий">Добрий</option>
+                                        <option value="Задовільний">Задовільний</option>
+                                        <option value="Потребує ремонту">Потребує ремонту</option>
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
+                                    <label>Вага загальна, кг</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={formData.weightTotal || ''}
+                                        onChange={e => setFormData({ ...formData, weightTotal: e.target.value })}
+                                        placeholder="0.0"
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
+                                    <label>Відновлювальна вартість, ₴</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.replacementCost || ''}
+                                        onChange={e => setFormData({ ...formData, replacementCost: e.target.value })}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Гарантійний платіж, ₴</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.securityDeposit || ''}
+                                        onChange={e => setFormData({ ...formData, securityDeposit: e.target.value })}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {!isRentContext && (
                         <div className="admin-section" style={{ background: 'white', padding: '25px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>

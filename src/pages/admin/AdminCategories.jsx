@@ -169,6 +169,9 @@ export default function AdminSettings() {
             });
             if (res.ok) {
                 setRentCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: value } : c));
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Помилка при зміні статусу категорії');
             }
         } catch (err) {
             console.error('Error toggling rent category:', err);

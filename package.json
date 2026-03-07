@@ -10,11 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "express-rate-limit": "^8.3.0",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-quill": "^2.0.0",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^7.11.0",
+    "react-to-print": "^3.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

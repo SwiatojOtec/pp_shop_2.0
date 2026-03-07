@@ -16,6 +16,7 @@ export default function ProductDetail() {
     const { toggleFavorite, isFavorite } = useFavorites();
     const [product, setProduct] = useState(null);
     const [variants, setVariants] = useState([]);
+    const [relatedItems, setRelatedItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeImg, setActiveImg] = useState('');
@@ -42,6 +43,15 @@ export default function ProductDetail() {
                 setLoading(false);
                 if (data.packSize) {
                     setM2Value(data.packSize.toFixed(2));
+                }
+
+                // Fetch related products for rent items
+                if (data.isRent && data.relatedProducts && data.relatedProducts.length > 0) {
+                    Promise.all(
+                        data.relatedProducts.map(pid =>
+                            fetch(`${API_URL}/api/products/by-id/${pid}`).then(r => r.ok ? r.json() : null)
+                        )
+                    ).then(items => setRelatedItems(items.filter(Boolean)));
                 }
 
                 // Fetch variants if groupId exists
@@ -194,6 +204,20 @@ export default function ProductDetail() {
                                         >
                                             <img src={img} alt={`Thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         </div>
+                                    ))}
+                                </div>
+                            )}
+                            {relatedItems.length > 0 && (
+                                <div className="rent-related-block">
+                                    <div className="rent-related-title">З цим товаром також беруть:</div>
+                                    {relatedItems.map(item => (
+                                        <Link key={item.id} to={`/orenda/${item.slug}`} className="rent-related-item">
+                                            <img src={item.image} alt={item.name} className="rent-related-img" />
+                                            <div className="rent-related-info">
+                                                <span className="rent-related-name">{item.name}</span>
+                                                <span className="rent-related-price">{item.price} ₴ / доба</span>
+                                            </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}

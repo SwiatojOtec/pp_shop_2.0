@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const RentCategory = require('../models/RentCategory');
+const Product = require('../models/Product');
 const { transliterate } = require('../utils/transliterate');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
@@ -33,6 +34,15 @@ router.patch('/:id', authMiddleware, requireRole(['owner', 'manager']), async (r
         if (!category) return res.status(404).json({ message: 'Category not found' });
 
         if (req.body.isActive !== undefined) {
+            // Block deactivation if products are using this category
+            if (req.body.isActive === false) {
+                const usedCount = await Product.count({ where: { category: category.name } });
+                if (usedCount > 0) {
+                    return res.status(409).json({
+                        message: `Неможливо вимкнути: категорію використовують ${usedCount} товар(ів). Спочатку змініть категорію у цих товарів.`
+                    });
+                }
+            }
             category.isActive = req.body.isActive;
         }
 

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, UserCircle2 } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, UserCircle2, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
@@ -17,13 +17,14 @@ export default function AdminLayout({ children }) {
         { path: '/admin/profile', icon: <UserCircle2 size={20} />, label: 'Мій кабінет' },
         { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
         { path: '/admin/rent', icon: <Wrench size={20} />, label: 'Оренда' },
+        { path: '/admin/rental-applications', icon: <ClipboardList size={20} />, label: 'Заявки (оренда)' },
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
         { path: '/admin/blog', icon: <FileText size={20} />, label: 'Блог' },
         { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
         ...(role === 'owner' ? [{ path: '/admin/users', icon: <Users size={20} />, label: 'Користувачі' }] : [])
     ];
 
-    const allowedPathsForRent = ['/admin', '/admin/profile', '/admin/rent'];
+    const allowedPathsForRent = ['/admin', '/admin/profile', '/admin/rent', '/admin/rental-applications'];
 
     const menuItems = role === 'rent'
         ? allMenuItems.filter(item => allowedPathsForRent.includes(item.path))
@@ -37,7 +38,9 @@ export default function AdminLayout({ children }) {
                 path === '/admin/' ||
                 path === '/admin/profile' ||
                 path === '/admin/rent' ||
-                path.startsWith('/admin/rent/');
+                path.startsWith('/admin/rent/') ||
+                path === '/admin/rental-applications' ||
+                path.startsWith('/admin/rental-applications/');
 
             if (!isAllowed) {
                 navigate('/admin/rent', { replace: true });

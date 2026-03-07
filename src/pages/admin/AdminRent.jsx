@@ -37,8 +37,7 @@ export default function AdminRent() {
     const filteredProducts = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-        const type = p.specs?.['Тип інструменту'] || '';
-        const matchesType = filterType === 'All' || type === filterType;
+        const matchesType = filterType === 'All' || (p.category || '') === filterType;
         return matchesSearch && matchesType;
     });
 
@@ -59,7 +58,7 @@ export default function AdminRent() {
     const toolTypes = Array.from(
         new Set(
             products
-                .map(p => p.specs?.['Тип інструменту'])
+                .map(p => p.category)
                 .filter(Boolean)
         )
     );
@@ -127,7 +126,7 @@ export default function AdminRent() {
                                 <td>{product.name}</td>
                                 <td>{product.price} ₴ / доба</td>
                                 <td>{typeof product.quantityAvailable === 'number' ? product.quantityAvailable : '—'}</td>
-                                <td>{product.specs?.['Тип інструменту'] || '—'}</td>
+                                <td>{product.category || '—'}</td>
                                 <td>{product.brand || '—'}</td>
                                 <td>
                                     <div className="table-actions">

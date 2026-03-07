@@ -1,8 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
+const RentCategory = require('../models/RentCategory');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
+
+// Convert empty strings to null for numeric fields to avoid DB type errors
+const sanitizeNumericFields = (data) => {
+    const numericFields = ['oldPrice', 'packSize', 'supplierPrice', 'quantityAvailable',
+        'weightPerUnit', 'weightTotal', 'replacementCost', 'securityDeposit'];
+    numericFields.forEach(field => {
+        if (data[field] === '' || data[field] === undefined) {
+            data[field] = null;
+        }
+    });
+};
+
+// Auto-activate rent category if it was disabled
+const autoActivateRentCategory = async (data) => {
+    if (data.isRent && data.category) {
+        await RentCategory.update(
+            { isActive: true },
+            { where: { name: data.category, isActive: false } }
+        );
+    }
+};
 
 // Get all products with filtering and search
 
@@ -115,7 +137,15 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent']), asyn
                 .replace(/\s+/g, '_');
         }
 
+        sanitizeNumericFields(data);
+
+        // For rent products: auto-set inventoryNumber to SKU if not provided
+        if (data.isRent && !data.inventoryNumber) {
+            data.inventoryNumber = data.sku;
+        }
+
         const product = await Product.create(data);
+        await autoActivateRentCategory(data);
         res.status(201).json(product);
     } catch (err) {
         console.error('CREATE PRODUCT ERROR:', err);
@@ -128,7 +158,9 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), as
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
+        sanitizeNumericFields(req.body);
         await product.update(req.body);
+        await autoActivateRentCategory(req.body);
         res.json(product);
     } catch (err) {
         console.error('UPDATE PRODUCT ERROR:', err);

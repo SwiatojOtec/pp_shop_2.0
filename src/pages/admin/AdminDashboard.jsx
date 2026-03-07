@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import { Package, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
+import RentDashboard from './RentDashboard';
 import './Admin.css';
 
 export default function AdminDashboard() {
     const { user } = useAuth();
+
+    if (user?.role === 'rent') return <RentDashboard />;
     const [stats, setStats] = useState({
         products: 0,
         orders: 0,

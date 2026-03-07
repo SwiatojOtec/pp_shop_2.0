@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const sequelize = require('./config/db');
 // Ініціалізація основного Telegram-бота (для калькулятора/рахунків)
 require('./utils/telegram');
@@ -16,6 +17,7 @@ const contactRoutes = require('./routes/contactRoutes');
 const rentCategoryRoutes = require('./routes/rentCategoryRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const rentalApplicationRoutes = require('./routes/rentalApplicationRoutes');
 const app = express();
 
 // Middleware
@@ -40,6 +42,29 @@ app.use(cors({
 
 app.use(express.json());
 
+// Rate limiting
+// General limit: 200 requests per 15 minutes per IP
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Забагато запитів. Спробуйте пізніше.' }
+});
+
+// Strict limit for auth routes: 10 attempts per 15 minutes (brute-force protection)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Забагато спроб входу. Спробуйте через 15 хвилин.' }
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
 // Root route for health check
 app.get('/', (req, res) => {
     res.send('PP Shop API is running...');
@@ -56,6 +81,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/rent-categories', rentCategoryRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/rental-applications', rentalApplicationRoutes);
 // Database Connection and Sync
 const PORT = process.env.PORT || 5000;
 

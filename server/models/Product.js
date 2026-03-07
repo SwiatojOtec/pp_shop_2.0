@@ -107,9 +107,41 @@ const Product = sequelize.define('Product', {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [] // Для оренди: перелік елементів комплекту
     },
+    relatedProducts: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        defaultValue: [] // IDs of related products shown on detail page
+    },
     quantityAvailable: {
         type: DataTypes.INTEGER,
         allowNull: true // Для оренди: скільки одиниць доступно
+    },
+    serialNumber: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    inventoryNumber: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    technicalCondition: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    weightPerUnit: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+    },
+    weightTotal: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+    },
+    replacementCost: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
+    },
+    securityDeposit: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true
     }
 });
 
