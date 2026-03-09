@@ -238,21 +238,35 @@ export default function AdminRentalApplicationForm() {
             totalAmount: totalRental.toFixed(2),
             depositAmount: totalDeposit.toFixed(2),
         };
-        try {
+
+        const doSave = async (attempt = 1) => {
+            const currentToken = token || window.localStorage.getItem('authToken') || '';
             const url = isNew
                 ? `${API_URL}/api/rental-applications`
                 : `${API_URL}/api/rental-applications/${id}`;
             const res = await fetch(url, {
                 method: isNew ? 'POST' : 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
                 body: JSON.stringify(payload),
             });
             if (res.ok) {
                 const saved = await res.json();
                 if (isNew) navigate(`/admin/rental-applications/${saved.id}`, { replace: true });
-            } else {
-                alert('Помилка збереження');
+                return true;
             }
+            // Retry once on 503 (DB overload) or 401 (possible timing issue)
+            if (attempt === 1 && (res.status === 503 || res.status === 401)) {
+                await new Promise(r => setTimeout(r, 600));
+                return doSave(2);
+            }
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || `Помилка ${res.status}`);
+        };
+
+        try {
+            await doSave();
+        } catch (err) {
+            alert(`Помилка збереження: ${err.message}`);
         } finally {
             setSaving(false);
         }

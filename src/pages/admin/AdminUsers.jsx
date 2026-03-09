@@ -36,6 +36,21 @@ export default function AdminUsers() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
+    const deleteUser = async (id, name) => {
+        if (!window.confirm(`Видалити користувача "${name}"? Цю дію неможливо скасувати.`)) return;
+        try {
+            const res = await fetch(`${API_URL}/api/users/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Помилка видалення');
+            setUsers(prev => prev.filter(u => u.id !== id));
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
     const updateUser = async (id, payload) => {
         if (!token) return;
         try {
@@ -135,6 +150,15 @@ export default function AdminUsers() {
                                                 onClick={() => updateUser(user.id, { status: 'active' })}
                                             >
                                                 Розблокувати
+                                            </button>
+                                        )}
+                                        {user.role !== 'owner' && (
+                                            <button
+                                                className="btn btn-secondary"
+                                                style={{ fontSize: '0.75rem', padding: '4px 8px', color: '#e53e3e', borderColor: '#e53e3e' }}
+                                                onClick={() => deleteUser(user.id, `${user.name} ${user.lastName}`)}
+                                            >
+                                                Видалити
                                             </button>
                                         )}
                                     </div>

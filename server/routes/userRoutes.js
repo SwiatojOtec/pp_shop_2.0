@@ -45,5 +45,26 @@ router.patch('/:id', authMiddleware, requireRole(['owner']), async (req, res) =>
     }
 });
 
+// DELETE /api/users/:id - видалити користувача (тільки owner, не можна видалити себе чи іншого owner)
+router.delete('/:id', authMiddleware, requireRole(['owner']), async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'Користувача не знайдено' });
+        }
+        if (user.role === 'owner') {
+            return res.status(403).json({ message: 'Не можна видалити власника' });
+        }
+        if (user.id === req.user.id) {
+            return res.status(403).json({ message: 'Не можна видалити власний акаунт' });
+        }
+        await user.destroy();
+        res.json({ message: 'Користувача видалено' });
+    } catch (err) {
+        console.error('Delete user error:', err);
+        res.status(500).json({ message: 'Помилка при видаленні користувача' });
+    }
+});
+
 module.exports = router;
 

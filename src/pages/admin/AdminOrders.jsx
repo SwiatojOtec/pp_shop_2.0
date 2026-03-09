@@ -1,9 +1,11 @@
-﻿import { API_URL } from '../../apiConfig';
+import { API_URL } from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
 import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
 export default function AdminOrders() {
+    const { token } = useAuth();
     const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -15,11 +17,13 @@ export default function AdminOrders() {
     useEffect(() => {
         fetchOrders();
         fetchProducts();
-    }, []);
+    }, [token]);
+
+    const authHeaders = () => ({ Authorization: `Bearer ${token}` });
 
     const fetchOrders = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/orders`);
+            const res = await fetch(`${API_URL}/api/orders`, { headers: authHeaders() });
             if (res.ok) {
                 const data = await res.json();
                 setOrders(Array.isArray(data) ? data : []);
@@ -34,7 +38,6 @@ export default function AdminOrders() {
             const res = await fetch(`${API_URL}/api/products`);
             if (res.ok) {
                 const data = await res.json();
-                // The API returns the array directly
                 setProducts(Array.isArray(data) ? data : []);
             }
         } catch (err) {
@@ -45,7 +48,7 @@ export default function AdminOrders() {
     const updateStatus = async (id, status) => {
         await fetch(`${API_URL}/api/orders/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
             body: JSON.stringify({ status })
         });
         fetchOrders();
@@ -55,7 +58,7 @@ export default function AdminOrders() {
         try {
             const res = await fetch(`${API_URL}/api/orders/${editingOrder.id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders() },
                 body: JSON.stringify(editingOrder)
             });
             if (res.ok) {
@@ -70,7 +73,7 @@ export default function AdminOrders() {
 
     const handleDelete = async (id) => {
         if (window.confirm('Видалити замовлення?')) {
-            await fetch(`${API_URL}/api/orders/${id}`, { method: 'DELETE' });
+            await fetch(`${API_URL}/api/orders/${id}`, { method: 'DELETE', headers: authHeaders() });
             fetchOrders();
         }
     };

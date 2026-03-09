@@ -11,8 +11,14 @@ const authMiddleware = async (req, res, next) => {
         return res.status(401).json({ message: 'Необхідна авторизація' });
     }
 
+    let payload;
     try {
-        const payload = jwt.verify(token, JWT_SECRET);
+        payload = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+        return res.status(401).json({ message: 'Невірний або протермінований токен' });
+    }
+
+    try {
         const user = await User.findByPk(payload.id);
         if (!user || user.status !== 'active') {
             return res.status(401).json({ message: 'Користувач неактивний або не знайдений' });
@@ -26,8 +32,8 @@ const authMiddleware = async (req, res, next) => {
         };
         next();
     } catch (err) {
-        console.error('authMiddleware error:', err.message);
-        return res.status(401).json({ message: 'Невірний або протермінований токен' });
+        console.error('authMiddleware DB error:', err.message);
+        return res.status(503).json({ message: 'Сервер тимчасово недоступний, спробуйте ще раз' });
     }
 };
 
