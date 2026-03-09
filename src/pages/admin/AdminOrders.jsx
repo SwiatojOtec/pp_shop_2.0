@@ -1,13 +1,16 @@
 import { API_URL } from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
-import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save } from 'lucide-react';
+import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './Admin.css';
 
 export default function AdminOrders() {
     const { token } = useAuth();
+    const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
+    const [converting, setConverting] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [productSearchTerm, setProductSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
@@ -75,6 +78,71 @@ export default function AdminOrders() {
         if (window.confirm('Видалити замовлення?')) {
             await fetch(`${API_URL}/api/orders/${id}`, { method: 'DELETE', headers: authHeaders() });
             fetchOrders();
+        }
+    };
+
+    // IDs of rental products for quick lookup
+    const rentProductIds = new Set(products.filter(p => p.isRent).map(p => p.id));
+
+    const orderHasRentItems = (order) =>
+        order.items && order.items.some(i => rentProductIds.has(i.id));
+
+    const convertToRentalApp = async (order) => {
+        if (!window.confirm(`Перенести замовлення ${order.orderNumber || '#' + order.id} до заявок оренди?`)) return;
+        setConverting(order.id);
+        try {
+            // Map order items to rental application format
+            const rentItems = (order.items || [])
+                .filter(i => rentProductIds.has(i.id))
+                .map(i => {
+                    const fullProduct = products.find(p => p.id === i.id) || {};
+                    return {
+                        productId: i.id,
+                        name: i.name,
+                        serialNumber: fullProduct.serialNumber || '',
+                        inventoryNumber: fullProduct.inventoryNumber || '',
+                        technicalCondition: fullProduct.technicalCondition || 'справний',
+                        unit: i.unit || 'шт',
+                        quantity: i.quantity || 1,
+                        weightTotal: fullProduct.weightTotal || '',
+                        replacementCostPerUnit: parseFloat(fullProduct.replacementCost || 0),
+                        replacementCostTotal: parseFloat(fullProduct.replacementCost || 0) * (i.quantity || 1),
+                        depositPercent: 30,
+                        depositAmount: (parseFloat(fullProduct.replacementCost || 0) * (i.quantity || 1) * 0.3).toFixed(2),
+                        pricePerDay: parseFloat(i.price || 0),
+                        rentFrom: '',
+                        rentTo: '',
+                        days: 0,
+                        totalRental: '',
+                        kitItems: fullProduct.kitItems || [],
+                    };
+                });
+
+            const totalDeposit = rentItems.reduce((s, i) => s + parseFloat(i.depositAmount || 0), 0);
+
+            const payload = {
+                clientName: order.customerName || '',
+                clientPhone: order.customerPhone || '',
+                clientEmail: order.customerEmail || '',
+                clientAddress: order.address || '',
+                status: 'draft',
+                items: rentItems,
+                totalAmount: 0,
+                depositAmount: totalDeposit.toFixed(2),
+            };
+
+            const res = await fetch(`${API_URL}/api/rental-applications`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error('Помилка створення заявки');
+            const created = await res.json();
+            navigate(`/admin/rental-applications/${created.id}`);
+        } catch (err) {
+            alert(`Помилка: ${err.message}`);
+        } finally {
+            setConverting(null);
         }
     };
 
@@ -230,7 +298,18 @@ export default function AdminOrders() {
                                     </div>
                                 </td>
                                 <td>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                        {orderHasRentItems(order) && (
+                                            <button
+                                                onClick={() => convertToRentalApp(order)}
+                                                disabled={converting === order.id}
+                                                className="action-btn"
+                                                title="Перенести в заявку оренди"
+                                                style={{ color: '#7c3aed' }}
+                                            >
+                                                <ClipboardList size={18} />
+                                            </button>
+                                        )}
                                         <button onClick={() => { setEditingOrder({ ...order }); setIsEditModalOpen(true); }} className="action-btn" title="Редагувати">
                                             <Edit2 size={18} />
                                         </button>
