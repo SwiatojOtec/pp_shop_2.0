@@ -9,7 +9,7 @@ const fmtDate = (d) => {
 };
 
 const RentalApplicationPrint = React.forwardRef(({
-    applicationNumber, lessor, client, items, totalRental, totalDeposit
+    applicationNumber, lessor, client, responsible, items, totalRental, totalDeposit
 }, ref) => {
     return (
         <div ref={ref} className="print-wrap">
@@ -39,12 +39,16 @@ const RentalApplicationPrint = React.forwardRef(({
                             <div className="party-header">ОРЕНДАРЬ:</div>
                             <div className="party-row"><b>Фізична особа П.І.Б.:</b> {client.name || '___________________________'}</div>
                             <div className="party-row"><b>ІПН:</b> ___________________________</div>
-                            <div className="party-row"><b>Адреса:</b> {client.address || '___________________________'}</div>
                             <div className="party-row"><b>Телефон:</b> {client.phone || '___________________________'}</div>
                             <div className="party-row"><b>e-mail:</b> {client.email || '___________________________'}</div>
-                            <div className="party-row"><b>Найменування / адреса будівельного майданчика:</b></div>
-                            <div className="party-row">{client.address || '___________________________'}</div>
-                            <div className="party-row"><b>Відповідальний П.І.Б.:</b> ___________________________</div>
+                            <div className="party-row"><b>Адреса проживання:</b> {client.address || '___________________________'}</div>
+                            <div className="party-row"><b>Адреса будівельного майданчика:</b> {client.siteAddress || '___________________________'}</div>
+                            {responsible && responsible.length > 0 && responsible.map((r, i) => (
+                                <div key={i} className="party-row"><b>Відповідальна особа {responsible.length > 1 ? i + 1 : ''}:</b> {r.name}{r.phone ? `, ${r.phone}` : ''}</div>
+                            ))}
+                            {(!responsible || responsible.length === 0) && (
+                                <div className="party-row"><b>Відповідальна особа:</b> ___________________________</div>
+                            )}
                         </td>
                     </tr>
                 </tbody>

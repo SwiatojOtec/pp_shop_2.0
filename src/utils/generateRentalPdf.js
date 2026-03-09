@@ -17,7 +17,7 @@ const loadFontAsBase64 = async (url) => {
     return btoa(binary);
 };
 
-export const generateRentalPdf = async ({ applicationNumber, lessor, client, items, totalRental, totalDeposit }) => {
+export const generateRentalPdf = async ({ applicationNumber, lessor, client, responsible, items, totalRental, totalDeposit }) => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     // Load and embed Roboto (Cyrillic support)
@@ -69,13 +69,18 @@ export const generateRentalPdf = async ({ applicationNumber, lessor, client, ite
                     `Телефон: ${client.phone || '___________________________'}`,
                     `E-mail: ${client.email || '___________________________'}`,
                     `Паспорт/ID: ${client.passport || '___________________________'}`,
-                    `Адреса: ${client.address || '___________________________'}`,
+                    `Адреса проживання: ${client.address || '___________________________'}`,
+                    `Адреса майданчика: ${client.siteAddress || '___________________________'}`,
+                    ...(responsible && responsible.length > 0
+                        ? responsible.map((r, i) => `Відп. особа${responsible.length > 1 ? ` ${i+1}` : ''}: ${r.name}${r.phone ? `, ${r.phone}` : ''}`)
+                        : [`Відповідальна особа: ___________________________`]
+                    ),
                 ].join('\n')
             ]
         ],
         styles: { fontSize: 8, cellPadding: 3, valign: 'top', font: fontName },
         headStyles: { fillColor: [180, 180, 180], textColor: [0,0,0], fontStyle: 'bold', fontSize: 8, font: fontName },
-        columnStyles: { 0: { cellWidth: 138 }, 1: { cellWidth: 138 } },
+        columnStyles: { 0: { cellWidth: 143 }, 1: { cellWidth: 144 } },
         theme: 'grid',
         margin: { left: 5, right: 5 },
     });
@@ -169,22 +174,22 @@ export const generateRentalPdf = async ({ applicationNumber, lessor, client, ite
         headStyles: { fillColor: [200, 200, 200], textColor: [0,0,0], fontStyle: 'bold', fontSize: 7, halign: 'center', valign: 'middle', font: fontName },
         columnStyles: {
             0:  { cellWidth: 8 },
-            1:  { cellWidth: 45 },
-            2:  { cellWidth: 18 },
-            3:  { cellWidth: 18 },
-            4:  { cellWidth: 18 },
-            5:  { cellWidth: 10 },
-            6:  { cellWidth: 10 },
+            1:  { cellWidth: 42 },
+            2:  { cellWidth: 17 },
+            3:  { cellWidth: 17 },
+            4:  { cellWidth: 17 },
+            5:  { cellWidth: 9 },
+            6:  { cellWidth: 9 },
             7:  { cellWidth: 12 },
             8:  { cellWidth: 18 },
             9:  { cellWidth: 18 },
-            10: { cellWidth: 12 },
+            10: { cellWidth: 11 },
             11: { cellWidth: 18 },
-            12: { cellWidth: 20 },
-            13: { cellWidth: 20 },
-            14: { cellWidth: 10 },
-            15: { cellWidth: 18 },
-            16: { cellWidth: 22 },
+            12: { cellWidth: 18 },
+            13: { cellWidth: 18 },
+            14: { cellWidth: 9 },
+            15: { cellWidth: 17 },
+            16: { cellWidth: 19 },
         },
         theme: 'grid',
         margin: { left: 5, right: 5 },

@@ -61,7 +61,10 @@ export default function AdminRentalApplicationForm() {
     const [notes, setNotes] = useState('');
 
     // Client
-    const [client, setClient] = useState({ name: '', phone: '', email: '', passport: '', address: '' });
+    const [client, setClient] = useState({ name: '', phone: '', email: '', passport: '', address: '', siteAddress: '' });
+
+    // Responsible persons
+    const [responsible, setResponsible] = useState([]);
 
     // Items
     const [items, setItems] = useState([emptyItem()]);
@@ -94,7 +97,11 @@ export default function AdminRentalApplicationForm() {
                         email: data.clientEmail || '',
                         passport: data.clientPassport || '',
                         address: data.clientAddress || '',
+                        siteAddress: data.clientSiteAddress || '',
                     });
+                    if (data.responsible && Array.isArray(data.responsible)) {
+                        setResponsible(data.responsible);
+                    }
                     setItems(data.items && data.items.length > 0
                         ? data.items.map(i => ({ ...emptyItem(), ...i, _key: Date.now() + Math.random() }))
                         : [emptyItem()]
@@ -223,6 +230,8 @@ export default function AdminRentalApplicationForm() {
             clientEmail: client.email,
             clientPassport: client.passport,
             clientAddress: client.address,
+            clientSiteAddress: client.siteAddress,
+            responsible,
             rentFrom: items[0]?.rentFrom || null,
             rentTo: items[0]?.rentTo || null,
             items: items.map(({ _key, ...i }) => i),
@@ -276,7 +285,7 @@ export default function AdminRentalApplicationForm() {
                         <option value="cancelled">Скасована</option>
                     </select>
                     <button
-                        onClick={() => generateRentalPdf({ applicationNumber, lessor: LESSOR, client, items, totalRental, totalDeposit }).catch(console.error)}
+                        onClick={() => generateRentalPdf({ applicationNumber, lessor: LESSOR, client, responsible, items, totalRental, totalDeposit }).catch(console.error)}
                         className="btn-secondary-icon"
                         title="Скачати PDF"
                     >
@@ -313,7 +322,8 @@ export default function AdminRentalApplicationForm() {
                             { label: 'Телефон', field: 'phone', placeholder: '+38 0XX XXX XX XX' },
                             { label: 'E-mail', field: 'email', placeholder: 'email@example.com' },
                             { label: 'Паспорт / ID', field: 'passport', placeholder: 'Серія, номер або ID-картка' },
-                            { label: 'Адреса / Майданчик', field: 'address', placeholder: 'Адреса проживання або будмайданчику' },
+                            { label: 'Адреса проживання', field: 'address', placeholder: 'вул. Прикладна, 1, м. Київ' },
+                            { label: 'Адреса майданчика', field: 'siteAddress', placeholder: 'Адреса будівельного майданчика' },
                         ].map(({ label, field, placeholder }) => (
                             <div key={field} className="party-field editable">
                                 <span>{label}:</span>
@@ -324,6 +334,42 @@ export default function AdminRentalApplicationForm() {
                                 />
                             </div>
                         ))}
+
+                        {/* Responsible persons */}
+                        {responsible.length > 0 && (
+                            <div style={{ marginTop: '10px', borderTop: '1px dashed #eee', paddingTop: '10px' }}>
+                                <div className="party-title" style={{ marginBottom: '8px' }}>Відповідальні особи</div>
+                                {responsible.map((r, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                                        <input
+                                            value={r.name}
+                                            onChange={e => setResponsible(prev => prev.map((p, pi) => pi === i ? { ...p, name: e.target.value } : p))}
+                                            placeholder="П.І.Б. відповідальної особи"
+                                            style={{ flex: 2, border: 'none', borderBottom: '1px dashed #ddd', padding: '2px 4px', fontSize: '0.88rem', outline: 'none', background: 'transparent' }}
+                                        />
+                                        <input
+                                            value={r.phone}
+                                            onChange={e => setResponsible(prev => prev.map((p, pi) => pi === i ? { ...p, phone: e.target.value } : p))}
+                                            placeholder="+38 0XX XXX XX XX"
+                                            style={{ flex: 1, border: 'none', borderBottom: '1px dashed #ddd', padding: '2px 4px', fontSize: '0.88rem', outline: 'none', background: 'transparent' }}
+                                        />
+                                        <button
+                                            onClick={() => setResponsible(prev => prev.filter((_, pi) => pi !== i))}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53e3e', padding: '2px', opacity: 0.6 }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => setResponsible(prev => [...prev, { name: '', phone: '' }])}
+                            style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1px dashed #ddd', borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.8rem', color: '#888', width: '100%', justifyContent: 'center' }}
+                        >
+                            <Plus size={13} /> Додати відповідальну особу
+                        </button>
                     </div>
                 </div>
 
@@ -535,6 +581,7 @@ export default function AdminRentalApplicationForm() {
                     applicationNumber={applicationNumber}
                     lessor={LESSOR}
                     client={client}
+                    responsible={responsible}
                     items={items}
                     totalRental={totalRental}
                     totalDeposit={totalDeposit}

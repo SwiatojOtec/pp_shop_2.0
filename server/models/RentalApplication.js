@@ -33,6 +33,14 @@ const RentalApplication = sequelize.define('RentalApplication', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    clientSiteAddress: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    responsible: {
+        type: DataTypes.JSONB,
+        defaultValue: []
+    },
     // Rental period
     rentFrom: {
         type: DataTypes.DATEONLY,
