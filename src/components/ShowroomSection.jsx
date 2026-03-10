@@ -3,9 +3,7 @@ import { MapPin, Clock, Navigation } from 'lucide-react';
 import './ShowroomSection.css';
 
 export default function ShowroomSection() {
-    const address = "вулиця Жовтнева, 79, Петропавлівська Борщагівка, Київська обл. 08130";
-    const mapUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyD...&q=${encodeURIComponent(address)}`;
-    // Since I don't have a key, I'll use the search embed format which is free and doesn't require a key for simple embeds
+    const address = "вулиця Козацька, 79, Петропавлівська Борщагівка, Київська обл. 08130";
     const freeMapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=15&ie=UTF8&iwloc=&output=embed&hl=uk`;
 
     return (

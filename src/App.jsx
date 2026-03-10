@@ -12,6 +12,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import InfoPage from './pages/InfoPage';
 import Rent from './pages/Rent';
+import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import ProductEdit from './pages/admin/ProductEdit';
@@ -216,6 +217,9 @@ function AppContent() {
               </RequireAdmin>
             }
           />
+
+          {/* 404 — must be last */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       {!isAdmin && <Footer />}

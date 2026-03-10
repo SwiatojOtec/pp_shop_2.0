@@ -30,7 +30,7 @@ const autoActivateRentCategory = async (data) => {
 
 router.get('/', async (req, res) => {
     try {
-        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent } = req.query;
+        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit } = req.query;
         let where = {};
 
         if (search) {
@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
         }
 
         // Handle dynamic spec filters (anything else in query)
-        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent'];
+        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit'];
         Object.keys(req.query).forEach(key => {
             if (!standardParams.includes(key) && req.query[key]) {
                 // For JSONB specs filtering
@@ -90,7 +90,9 @@ router.get('/', async (req, res) => {
         if (sort === 'price_desc') order = [['price', 'DESC']];
         if (sort === 'popular') order = [['rating', 'DESC']];
 
-        const products = await Product.findAll({ where, order });
+        const queryOptions = { where, order };
+        if (limit) queryOptions.limit = parseInt(limit);
+        const products = await Product.findAll(queryOptions);
         res.json(products);
     } catch (err) {
         res.status(500).json({ message: err.message });

@@ -89,9 +89,7 @@ export default function AdminLayout({ children }) {
 
             <main className="admin-main">
                 <header className="admin-topbar">
-                    <div className="topbar-search">
-                        <input type="text" placeholder="Пошук по адмінці..." />
-                    </div>
+                    <div className="topbar-search" />
                     <div className="topbar-user">
                         <div className="user-avatar">{initials}</div>
                         <div className="topbar-user-info">

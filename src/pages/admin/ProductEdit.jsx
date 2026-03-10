@@ -159,7 +159,6 @@ export default function ProductEdit({ context = 'products' }) {
                         specs: template.specs || {},
                         priceMatrix: template.priceMatrix || []
                     }));
-                    console.log('Данные подтянуты из коллекции:', groupId);
                 }
             }
         } catch (err) {

@@ -141,8 +141,7 @@ export default function ProductDetail() {
         };
 
         addToCart(customItem, 1);
-        alert('Товар додано в кошик!');
-        // Reset or keep? Let's keep for now so they can add another similar one
+        showToast(`${product.name} додано в кошик`, 'success');
     };
 
     const getMaxRentQuantity = () => {

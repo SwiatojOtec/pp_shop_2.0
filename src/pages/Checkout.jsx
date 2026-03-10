@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin } from 'lucide-react';
 import { API_URL } from '../apiConfig';
@@ -7,6 +8,7 @@ import './Checkout.css';
 
 export default function Checkout() {
     const { cartItems, cartTotal, clearCart } = useCart();
+    const { showToast } = useToast();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         name: '',
@@ -78,7 +80,7 @@ export default function Checkout() {
                 throw new Error('Помилка при оформленні замовлення');
             }
         } catch (err) {
-            alert(err.message);
+            showToast(err.message || 'Помилка при оформленні замовлення', 'error');
         } finally {
             setLoading(false);
         }

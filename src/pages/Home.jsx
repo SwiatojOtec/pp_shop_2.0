@@ -4,7 +4,7 @@ import BrandStrip from '../components/BrandStrip';
 import FeaturesStrip from '../components/FeaturesStrip';
 import CategoryGrid from '../components/CategoryGrid';
 import ProductGrid from '../components/ProductGrid';
-import ProjectsGallery from '../components/ProjectsGallery';
+import HomeBlogSection from '../components/HomeBlogSection';
 import RentSection from '../components/RentSection';
 import ShowroomSection from '../components/ShowroomSection';
 import ConsultationBlock from '../components/ConsultationBlock';
@@ -17,7 +17,7 @@ export default function Home() {
             <FeaturesStrip />
             <CategoryGrid />
             <ProductGrid />
-            <ProjectsGallery />
+            <HomeBlogSection />
             <RentSection />
             <ShowroomSection />
             <ConsultationBlock />
