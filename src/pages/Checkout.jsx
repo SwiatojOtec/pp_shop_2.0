@@ -54,12 +54,18 @@ export default function Checkout() {
         e.preventDefault();
         setLoading(true);
 
+        const hasRentItems = cartItems.some(item => item.isRent);
+
         const orderData = {
             customerName: formData.name,
             customerPhone: formData.phone,
             customerEmail: formData.email,
             deliveryMethod: formData.deliveryMethod,
-            address: formData.deliveryMethod === 'delivery' ? `${formData.city}, ${formData.address}` : 'Самовивіз (вул. Жовтнева, 79)',
+            address: formData.deliveryMethod === 'delivery'
+                ? `${formData.city}, ${formData.address}`
+                : hasRentItems
+                    ? 'Самовивіз (вул. Холодноярська 2а, Київ)'
+                    : 'Самовивіз (вул. Козацька, 79, Петропавлівська Борщагівка)',
             paymentMethod: formData.paymentMethod,
             items: cartItems,
             totalAmount: cartTotal
@@ -137,7 +143,11 @@ export default function Checkout() {
                                     />
                                     <MapPin size={24} />
                                     <span style={{ fontWeight: 700 }}>Самовивіз</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>вул. Жовтнева, 79</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
+                                        {cartItems.some(item => item.isRent)
+                                            ? 'вул. Холодноярська 2а, Київ'
+                                            : 'вул. Козацька, 79, Петропавлівська Борщагівка'}
+                                    </span>
                                 </label>
                                 <label className={`payment-card ${formData.deliveryMethod === 'delivery' ? 'active' : ''}`} style={{ cursor: 'pointer', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                                     <input

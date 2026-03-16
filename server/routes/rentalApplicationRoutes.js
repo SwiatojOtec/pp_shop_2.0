@@ -65,7 +65,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), as
 });
 
 // DELETE application
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
     try {
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });

@@ -326,7 +326,11 @@ export default function Rent() {
                                             <h3 className="product-name">{product.name}</h3>
                                         </Link>
                                         <div className="price-block">
-                                            {product.oldPrice && <span className="old-price" style={{ marginRight: '10px', fontSize: '0.9rem' }}>{product.oldPrice} ₴</span>}
+                                            {product.oldPrice && (
+                                                <span className="old-price" style={{ marginRight: '10px', fontSize: '0.9rem' }}>
+                                                    {product.oldPrice} ₴
+                                                </span>
+                                            )}
                                             <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`} style={{ fontWeight: 700 }}>
                                                 {product.price} ₴ / доба
                                             </span>

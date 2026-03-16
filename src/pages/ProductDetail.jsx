@@ -29,6 +29,7 @@ export default function ProductDetail() {
     const [sillLength, setSillLength] = useState('');
     const [calculatedSillPrice, setCalculatedSillPrice] = useState(0);
     const [sillError, setSillError] = useState('');
+    const [imageZoomOpen, setImageZoomOpen] = useState(false);
 
     useEffect(() => {
         setLoading(true);
@@ -177,7 +178,7 @@ export default function ProductDetail() {
                     <div className="rent-product-grid">
                         {/* LEFT: image */}
                         <div className="rent-gallery">
-                            <div className="rent-main-image-wrap">
+                            <div className="rent-main-image-wrap" onClick={() => setImageZoomOpen(true)}>
                                 <img src={activeImg} alt={product.name} className="rent-main-image" />
                                 <button
                                     className={`wishlist-btn-large ${isFavorite(product._id || product.id) ? 'active' : ''}`}
@@ -262,7 +263,13 @@ export default function ProductDetail() {
                                 {product.oldPrice && (
                                     <div className="price-old" style={{ fontSize: '1.1rem' }}>{product.oldPrice} ₴</div>
                                 )}
-                                <div className="rent-qty-available">
+                                {product.securityDeposit != null && (
+                                    <div style={{ marginTop: '6px', fontSize: '0.9rem', color: '#374151' }}>
+                                        Гарантійний платіж:&nbsp;
+                                        <strong>{parseFloat(product.securityDeposit).toLocaleString('uk-UA')} ₴</strong>
+                                    </div>
+                                )}
+                                <div className="rent-qty-available" style={{ marginTop: '8px' }}>
                                     {product.stockStatus === 'out_of_stock' && (
                                         <span style={{ color: '#ef4444', fontWeight: 700 }}>Немає в наявності</span>
                                     )}
@@ -344,8 +351,8 @@ export default function ProductDetail() {
                 </nav>
 
                 <div className="product-main-grid">
-                    <div className="product-gallery">
-                        <div className="main-image-container">
+                        <div className="product-gallery">
+                        <div className="main-image-container" onClick={() => setImageZoomOpen(true)}>
                             <img src={activeImg} alt={product.name} className="main-image" />
                             {product.badge && (
                                 <span className={`badge badge-${product.badge.toLowerCase()}`} style={{ top: '20px', left: '20px' }}>
@@ -638,6 +645,20 @@ export default function ProductDetail() {
                     </div>
                 </div>
             </div>
+            {imageZoomOpen && activeImg && (
+                <div className="image-lightbox" onClick={() => setImageZoomOpen(false)}>
+                    <div className="image-lightbox-inner" onClick={e => e.stopPropagation()}>
+                        <button
+                            className="image-lightbox-close"
+                            onClick={() => setImageZoomOpen(false)}
+                            aria-label="Закрити зображення"
+                        >
+                            ×
+                        </button>
+                        <img src={activeImg} alt={product.name} className="image-lightbox-img" />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
