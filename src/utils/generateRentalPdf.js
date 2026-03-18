@@ -195,8 +195,16 @@ export const generateRentalPdf = async ({ applicationNumber, lessor, client, res
         margin: { left: 5, right: 5 },
     });
 
+    // --- Amount due (rental + deposit) ---
+    const due = (parseFloat(totalRental || 0) + parseFloat(totalDeposit || 0)).toFixed(2);
+    const dueY = doc.lastAutoTable.finalY + 6;
+    doc.setFontSize(10);
+    doc.setFont(fontName, 'bold');
+    doc.text(`До сплати: ${fmt(due)} грн`, 292, dueY, { align: 'right' });
+    doc.setFont(fontName, 'normal');
+
     // --- Signatures ---
-    const sigY = doc.lastAutoTable.finalY + 8;
+    const sigY = dueY + 10;
     doc.setFontSize(8);
     doc.setFont(fontName, 'bold');
     doc.text('Передав (Орендодавець):', 20, sigY);

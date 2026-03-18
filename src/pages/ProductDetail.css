@@ -89,6 +89,7 @@
     color: #666;
     line-height: 1.6;
     margin: 0;
+    white-space: pre-line;
 }
 
 /* Middle: specs column */
@@ -557,6 +558,12 @@
     color: #666;
     line-height: 1.6;
     margin-bottom: 30px;
+    white-space: pre-line;
+}
+
+/* Tabs description content (shop product page) */
+.tabs-content p {
+    white-space: pre-line;
 }
 
 .kit-block {

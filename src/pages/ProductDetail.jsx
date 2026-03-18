@@ -339,6 +339,20 @@ export default function ProductDetail() {
                         </div>
                     </div>
                 </div>
+                {imageZoomOpen && activeImg && (
+                    <div className="image-lightbox" onClick={() => setImageZoomOpen(false)}>
+                        <div className="image-lightbox-inner" onClick={e => e.stopPropagation()}>
+                            <button
+                                className="image-lightbox-close"
+                                onClick={() => setImageZoomOpen(false)}
+                                aria-label="Закрити зображення"
+                            >
+                                ×
+                            </button>
+                            <img src={activeImg} alt={product.name} className="image-lightbox-img" />
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
