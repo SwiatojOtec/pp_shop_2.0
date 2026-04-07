@@ -29,28 +29,56 @@
 }
 
 .sidebar-header {
-    padding: 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    padding: 0 0 14px;
 }
 
-.sidebar-logo {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: white;
+/* Окремий блок бренду — завжди колонка (уникає злипання «PPbud TechPAN PARKET») */
+.sidebar-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+}
+
+.sidebar-brand-link {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    width: 100%;
+    max-width: 100%;
     text-decoration: none;
-    letter-spacing: -1px;
+    color: inherit;
+}
+
+.sidebar-brand-link:hover .sidebar-brand-logo {
+    opacity: 0.92;
+}
+
+/** Логотип: файл клади в public/admin-sidebar-logo.svg (або .png — зміни src у AdminLayout.jsx) */
+.sidebar-brand-logo {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: none;
+    object-fit: contain;
+    object-position: left center;
 }
 
 .admin-badge {
+    display: inline-block;
     font-size: 0.7rem;
     text-transform: uppercase;
     background: var(--admin-accent);
-    padding: 2px 8px;
+    padding: 3px 9px;
     border-radius: 4px;
     width: fit-content;
+    max-width: 100%;
     font-weight: 800;
+    flex-shrink: 0;
+    margin-left: 14px;
 }
 
 .sidebar-nav {
@@ -104,6 +132,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -165,6 +194,7 @@
     padding: 30px;
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
 }
 
 /* Form Styles Fix */
@@ -505,6 +535,135 @@
     border: 1px solid #bbf7d0;
 }
 
+.admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2500;
+    padding: 20px;
+}
+
+.admin-modal-card {
+    width: min(860px, 96vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+    padding: 18px;
+}
+
+.client-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.client-details-title-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.client-details-title-wrap .admin-title {
+    line-height: 1.05;
+    max-width: 860px;
+}
+
+.client-details-meta {
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.client-details-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 18px;
+}
+
+.client-details-meta-item {
+    font-size: 0.94rem;
+    line-height: 1.35;
+}
+
+.client-details-addresses {
+    margin-top: 10px;
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 1280px) {
+    .admin-content {
+        padding: 18px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 10px 12px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .client-details-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .client-details-title-wrap .admin-title {
+        font-size: 2.2rem;
+    }
+
+    .client-details-meta-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .admin-modal-card {
+        width: min(920px, 98vw);
+        max-height: 92vh;
+        padding: 14px;
+    }
+}
+
+@media (max-width: 860px) {
+    .admin-content {
+        padding: 12px;
+    }
+
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+    }
+
+    .client-details-title-wrap .admin-title {
+        font-size: 1.6rem;
+    }
+
+    .client-details-meta-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .admin-table {
+        font-size: 0.84rem;
+    }
+
+    .admin-table-container {
+        overflow-x: auto;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
 /* Buttons */
 .btn-primary {
     background: var(--admin-dark);
@@ -522,6 +681,25 @@
 
 .btn-primary:hover {
     background: var(--admin-accent);
+}
+
+.btn-secondary {
+    background: #fff;
+    color: var(--admin-dark);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--admin-border);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #f8f8f8;
+    border-color: #ccc;
 }
 
 .action-btn {
@@ -591,4 +769,283 @@
 
 .brand-toggle input:checked + .brand-toggle-slider::before {
     transform: translateX(18px);
+}
+
+/* Склад: розгорнуті деталі картки оренди */
+.admin-warehouses .warehouse-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px 20px;
+    align-items: start;
+}
+
+.admin-warehouses .admin-table--warehouses .admin-input-inline {
+    width: 76px;
+    max-width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d0d0d0;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.admin-warehouses .admin-table--warehouses tr.warehouse-detail-row td {
+    vertical-align: top;
+}
+
+/* Склад: шапка з кнопками справа */
+.admin-warehouses-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.admin-warehouses-top__text {
+    flex: 1;
+    min-width: min(100%, 320px);
+}
+
+.admin-warehouses-desc {
+    margin: 10px 0 0;
+    color: #555;
+    font-size: 0.9rem;
+    max-width: 720px;
+    line-height: 1.45;
+}
+
+.admin-warehouses-active {
+    margin: 10px 0 0;
+    font-size: 0.88rem;
+    color: #444;
+}
+
+.admin-warehouses-inactive {
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.admin-warehouses-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.admin-warehouses-toolbar__btn {
+    white-space: nowrap;
+}
+
+.admin-warehouses-search {
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.admin-modal-card--warehouses {
+    width: min(480px, 96vw);
+}
+
+.admin-warehouses-modal-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: min(50vh, 360px);
+    overflow-y: auto;
+}
+
+.admin-warehouses-modal-item {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--admin-border);
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-warehouses-modal-item:hover {
+    border-color: #ccc;
+    background: #fafafa;
+}
+
+.admin-warehouses-modal-item.is-active {
+    border-color: var(--admin-dark);
+    background: #f4f4f4;
+}
+
+.admin-warehouses-modal-item__name {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.admin-warehouses-modal-item__notes {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+@media (max-width: 900px) {
+    .admin-warehouses-toolbar {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .admin-warehouses-toolbar__btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Склад: вкладки Головна / Залишки */
+.admin-warehouse-shell {
+    width: 100%;
+}
+
+.admin-warehouse-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-warehouse-subnav__link {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #555;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.admin-warehouse-subnav__link:hover {
+    background: #f0f0f0;
+    color: var(--admin-dark);
+}
+
+.admin-warehouse-subnav__link.is-active {
+    background: var(--admin-dark);
+    color: #fff;
+    border-color: var(--admin-dark);
+}
+
+/* Головна складу */
+.admin-warehouse-home__section {
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+}
+
+.admin-warehouse-home__h2 {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+}
+
+.admin-warehouse-home__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.admin-warehouse-home__card {
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fafafa;
+}
+
+.admin-warehouse-home__thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.admin-warehouse-home__stock-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.admin-warehouse-home__stock-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.9rem;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.admin-warehouse-home__stock-row:last-child {
+    border-bottom: none;
+}
+
+.admin-warehouse-home__feed {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.admin-warehouse-home__feed-item {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 12px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.admin-warehouse-home__feed-time {
+    color: #888;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+.admin-modal-card--work-product {
+    width: min(520px, 96vw);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.admin-work-product-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-work-product-actions__row {
+    width: 100%;
+    justify-content: center;
+}
+
+.admin-work-product-block {
+    padding-top: 12px;
+    border-top: 1px solid var(--admin-border);
 }

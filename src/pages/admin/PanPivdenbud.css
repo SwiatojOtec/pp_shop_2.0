@@ -1,0 +1,288 @@
+.pan-pivdenbud-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.pan-pivdenbud-tab {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--admin-border, #e5e7eb);
+    background: #fff;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    color: #666;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.pan-pivdenbud-tab:hover {
+    border-color: #ccc;
+    color: #333;
+}
+
+.pan-pivdenbud-tab.active {
+    background: var(--color-dark, #121212);
+    color: #fff;
+    border-color: var(--color-dark, #121212);
+}
+
+.pan-pivdenbud-panel {
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.timesheet-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.timesheet-toolbar label {
+    display: flex;
+    align-items: center;
+    font-size: 0.88rem;
+}
+
+.timesheet-input-year {
+    width: 88px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.timesheet-select-month {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    min-width: 160px;
+}
+
+.timesheet-hint {
+    font-size: 0.78rem;
+    color: #888;
+    margin-bottom: 12px;
+    line-height: 1.45;
+    max-width: 900px;
+}
+
+/* Календар: дні — колонки */
+.timesheet-calendar-wrap {
+    overflow: auto;
+    max-width: 100%;
+    max-height: min(78vh, 900px);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    overscroll-behavior: contain;
+    scrollbar-color: #94a3b8 #eef2f6;
+}
+
+.timesheet-calendar-wrap::-webkit-scrollbar {
+    height: 11px;
+    width: 11px;
+}
+
+.timesheet-calendar-wrap::-webkit-scrollbar-track {
+    background: #eef2f6;
+    border-radius: 0 0 8px 8px;
+}
+
+.timesheet-calendar-wrap::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 6px;
+    border: 2px solid #eef2f6;
+}
+
+.timesheet-cal-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.72rem;
+    min-width: max-content;
+}
+
+.timesheet-cal-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+    /* Уникає «смуги» при накладанні sticky у скролі */
+    background-clip: padding-box;
+}
+
+.timesheet-cal-corner {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    background: #f8f9fa;
+    min-width: 112px;
+    width: 112px;
+    border-right: 1px solid #e5e7eb;
+}
+
+.timesheet-cal-th-day {
+    text-align: center;
+    padding: 4px 3px 6px;
+    min-width: 72px;
+    max-width: 82px;
+    vertical-align: middle;
+    line-height: 1.15;
+}
+
+.timesheet-cal-th-day-num {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.timesheet-cal-th-day-wd {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: #666;
+    margin-top: 2px;
+}
+
+.timesheet-cal-th--weekend {
+    color: #c53030 !important;
+    background: #fff5f5 !important;
+}
+
+.timesheet-cal-th--weekend .timesheet-cal-th-day-wd {
+    color: #c53030;
+}
+
+.timesheet-cal-name {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    vertical-align: middle;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    padding: 6px 8px;
+    min-width: 112px;
+    max-width: 140px;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.04);
+}
+
+.timesheet-cal-name-text {
+    display: block;
+    font-weight: 700;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    hyphens: auto;
+    word-break: break-word;
+}
+
+.timesheet-cal-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 3px 4px;
+    border-bottom: 1px solid #f0f0f0;
+    border-left: 1px solid #f3f3f3;
+    background: #fff;
+}
+
+.timesheet-time-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: nowrap;
+}
+
+.timesheet-time-colon {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    user-select: none;
+    padding: 0 1px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.timesheet-cal-cell--weekend {
+    background: #fffafa;
+}
+
+.timesheet-time-inp {
+    margin: 0;
+    padding: 3px 2px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 0.72rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+}
+
+.timesheet-time-inp--h {
+    width: 28px;
+    min-width: 26px;
+}
+
+.timesheet-time-inp--m {
+    width: 26px;
+    min-width: 24px;
+}
+
+.timesheet-time-inp:focus {
+    outline: none;
+    border-color: var(--color-primary, #d62828);
+    background: #fffefb;
+}
+
+.timesheet-cal-cell--weekend .timesheet-time-inp {
+    border-color: #f5c6c6;
+    background: #fff;
+}
+
+.timesheet-overview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.timesheet-overview-block {
+    margin: 0;
+}
+
+.timesheet-overview-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: #1a1a1a;
+}
+
+.timesheet-overview-meta {
+    font-size: 0.82rem;
+    color: #666;
+    margin: 0 0 12px;
+}
+
+.timesheet-cal-cell--readonly {
+    user-select: text;
+}
+
+.timesheet-time-read {
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 22px;
+    text-align: center;
+    display: inline-block;
+}
+
+.timesheet-time-read--h {
+    width: 28px;
+}
+
+.timesheet-time-read--m {
+    width: 26px;
+}

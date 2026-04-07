@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingBag, TrendingUp, Wrench, CheckCircle, Clock, AlertTriangle, Plus, ClipboardList } from 'lucide-react';
+import { Package, ShoppingBag, TrendingUp, Wrench, CheckCircle, Clock, AlertTriangle, Plus, ClipboardList, FileClock, WrenchIcon, ShieldAlert } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import RentDashboard from './RentDashboard';
 import './Admin.css';
 
-export default function AdminDashboard() {
-    const { user, token } = useAuth();
-
-    if (user?.role === 'rent') return <RentDashboard />;
-
+/** Дашборд для owner/manager — хуки тільки тут, без умовного return перед ними. */
+function AdminOwnerDashboard({ user, token }) {
     const [shopStats, setShopStats] = useState({ products: 0, orders: 0, revenue: 0 });
     const [recentOrders, setRecentOrders] = useState([]);
     const [rentProducts, setRentProducts] = useState([]);
@@ -22,7 +19,7 @@ export default function AdminDashboard() {
                 const [prodRes, orderRes, rentRes] = await Promise.all([
                     fetch(`${API_URL}/api/products`),
                     fetch(`${API_URL}/api/orders`, { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch(`${API_URL}/api/products?isRent=true`),
+                    fetch(`${API_URL}/api/products?isRent=true&includeHiddenRent=true`),
                 ]);
 
                 const products = prodRes.ok ? await prodRes.json() : [];
@@ -51,6 +48,9 @@ export default function AdminDashboard() {
     const rentTotal = rentProducts.length;
     const rentAvailable = rentProducts.filter(isAvailable).length;
     const rentAvailableLater = rentProducts.filter(p => p.stockStatus === 'available_later').length;
+    const rentInProcurement = rentProducts.filter(p => p.stockStatus === 'in_procurement').length;
+    const rentNeedsRepair = rentProducts.filter(p => p.stockStatus === 'needs_repair').length;
+    const rentInRepair = rentProducts.filter(p => p.stockStatus === 'in_repair').length;
     const rentLowStock = rentProducts.filter(p => p.quantityAvailable != null && p.quantityAvailable <= 2 && isAvailable(p)).length;
 
     const formatDate = (d) => {
@@ -62,6 +62,9 @@ export default function AdminDashboard() {
     const statusLabel = (p) => {
         if (isAvailable(p)) return <span style={{ color: '#16a34a', fontWeight: 600 }}>Доступний</span>;
         if (p.stockStatus === 'available_later') return <span style={{ color: '#d97706', fontWeight: 600 }}>З {formatDate(p.availableFrom)}</span>;
+        if (p.stockStatus === 'in_procurement') return <span style={{ color: '#7c3aed', fontWeight: 600 }}>У закупівлі (на папері)</span>;
+        if (p.stockStatus === 'needs_repair') return <span style={{ color: '#b45309', fontWeight: 600 }}>Потребує ремонту</span>;
+        if (p.stockStatus === 'in_repair') return <span style={{ color: '#dc2626', fontWeight: 600 }}>На ремонті</span>;
         return <span style={{ color: '#dc2626', fontWeight: 600 }}>Недоступний</span>;
     };
 
@@ -131,6 +134,27 @@ export default function AdminDashboard() {
                             <span className="stat-value" style={{ color: '#d97706' }}>{rentAvailableLater}</span>
                         </div>
                     </div>
+                    <div className="stat-card">
+                        <div className="stat-icon" style={{ color: '#7c3aed' }}><FileClock size={24} /></div>
+                        <div className="stat-info">
+                            <span className="stat-label">У закупівлі (на папері)</span>
+                            <span className="stat-value" style={{ color: '#7c3aed' }}>{rentInProcurement}</span>
+                        </div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-icon" style={{ color: '#b45309' }}><ShieldAlert size={24} /></div>
+                        <div className="stat-info">
+                            <span className="stat-label">Потребує ремонту</span>
+                            <span className="stat-value" style={{ color: '#b45309' }}>{rentNeedsRepair}</span>
+                        </div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-icon" style={{ color: '#dc2626' }}><WrenchIcon size={24} /></div>
+                        <div className="stat-info">
+                            <span className="stat-label">На ремонті</span>
+                            <span className="stat-value" style={{ color: '#dc2626' }}>{rentInRepair}</span>
+                        </div>
+                    </div>
                     <Link to="/admin/rental-applications" className="stat-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                         <div className="stat-icon"><ClipboardList size={24} /></div>
                         <div className="stat-info">
@@ -151,7 +175,6 @@ export default function AdminDashboard() {
             </div>
 
             <div className="dashboard-sections" style={{ marginTop: '32px' }}>
-                {/* Останні замовлення */}
                 <div className="admin-section" style={{ marginBottom: '32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, textTransform: 'uppercase' }}>Останні замовлення</h2>
@@ -192,7 +215,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Склад оренди */}
                 <div className="admin-section">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, textTransform: 'uppercase' }}>Склад інструментів (оренда)</h2>
@@ -253,3 +275,15 @@ export default function AdminDashboard() {
         </div>
     );
 }
+
+function AdminDashboard() {
+    const { user, token } = useAuth();
+
+    if (user?.role === 'rent' || user?.role === 'pivdenbud') {
+        return <RentDashboard />;
+    }
+
+    return <AdminOwnerDashboard user={user} token={token} />;
+}
+
+export default AdminDashboard;

@@ -24,11 +24,17 @@ import AdminRent from './pages/admin/AdminRent';
 import AdminRentEdit from './pages/admin/AdminRentEdit';
 import AdminRentalApplications from './pages/admin/AdminRentalApplications';
 import AdminRentalApplicationForm from './pages/admin/AdminRentalApplicationForm';
+import PanPivdenbud from './pages/admin/PanPivdenbud';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminRegister from './pages/admin/AdminRegister';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminClients from './pages/admin/AdminClients';
+import AdminClientDetails from './pages/admin/AdminClientDetails';
+import AdminWarehouseLayout from './pages/admin/AdminWarehouseLayout';
+import AdminWarehouseHome from './pages/admin/AdminWarehouseHome';
+import AdminWarehousePositions from './pages/admin/AdminWarehousePositions';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -168,6 +174,16 @@ function AppContent() {
             }
           />
           <Route
+            path="/admin/pan-pivdenbud"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <PanPivdenbud />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
             path="/admin/orders"
             element={
               <RequireAdmin>
@@ -207,6 +223,39 @@ function AppContent() {
               </RequireAdmin>
             }
           />
+          <Route
+            path="/admin/clients"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminClients />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/clients/:id"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminClientDetails />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/warehouses"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminWarehouseLayout />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          >
+            <Route index element={<AdminWarehouseHome />} />
+            <Route path="positions" element={<AdminWarehousePositions />} />
+          </Route>
           <Route
             path="/admin/users"
             element={

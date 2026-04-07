@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Wrench, CheckCircle, Clock, AlertTriangle, Plus } from 'lucide-react';
+import { Wrench, CheckCircle, Clock, AlertTriangle, Plus, FileClock, WrenchIcon, ShieldAlert } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
 
@@ -10,7 +10,7 @@ export default function RentDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/products?isRent=true`)
+        fetch(`${API_URL}/api/products?isRent=true&includeHiddenRent=true`)
             .then(res => res.ok ? res.json() : [])
             .then(data => {
                 setProducts(Array.isArray(data) ? data : []);
@@ -23,6 +23,9 @@ export default function RentDashboard() {
     const isAvailable = (p) => p.stockStatus === 'available' || p.stockStatus === 'in_stock';
     const available = products.filter(isAvailable).length;
     const availableLater = products.filter(p => p.stockStatus === 'available_later').length;
+    const inProcurement = products.filter(p => p.stockStatus === 'in_procurement').length;
+    const needsRepair = products.filter(p => p.stockStatus === 'needs_repair').length;
+    const inRepair = products.filter(p => p.stockStatus === 'in_repair').length;
     const lowStock = products.filter(p => p.quantityAvailable != null && p.quantityAvailable <= 2 && isAvailable(p)).length;
 
     const formatDate = (dateStr) => {
@@ -34,6 +37,9 @@ export default function RentDashboard() {
     const statusLabel = (p) => {
         if (p.stockStatus === 'available' || p.stockStatus === 'in_stock') return <span style={{ color: '#16a34a', fontWeight: 600 }}>Доступний</span>;
         if (p.stockStatus === 'available_later') return <span style={{ color: '#d97706', fontWeight: 600 }}>З {formatDate(p.availableFrom)}</span>;
+        if (p.stockStatus === 'in_procurement') return <span style={{ color: '#7c3aed', fontWeight: 600 }}>У закупівлі (на папері)</span>;
+        if (p.stockStatus === 'needs_repair') return <span style={{ color: '#b45309', fontWeight: 600 }}>Потребує ремонту</span>;
+        if (p.stockStatus === 'in_repair') return <span style={{ color: '#dc2626', fontWeight: 600 }}>На ремонті</span>;
         return <span style={{ color: '#dc2626', fontWeight: 600 }}>Недоступний</span>;
     };
 
@@ -67,6 +73,27 @@ export default function RentDashboard() {
                     <div className="stat-info">
                         <span className="stat-label">Буде доступно</span>
                         <span className="stat-value" style={{ color: '#d97706' }}>{availableLater}</span>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon" style={{ color: '#7c3aed' }}><FileClock size={24} /></div>
+                    <div className="stat-info">
+                        <span className="stat-label">У закупівлі (на папері)</span>
+                        <span className="stat-value" style={{ color: '#7c3aed' }}>{inProcurement}</span>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon" style={{ color: '#b45309' }}><ShieldAlert size={24} /></div>
+                    <div className="stat-info">
+                        <span className="stat-label">Потребує ремонту</span>
+                        <span className="stat-value" style={{ color: '#b45309' }}>{needsRepair}</span>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon" style={{ color: '#dc2626' }}><WrenchIcon size={24} /></div>
+                    <div className="stat-info">
+                        <span className="stat-label">На ремонті</span>
+                        <span className="stat-value" style={{ color: '#dc2626' }}>{inRepair}</span>
                     </div>
                 </div>
                 {lowStock > 0 && (

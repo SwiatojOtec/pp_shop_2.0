@@ -18,6 +18,16 @@ const rentCategoryRoutes = require('./routes/rentCategoryRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const rentalApplicationRoutes = require('./routes/rentalApplicationRoutes');
+const timesheetRoutes = require('./routes/timesheetRoutes');
+const subdivisionRoutes = require('./routes/subdivisionRoutes');
+const clientRoutes = require('./routes/clientRoutes');
+const warehouseRoutes = require('./routes/warehouseRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const warehouseDashboardRoutes = require('./routes/warehouseDashboardRoutes');
+require('./models/Warehouse');
+require('./models/InventoryItem');
+require('./models/WarehouseEvent');
+const { ensureMainWarehouse, bootstrapRentInventoryFromProducts } = require('./services/inventoryService');
 const app = express();
 
 // Middleware
@@ -82,6 +92,12 @@ app.use('/api/rent-categories', rentCategoryRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rental-applications', rentalApplicationRoutes);
+app.use('/api/timesheet', timesheetRoutes);
+app.use('/api/subdivisions', subdivisionRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/warehouses', warehouseRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/warehouse', warehouseDashboardRoutes);
 // Database Connection and Sync
 const PORT = process.env.PORT || 5000;
 
@@ -89,6 +105,10 @@ sequelize.authenticate()
     .then(() => {
         console.log('Connected to PostgreSQL');
         return sequelize.sync({ alter: true });
+    })
+    .then(async () => {
+        await ensureMainWarehouse();
+        await bootstrapRentInventoryFromProducts();
     })
     .then(() => {
         console.log('Database synced');

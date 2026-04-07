@@ -9,8 +9,29 @@ const fmtDate = (d) => {
 };
 
 const RentalApplicationPrint = React.forwardRef(({
-    applicationNumber, lessor, client, responsible, items, totalRental, totalDeposit
+    applicationNumber,
+    lessor,
+    client,
+    responsible,
+    items,
+    totalRental,
+    totalDeposit,
+    discountType = 'fixed',
+    discountValue = 0,
+    discountAmount = 0,
+    totalRentalAfterDiscount
 }, ref) => {
+    const safeDiscountAmount = Math.max(0, Number(discountAmount || 0));
+    const safeTotalRentalAfterDiscount =
+        totalRentalAfterDiscount != null
+            ? Number(totalRentalAfterDiscount || 0)
+            : Math.max(Number(totalRental || 0) - safeDiscountAmount, 0);
+    const grandTotal = safeTotalRentalAfterDiscount + Number(totalDeposit || 0);
+    const discountLabel =
+        discountType === 'percent'
+            ? `Знижка (${Number(discountValue || 0).toFixed(2)}%)`
+            : 'Знижка (грн)';
+
     return (
         <div ref={ref} className="print-wrap">
             {/* Title */}
@@ -135,6 +156,16 @@ const RentalApplicationPrint = React.forwardRef(({
                     </tr>
                 </tbody>
             </table>
+
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', fontSize: '12px' }}>
+                {safeDiscountAmount > 0 && (
+                    <>
+                        <div><b>{discountLabel}:</b> -{fmt(safeDiscountAmount)} грн</div>
+                        <div><b>Оренда зі знижкою:</b> {fmt(safeTotalRentalAfterDiscount)} грн</div>
+                    </>
+                )}
+                <div><b>До сплати:</b> {fmt(grandTotal)} грн</div>
+            </div>
 
             {/* Signatures */}
             <div className="print-signatures">

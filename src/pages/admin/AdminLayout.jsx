@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, UserCircle2, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, UserCircle2, ClipboardList, Building2, ContactRound, Warehouse } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
@@ -18,42 +18,71 @@ export default function AdminLayout({ children }) {
         { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
         { path: '/admin/rent', icon: <Wrench size={20} />, label: 'Оренда' },
         { path: '/admin/rental-applications', icon: <ClipboardList size={20} />, label: 'Заявки (оренда)' },
+        { path: '/admin/clients', icon: <ContactRound size={20} />, label: 'Клієнти' },
+        { path: '/admin/warehouses', icon: <Warehouse size={20} />, label: 'Склад' },
+        { path: '/admin/pan-pivdenbud', icon: <Building2 size={20} />, label: 'ПАН ПІВДЕНЬБУД' },
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
         { path: '/admin/blog', icon: <FileText size={20} />, label: 'Блог' },
         { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
         ...(role === 'owner' ? [{ path: '/admin/users', icon: <Users size={20} />, label: 'Користувачі' }] : [])
     ];
 
-    const allowedPathsForRent = ['/admin', '/admin/profile', '/admin/rent', '/admin/rental-applications'];
+    const rentBasePaths = ['/admin', '/admin/profile', '/admin/rent', '/admin/rental-applications', '/admin/clients', '/admin/warehouses'];
+    const pivdenbudPaths = [...rentBasePaths, '/admin/pan-pivdenbud'];
 
-    const menuItems = role === 'rent'
-        ? allMenuItems.filter(item => allowedPathsForRent.includes(item.path))
-        : allMenuItems;
+    const menuItems =
+        role === 'rent'
+            ? allMenuItems.filter(item => rentBasePaths.includes(item.path))
+            : role === 'pivdenbud'
+                ? allMenuItems.filter(item => pivdenbudPaths.includes(item.path))
+                : allMenuItems;
 
     useEffect(() => {
-        if (role === 'rent') {
+        if (role === 'rent' || role === 'pivdenbud') {
             const path = location.pathname;
-            const isAllowed =
+            const rentAllowed =
                 path === '/admin' ||
                 path === '/admin/' ||
                 path === '/admin/profile' ||
                 path === '/admin/rent' ||
                 path.startsWith('/admin/rent/') ||
                 path === '/admin/rental-applications' ||
-                path.startsWith('/admin/rental-applications/');
-
-            if (!isAllowed) {
+                path.startsWith('/admin/rental-applications/') ||
+                path === '/admin/clients' ||
+                path.startsWith('/admin/clients/') ||
+                path === '/admin/warehouses' ||
+                path.startsWith('/admin/warehouses/');
+            const pivExtra =
+                role === 'pivdenbud' &&
+                (path === '/admin/pan-pivdenbud' || path.startsWith('/admin/pan-pivdenbud/'));
+            if (!rentAllowed && !pivExtra) {
                 navigate('/admin/rent', { replace: true });
             }
         }
     }, [role, location.pathname, navigate]);
 
+    const navLinkClass = (itemPath) => {
+        const path = location.pathname;
+        if (itemPath === '/admin') {
+            return path === '/admin' || path === '/admin/' ? 'nav-link active' : 'nav-link';
+        }
+        return path === itemPath || path.startsWith(`${itemPath}/`) ? 'nav-link active' : 'nav-link';
+    };
+
     return (
         <div className="admin-layout">
             <aside className="admin-sidebar">
                 <div className="sidebar-header">
-                    <Link to="/" className="sidebar-logo">PAN PARKET</Link>
-                    <span className="admin-badge">Admin</span>
+                    <div className="sidebar-brand">
+                        <Link to="/admin" className="sidebar-brand-link">
+                            <img
+                                src="/admin-sidebar-logo.png"
+                                alt="PPbud Tech · PAN PARKET"
+                                className="sidebar-brand-logo"
+                            />
+                        </Link>
+                        <span className="admin-badge">Admin</span>
+                    </div>
                 </div>
 
                 <nav className="sidebar-nav">
@@ -61,7 +90,7 @@ export default function AdminLayout({ children }) {
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
+                            className={navLinkClass(item.path)}
                         >
                             {item.icon}
                             <span>{item.label}</span>
@@ -96,6 +125,9 @@ export default function AdminLayout({ children }) {
                             <span className="topbar-user-name">{fullName}</span>
                             {role === 'rent' && (
                                 <span className="topbar-user-role">Менеджер з оренди</span>
+                            )}
+                            {role === 'pivdenbud' && (
+                                <span className="topbar-user-role">ПАН ПІВДЕНЬБУД · оренда</span>
                             )}
                         </div>
                     </div>

@@ -4,6 +4,8 @@ const Product = require('../models/Product');
 const RentCategory = require('../models/RentCategory');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
+const InventoryItem = require('../models/InventoryItem');
+const { ensureMainWarehouse, recalculateProductQuantity } = require('../services/inventoryService');
 
 // Convert empty strings to null for numeric fields to avoid DB type errors
 const sanitizeNumericFields = (data) => {
@@ -26,11 +28,26 @@ const autoActivateRentCategory = async (data) => {
     }
 };
 
+const ensureMainWarehouseInventoryForProduct = async (product) => {
+    if (!product?.isRent) return;
+    const warehouse = await ensureMainWarehouse();
+    const safeQuantity = Number.isFinite(product.quantityAvailable) ? product.quantityAvailable : 0;
+    const [row] = await InventoryItem.findOrCreate({
+        where: { warehouseId: warehouse.id, productId: product.id },
+        defaults: { quantity: safeQuantity, reserved: 0, minStock: 0 }
+    });
+    if (row.quantity !== safeQuantity) {
+        row.quantity = safeQuantity;
+        await row.save();
+    }
+    await recalculateProductQuantity(product.id);
+};
+
 // Get all products with filtering and search
 
 router.get('/', async (req, res) => {
     try {
-        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit } = req.query;
+        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit, includeHiddenRent } = req.query;
         let where = {};
 
         if (search) {
@@ -61,6 +78,9 @@ router.get('/', async (req, res) => {
         // Фільтр за isRent застосовуємо тільки, якщо параметр явно переданий
         if (isRent === 'true') {
             where.isRent = true;
+            if (includeHiddenRent !== 'true') {
+                where.showInRentCatalog = true;
+            }
         } else if (isRent === 'false') {
             where.isRent = {
                 [Op.or]: [false, null]
@@ -88,6 +108,8 @@ router.get('/', async (req, res) => {
         let order = [['createdAt', 'DESC']];
         if (sort === 'price_asc') order = [['price', 'ASC']];
         if (sort === 'price_desc') order = [['price', 'DESC']];
+        if (sort === 'name_asc') order = [['name', 'ASC']];
+        if (sort === 'name_desc') order = [['name', 'DESC']];
         if (sort === 'popular') order = [['rating', 'DESC']];
 
         const queryOptions = { where, order };
@@ -122,7 +144,7 @@ router.get('/by-id/:id', async (req, res) => {
 });
 
 // Create product (admin only)
-router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const data = req.body;
 
@@ -148,6 +170,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent']), asyn
 
         const product = await Product.create(data);
         await autoActivateRentCategory(data);
+        await ensureMainWarehouseInventoryForProduct(product);
         res.status(201).json(product);
     } catch (err) {
         console.error('CREATE PRODUCT ERROR:', err);
@@ -156,13 +179,14 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent']), asyn
 });
 
 // Update product (admin only)
-router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
         sanitizeNumericFields(req.body);
         await product.update(req.body);
         await autoActivateRentCategory(req.body);
+        await ensureMainWarehouseInventoryForProduct(product);
         res.json(product);
     } catch (err) {
         console.error('UPDATE PRODUCT ERROR:', err);
@@ -171,7 +195,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), as
 });
 
 // Delete product (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });

@@ -20,7 +20,7 @@ export default function AdminRent() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/products?isRent=true`);
+            const res = await fetch(`${API_URL}/api/products?isRent=true&includeHiddenRent=true`);
             if (res.ok) {
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);

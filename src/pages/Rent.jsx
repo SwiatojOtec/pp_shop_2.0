@@ -10,6 +10,21 @@ import './Shop.css';
 
 const RENT_CATEGORY_NAME = 'Оренда інструменту';
 
+const isRentUnavailableNow = (product) => {
+    if (!product) return true;
+    if (typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0) return true;
+    return ['out_of_stock', 'available_later', 'needs_repair', 'in_repair', 'in_procurement'].includes(product.stockStatus);
+};
+
+const rentStatusLabel = (product) => {
+    if (typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0) return 'Немає в наявності';
+    if (product.stockStatus === 'available_later') return `В оренді до ${product.availableFrom || 'уточнення дати'}`;
+    if (product.stockStatus === 'needs_repair') return 'Потребує ремонту';
+    if (product.stockStatus === 'in_repair') return 'На ремонті';
+    if (product.stockStatus === 'in_procurement') return 'У закупівлі';
+    return 'Тимчасово недоступний';
+};
+
 export default function Rent() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -141,6 +156,9 @@ export default function Rent() {
     const currentSortLabel = sortOptions.find(opt => opt.value === sort)?.label || 'За популярністю';
 
     const sortedProducts = [...products].sort((a, b) => {
+        const unavailableA = isRentUnavailableNow(a) ? 1 : 0;
+        const unavailableB = isRentUnavailableNow(b) ? 1 : 0;
+        if (unavailableA !== unavailableB) return unavailableA - unavailableB;
         switch (sort) {
             case 'name_asc':
                 return a.name.localeCompare(b.name);
@@ -290,8 +308,10 @@ export default function Rent() {
 
                     <main className="shop-main">
                         <div className="product-grid">
-                            {sortedProducts.map((product) => (
-                                <div key={product._id || product.id} className="product-card">
+                            {sortedProducts.map((product) => {
+                                const unavailableNow = isRentUnavailableNow(product);
+                                return (
+                                <div key={product._id || product.id} className={`product-card ${unavailableNow ? 'product-card--unavailable' : ''}`}>
                                     <div className="product-image-container">
                                         {product.badge && (
                                             <span className={`badge badge-${product.badge.toLowerCase()}`}>
@@ -313,7 +333,14 @@ export default function Rent() {
                                         <button className="quick-view-btn" onClick={() => setQuickViewProduct(product)}>
                                             Швидкий перегляд
                                         </button>
-                                        <button className="add-to-cart-btn" onClick={() => addToCartWithToast(product, 1, cartItems, addToCart, showToast)}><Plus size={24} /></button>
+                                        <button
+                                            className="add-to-cart-btn"
+                                            onClick={() => addToCartWithToast(product, 1, cartItems, addToCart, showToast)}
+                                            disabled={unavailableNow}
+                                            title={unavailableNow ? 'Тимчасово недоступно для оренди' : 'Додати в кошик'}
+                                        >
+                                            <Plus size={24} />
+                                        </button>
                                     </div>
                                     <div className="product-info">
                                         <div className="product-meta">
@@ -340,9 +367,20 @@ export default function Rent() {
                                                 </div>
                                             )}
                                         </div>
+                                        <div
+                                            className="stock-status"
+                                            style={{
+                                                marginTop: '5px',
+                                                fontSize: '0.8rem',
+                                                color: unavailableNow ? '#9ca3af' : '#16a34a',
+                                                fontWeight: 600
+                                            }}
+                                        >
+                                            {unavailableNow ? rentStatusLabel(product) : 'Доступний зараз'}
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     </main>
                 </div>

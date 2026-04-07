@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import {
     Save, ArrowLeft, Plus, Trash2, Image as ImageIcon,
     X, ChevronRight, Settings
@@ -9,9 +9,22 @@ import { transliterate } from '../../utils/transliterate';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
+function safeAdminReturnPath(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    try {
+        const p = decodeURIComponent(raw.trim());
+        if (!p.startsWith('/admin') || p.includes('://')) return null;
+        return p.split('?')[0];
+    } catch {
+        return null;
+    }
+}
+
 export default function ProductEdit({ context = 'products' }) {
     const { id } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const location = useLocation();
     const isNew = id === 'new';
 
     const [formData, setFormData] = useState({
@@ -22,6 +35,7 @@ export default function ProductEdit({ context = 'products' }) {
         image: '',
         images: [],
         desc: '',
+        adminNotes: '',
         sku: '',
         slug: '',
         groupId: '', // For linking variants
@@ -35,6 +49,7 @@ export default function ProductEdit({ context = 'products' }) {
         availableFrom: '',
         kitItems: [],
         quantityAvailable: '',
+        showInRentCatalog: true,
         relatedProducts: [],
         serialNumber: '',
         inventoryNumber: '',
@@ -42,19 +57,31 @@ export default function ProductEdit({ context = 'products' }) {
         weightPerUnit: '',
         weightTotal: '',
         replacementCost: '',
-        securityDeposit: ''
+        securityDeposit: '',
+        competitorLinks: []
     });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
     const [newSpec, setNewSpec] = useState({ key: '', value: '' });
+    const [newCompetitorUrl, setNewCompetitorUrl] = useState('');
     const [relatedSearch, setRelatedSearch] = useState('');
     const [relatedResults, setRelatedResults] = useState([]);
     const relatedSearchTimeout = useRef(null);
     const { token } = useAuth();
 
     const isRentContext = context === 'rent';
+
+    const afterSavePath = () => {
+        const fromQuery = safeAdminReturnPath(searchParams.get('returnTo'));
+        if (fromQuery) return fromQuery;
+        const fromState = location.state && typeof location.state.returnTo === 'string'
+            ? safeAdminReturnPath(location.state.returnTo)
+            : null;
+        if (fromState) return fromState;
+        return isRentContext ? '/admin/rent' : '/admin/products';
+    };
 
     useEffect(() => {
         // Для нових інструментів оренди за замовчуванням ставимо "шт"
@@ -127,12 +154,15 @@ export default function ProductEdit({ context = 'products' }) {
                     price: data.price || '',
                     oldPrice: data.oldPrice || '',
                     images: data.images || [],
+                    adminNotes: data.adminNotes || '',
                     specs: data.specs || {},
                     priceMatrix: data.priceMatrix || [],
                     availableFrom: data.availableFrom || '',
                     kitItems: data.kitItems || [],
                     quantityAvailable: data.quantityAvailable ?? '',
-                    relatedProducts: relatedProductObjects
+                    showInRentCatalog: typeof data.showInRentCatalog === 'boolean' ? data.showInRentCatalog : true,
+                    relatedProducts: relatedProductObjects,
+                    competitorLinks: Array.isArray(data.competitorLinks) ? data.competitorLinks : []
                 });
             }
         } catch (err) {
@@ -185,11 +215,17 @@ export default function ProductEdit({ context = 'products' }) {
                 oldPrice: (formData.oldPrice === '' || formData.badge !== 'SALE') ? null : Number(formData.oldPrice),
                 packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize),
                 availableFrom: formData.availableFrom || null,
+                adminNotes: String(formData.adminNotes || '').trim() || null,
                 badge: isRentContext ? null : formData.badge,
                 quantityAvailable: formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable),
                 // Store only IDs in DB, not full objects
                 relatedProducts: Array.isArray(formData.relatedProducts)
                     ? formData.relatedProducts.map(r => (typeof r === 'object' ? r.id : r))
+                    : [],
+                competitorLinks: Array.isArray(formData.competitorLinks)
+                    ? formData.competitorLinks
+                        .map(v => String(v || '').trim())
+                        .filter(Boolean)
                     : []
             };
 
@@ -210,7 +246,7 @@ export default function ProductEdit({ context = 'products' }) {
             });
 
             if (res.ok) {
-                navigate(isRentContext ? '/admin/rent' : '/admin/products');
+                navigate(afterSavePath());
             } else {
                 const errorData = await res.json();
                 alert(`Помилка: ${errorData.message || 'Не вдалося зберегти товар'}`);
@@ -312,7 +348,7 @@ export default function ProductEdit({ context = 'products' }) {
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <button
-                        onClick={() => navigate(isRentContext ? '/admin/rent' : '/admin/products')}
+                        onClick={() => navigate(afterSavePath())}
                         className="action-btn"
                         style={{ width: '40px', height: '40px' }}
                     >
@@ -349,6 +385,16 @@ export default function ProductEdit({ context = 'products' }) {
                                     value={formData.desc}
                                     onChange={e => setFormData({ ...formData, desc: e.target.value })}
                                     rows="10"
+                                    style={{ resize: 'vertical' }}
+                                ></textarea>
+                            </div>
+                            <div className="form-group" style={{ marginTop: '20px' }}>
+                                <label>Нотатки (внутрішні, тільки для адмінів)</label>
+                                <textarea
+                                    value={formData.adminNotes || ''}
+                                    onChange={e => setFormData({ ...formData, adminNotes: e.target.value })}
+                                    rows="4"
+                                    placeholder="Наприклад: мінімальна ціна, стан, нюанси по оренді, контакт постачальника..."
                                     style={{ resize: 'vertical' }}
                                 ></textarea>
                             </div>
@@ -499,7 +545,7 @@ export default function ProductEdit({ context = 'products' }) {
                                         clearTimeout(relatedSearchTimeout.current);
                                         if (val.trim().length < 2) { setRelatedResults([]); return; }
                                         relatedSearchTimeout.current = setTimeout(async () => {
-                                            const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(val)}&isRent=true`);
+                                            const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(val)}&isRent=true&includeHiddenRent=true`);
                                             const data = res.ok ? await res.json() : [];
                                             const existing = (formData.relatedProducts || []).map(r => r.id);
                                             setRelatedResults(data.filter(p => p.id !== (id ? parseInt(id) : null) && !existing.includes(p.id)).slice(0, 6));
@@ -693,6 +739,9 @@ export default function ProductEdit({ context = 'products' }) {
                                             onChange={e => setFormData({ ...formData, stockStatus: e.target.value })}
                                         >
                                             <option value="in_stock">В наявності</option>
+                                            <option value="in_procurement">У закупівлі (на папері)</option>
+                                            <option value="needs_repair">Потребує ремонту</option>
+                                            <option value="in_repair">На ремонті</option>
                                             <option value="out_of_stock">Немає в наявності</option>
                                             <option value="available_later">Буде доступно з дати</option>
                                         </select>
@@ -719,6 +768,17 @@ export default function ProductEdit({ context = 'products' }) {
                                                 onChange={e => setFormData({ ...formData, quantityAvailable: e.target.value })}
                                                 placeholder="Наприклад: 5"
                                             />
+                                        </div>
+                                        <div style={{ marginTop: '12px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!formData.showInRentCatalog}
+                                                    onChange={e => setFormData({ ...formData, showInRentCatalog: e.target.checked })}
+                                                    style={{ width: '16px', height: '16px' }}
+                                                />
+                                                Показувати в каталозі оренди
+                                            </label>
                                         </div>
                                     </>
                                 )}
@@ -872,7 +932,7 @@ export default function ProductEdit({ context = 'products' }) {
                                         placeholder="0.00"
                                     />
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ marginBottom: '16px' }}>
                                     <label>Гарантійний платіж, ₴</label>
                                     <input
                                         type="number"
@@ -881,6 +941,68 @@ export default function ProductEdit({ context = 'products' }) {
                                         onChange={e => setFormData({ ...formData, securityDeposit: e.target.value })}
                                         placeholder="0.00"
                                     />
+                                </div>
+                                <div className="form-group" style={{ marginTop: '20px' }}>
+                                    <label>Конкуренти (посилання на товари)</label>
+                                    <p style={{ fontSize: '0.75rem', color: '#777', marginTop: '4px', marginBottom: '8px' }}>
+                                        Додайте URL товарів конкурентів для швидкого моніторингу ціни.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                        <input
+                                            type="url"
+                                            value={newCompetitorUrl}
+                                            onChange={e => setNewCompetitorUrl(e.target.value)}
+                                            placeholder="https://site.com/product/..."
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                                let val = String(newCompetitorUrl || '').trim();
+                                                if (!val) return;
+                                                if (!/^https?:\/\//i.test(val)) val = `https://${val}`;
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    competitorLinks: [...(Array.isArray(prev.competitorLinks) ? prev.competitorLinks : []), val]
+                                                }));
+                                                setNewCompetitorUrl('');
+                                            }}
+                                        >
+                                            <Plus size={16} /> Додати
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {Array.isArray(formData.competitorLinks) && formData.competitorLinks.length > 0 ? (
+                                            formData.competitorLinks.map((link, idx) => (
+                                                <div key={`${link}-${idx}`} style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 8px' }}>
+                                                    <a
+                                                        href={link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ flex: 1, fontSize: '0.82rem', color: '#2563eb', textDecoration: 'none', wordBreak: 'break-all' }}
+                                                        title={link}
+                                                    >
+                                                        {link}
+                                                    </a>
+                                                    <button
+                                                        type="button"
+                                                        className="action-btn delete"
+                                                        onClick={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                competitorLinks: (prev.competitorLinks || []).filter((_, i) => i !== idx)
+                                                            }));
+                                                        }}
+                                                        title="Видалити посилання"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Посилань ще немає</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

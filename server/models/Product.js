@@ -62,6 +62,10 @@ const Product = sequelize.define('Product', {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    adminNotes: {
+        type: DataTypes.TEXT,
+        allowNull: true // Внутрішні нотатки для адмінів (не для клієнтської частини)
+    },
     specs: {
         type: DataTypes.JSONB, // Flexible characteristics
         defaultValue: {}
@@ -103,6 +107,11 @@ const Product = sequelize.define('Product', {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
+    showInRentCatalog: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+    },
     kitItems: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [] // Для оренди: перелік елементів комплекту
@@ -142,6 +151,10 @@ const Product = sequelize.define('Product', {
     securityDeposit: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true
+    },
+    competitorLinks: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: [] // Для оренди: посилання на товари конкурентів для моніторингу цін
     }
 });
 

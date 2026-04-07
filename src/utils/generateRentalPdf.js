@@ -17,7 +17,19 @@ const loadFontAsBase64 = async (url) => {
     return btoa(binary);
 };
 
-export const generateRentalPdf = async ({ applicationNumber, lessor, client, responsible, items, totalRental, totalDeposit }) => {
+export const generateRentalPdf = async ({
+    applicationNumber,
+    lessor,
+    client,
+    responsible,
+    items,
+    totalRental,
+    totalDeposit,
+    discountType = 'fixed',
+    discountValue = 0,
+    discountAmount = 0,
+    totalRentalAfterDiscount
+}) => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     // Load and embed Roboto (Cyrillic support)
@@ -195,16 +207,32 @@ export const generateRentalPdf = async ({ applicationNumber, lessor, client, res
         margin: { left: 5, right: 5 },
     });
 
-    // --- Amount due (rental + deposit) ---
-    const due = (parseFloat(totalRental || 0) + parseFloat(totalDeposit || 0)).toFixed(2);
+    // --- Totals block (discount + due) ---
+    const safeTotalRental = parseFloat(totalRental || 0);
+    const safeTotalDeposit = parseFloat(totalDeposit || 0);
+    const safeDiscountAmount = Math.max(0, parseFloat(discountAmount || 0));
+    const safeTotalRentalAfterDiscount =
+        totalRentalAfterDiscount != null
+            ? parseFloat(totalRentalAfterDiscount || 0)
+            : Math.max(safeTotalRental - safeDiscountAmount, 0);
+    const due = (safeTotalRentalAfterDiscount + safeTotalDeposit).toFixed(2);
     const dueY = doc.lastAutoTable.finalY + 6;
     doc.setFontSize(10);
+    doc.setFont(fontName, 'normal');
+    if (safeDiscountAmount > 0) {
+        const discountLabel =
+            discountType === 'percent'
+                ? `Знижка (${Number(discountValue || 0).toFixed(2)}%)`
+                : 'Знижка (грн)';
+        doc.text(`${discountLabel}: -${fmt(safeDiscountAmount)} грн`, 292, dueY, { align: 'right' });
+        doc.text(`Оренда зі знижкою: ${fmt(safeTotalRentalAfterDiscount)} грн`, 292, dueY + 5, { align: 'right' });
+    }
     doc.setFont(fontName, 'bold');
-    doc.text(`До сплати: ${fmt(due)} грн`, 292, dueY, { align: 'right' });
+    doc.text(`До сплати: ${fmt(due)} грн`, 292, dueY + (safeDiscountAmount > 0 ? 10 : 0), { align: 'right' });
     doc.setFont(fontName, 'normal');
 
     // --- Signatures ---
-    const sigY = dueY + 10;
+    const sigY = dueY + (safeDiscountAmount > 0 ? 20 : 10);
     doc.setFontSize(8);
     doc.setFont(fontName, 'bold');
     doc.text('Передав (Орендодавець):', 20, sigY);

@@ -37,6 +37,10 @@ const RentalApplication = sequelize.define('RentalApplication', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    clientId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     responsible: {
         type: DataTypes.JSONB,
         defaultValue: []
@@ -61,6 +65,18 @@ const RentalApplication = sequelize.define('RentalApplication', {
         defaultValue: 0
     },
     depositAmount: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0
+    },
+    discountType: {
+        type: DataTypes.STRING,
+        defaultValue: 'fixed' // fixed | percent
+    },
+    discountValue: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0
+    },
+    discountAmount: {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0
     },

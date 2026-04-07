@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Plus, Trash2, Save, Printer, Download, Search, X, Sparkles } from 'lucide-react';
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
@@ -50,6 +50,7 @@ const calcDays = (from, to) => {
 export default function AdminRentalApplicationForm() {
     const { id } = useParams();
     const isNew = !id || id === 'new';
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { token } = useAuth();
     const printRef = useRef();
@@ -59,6 +60,10 @@ export default function AdminRentalApplicationForm() {
     const [applicationNumber, setApplicationNumber] = useState('');
     const [status, setStatus] = useState('draft');
     const [notes, setNotes] = useState('');
+    const [discountType, setDiscountType] = useState('fixed');
+    const [discountValue, setDiscountValue] = useState('');
+    const [clients, setClients] = useState([]);
+    const [selectedClientId, setSelectedClientId] = useState('');
 
     // Client
     const [client, setClient] = useState({ name: '', phone: '', email: '', passport: '', address: '', siteAddress: '' });
@@ -81,6 +86,34 @@ export default function AdminRentalApplicationForm() {
 
     const handlePrint = useReactToPrint({ contentRef: printRef });
 
+    useEffect(() => {
+        if (!token) return;
+        fetch(`${API_URL}/api/clients`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => (r.ok ? r.json() : []))
+            .then(data => setClients(Array.isArray(data) ? data : []))
+            .catch(() => setClients([]));
+    }, [token]);
+
+    useEffect(() => {
+        if (!isNew || clients.length === 0) return;
+        const queryClientId = searchParams.get('clientId');
+        if (!queryClientId) return;
+        const picked = clients.find(c => String(c.id) === String(queryClientId));
+        if (!picked) return;
+        setSelectedClientId(String(picked.id));
+        setClient({
+            name: picked.fullName || '',
+            phone: picked.phone || '',
+            email: picked.email || '',
+            passport: picked.passport || '',
+            address: picked.address || '',
+            siteAddress: picked.siteAddress || ''
+        });
+        const discountPercent = Number(picked.discountPercent || 0);
+        setDiscountType('percent');
+        setDiscountValue(String(discountPercent));
+    }, [isNew, clients, searchParams]);
+
     // Load existing application
     useEffect(() => {
         if (!isNew) {
@@ -91,6 +124,12 @@ export default function AdminRentalApplicationForm() {
                     setApplicationNumber(data.applicationNumber || '');
                     setStatus(data.status || 'draft');
                     setNotes(data.notes || '');
+                    setDiscountType(data.discountType === 'percent' ? 'percent' : 'fixed');
+                    setDiscountValue(
+                        data.discountValue !== null && data.discountValue !== undefined
+                            ? String(data.discountValue)
+                            : ''
+                    );
                     setClient({
                         name: data.clientName || '',
                         phone: data.clientPhone || '',
@@ -99,6 +138,7 @@ export default function AdminRentalApplicationForm() {
                         address: data.clientAddress || '',
                         siteAddress: data.clientSiteAddress || '',
                     });
+                    setSelectedClientId(data.clientId ? String(data.clientId) : '');
                     if (data.responsible && Array.isArray(data.responsible)) {
                         setResponsible(data.responsible);
                     }
@@ -116,7 +156,7 @@ export default function AdminRentalApplicationForm() {
         clearTimeout(searchTimeout.current);
         if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
         searchTimeout.current = setTimeout(async () => {
-            const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(searchQuery)}&isRent=true`);
+            const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(searchQuery)}&isRent=true&includeHiddenRent=true`);
             const data = res.ok ? await res.json() : [];
             setSearchResults(data.slice(0, 8));
         }, 300);
@@ -219,6 +259,14 @@ export default function AdminRentalApplicationForm() {
 
     const totalRental = items.reduce((s, i) => s + parseFloat(i.totalRental || 0), 0);
     const totalDeposit = items.reduce((s, i) => s + parseFloat(i.depositAmount || 0), 0);
+    const parsedDiscount = Math.max(0, parseFloat(discountValue || 0) || 0);
+    const rawDiscountAmount =
+        discountType === 'percent'
+            ? (totalRental * Math.min(parsedDiscount, 100)) / 100
+            : parsedDiscount;
+    const discountAmount = Math.min(rawDiscountAmount, totalRental);
+    const totalRentalAfterDiscount = Math.max(totalRental - discountAmount, 0);
+    const grandTotal = totalRentalAfterDiscount + totalDeposit;
 
     const handleSave = async () => {
         setSaving(true);
@@ -231,12 +279,16 @@ export default function AdminRentalApplicationForm() {
             clientPassport: client.passport,
             clientAddress: client.address,
             clientSiteAddress: client.siteAddress,
+            clientId: selectedClientId ? Number(selectedClientId) : null,
             responsible,
             rentFrom: items[0]?.rentFrom || null,
             rentTo: items[0]?.rentTo || null,
             items: items.map(({ _key, ...i }) => i),
-            totalAmount: totalRental.toFixed(2),
+            totalAmount: totalRentalAfterDiscount.toFixed(2),
             depositAmount: totalDeposit.toFixed(2),
+            discountType,
+            discountValue: parsedDiscount.toFixed(2),
+            discountAmount: discountAmount.toFixed(2),
         };
 
         const doSave = async (attempt = 1) => {
@@ -295,11 +347,27 @@ export default function AdminRentalApplicationForm() {
                     <select value={status} onChange={e => setStatus(e.target.value)} className="status-select">
                         <option value="draft">Чернетка</option>
                         <option value="active">Активна</option>
+                        <option value="booked">Заброньовано</option>
+                        <option value="overdue">Термін повернення прострочено</option>
                         <option value="returned">Повернуто</option>
                         <option value="cancelled">Скасована</option>
                     </select>
                     <button
-                        onClick={() => generateRentalPdf({ applicationNumber, lessor: LESSOR, client, responsible, items, totalRental, totalDeposit }).catch(console.error)}
+                        onClick={() =>
+                            generateRentalPdf({
+                                applicationNumber,
+                                lessor: LESSOR,
+                                client,
+                                responsible,
+                                items,
+                                totalRental,
+                                totalDeposit,
+                                discountType,
+                                discountValue: parsedDiscount,
+                                discountAmount,
+                                totalRentalAfterDiscount
+                            }).catch(console.error)
+                        }
                         className="btn-secondary-icon"
                         title="Скачати PDF"
                     >
@@ -331,6 +399,38 @@ export default function AdminRentalApplicationForm() {
                     {/* Client (editable) */}
                     <div className="rental-party-block">
                         <h3 className="party-title">Орендар</h3>
+                        <div style={{ marginBottom: '10px' }}>
+                            <select
+                                value={selectedClientId}
+                                onChange={e => {
+                                    const value = e.target.value;
+                                    setSelectedClientId(value);
+                                    if (!value) return;
+                                    const picked = clients.find(c => String(c.id) === String(value));
+                                    if (!picked) return;
+                                    setClient({
+                                        name: picked.fullName || '',
+                                        phone: picked.phone || '',
+                                        email: picked.email || '',
+                                        passport: picked.passport || '',
+                                        address: picked.address || '',
+                                        siteAddress: picked.siteAddress || ''
+                                    });
+                                    const discountPercent = Number(picked.discountPercent || 0);
+                                    setDiscountType('percent');
+                                    setDiscountValue(String(discountPercent));
+                                }}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            >
+                                <option value="">Обрати клієнта з бази (опціонально)</option>
+                                {clients.map(c => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.fullName} · {c.phone}
+                                        {Number(c.discountPercent || 0) > 0 ? ` · знижка ${Number(c.discountPercent).toFixed(0)}%` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         {[
                             { label: 'П.І.Б.', field: 'name', placeholder: "Прізвище Ім'я По-батькові" },
                             { label: 'Телефон', field: 'phone', placeholder: '+38 0XX XXX XX XX' },
@@ -506,6 +606,24 @@ export default function AdminRentalApplicationForm() {
                                                 <span className="kit-item-num">{idx + 1}.{ki + 1}</span>
                                                 <span className="kit-item-name">{kit}</span>
                                                 <span className="kit-item-state">справний</span>
+                                                <button
+                                                    type="button"
+                                                    className="kit-item-remove-btn"
+                                                    title="Прибрати з комплектації в цій заявці"
+                                                    onClick={() => {
+                                                        setItems(prev =>
+                                                            prev.map(it => {
+                                                                if (it._key !== item._key) return it;
+                                                                const nextKitItems = Array.isArray(it.kitItems)
+                                                                    ? it.kitItems.filter((_, index) => index !== ki)
+                                                                    : [];
+                                                                return { ...it, kitItems: nextKitItems };
+                                                            })
+                                                        );
+                                                    }}
+                                                >
+                                                    <X size={12} />
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -539,13 +657,43 @@ export default function AdminRentalApplicationForm() {
                             <span>Загальна сума оренди:</span>
                             <strong>{totalRental.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
                         </div>
+                        <div className="total-row" style={{ gap: '10px', flexWrap: 'wrap' }}>
+                            <span>Знижка:</span>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <select
+                                    value={discountType}
+                                    onChange={e => setDiscountType(e.target.value)}
+                                    style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                >
+                                    <option value="fixed">₴</option>
+                                    <option value="percent">%</option>
+                                </select>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max={discountType === 'percent' ? 100 : undefined}
+                                    step="0.01"
+                                    value={discountValue}
+                                    onChange={e => setDiscountValue(e.target.value)}
+                                    placeholder={discountType === 'percent' ? '0-100' : '0.00'}
+                                    style={{ width: '100px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                />
+                            </div>
+                            <strong style={{ marginLeft: 'auto', color: '#b91c1c' }}>
+                                -{discountAmount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
+                            </strong>
+                        </div>
+                        <div className="total-row">
+                            <span>Оренда зі знижкою:</span>
+                            <strong>{totalRentalAfterDiscount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
+                        </div>
                         <div className="total-row">
                             <span>Загальна застава:</span>
                             <strong>{totalDeposit.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
                         </div>
                         <div className="total-row total-row--grand">
-                            <span>До сплати (оренда + застава):</span>
-                            <strong>{(totalRental + totalDeposit).toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
+                            <span>До сплати (оренда зі знижкою + застава):</span>
+                            <strong>{grandTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
                         </div>
                     </div>
                 </div>
@@ -599,6 +747,10 @@ export default function AdminRentalApplicationForm() {
                     items={items}
                     totalRental={totalRental}
                     totalDeposit={totalDeposit}
+                    discountType={discountType}
+                    discountValue={parsedDiscount}
+                    discountAmount={discountAmount}
+                    totalRentalAfterDiscount={totalRentalAfterDiscount}
                     status={status}
                     notes={notes}
                 />

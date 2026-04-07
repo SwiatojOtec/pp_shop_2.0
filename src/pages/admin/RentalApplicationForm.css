@@ -304,6 +304,24 @@
 .kit-item-num { color: #aaa; font-size: 0.75rem; min-width: 30px; }
 .kit-item-name { flex: 1; }
 .kit-item-state { color: #16a34a; font-size: 0.78rem; font-weight: 600; }
+.kit-item-remove-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.15s, background 0.15s;
+}
+.kit-item-remove-btn:hover {
+    opacity: 1;
+    background: #fee2e2;
+}
 
 .add-item-btn {
     display: flex;

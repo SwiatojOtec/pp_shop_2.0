@@ -8,6 +8,8 @@ import './Admin.css';
 const STATUS_LABELS = {
     draft:     { label: 'Чернетка',   color: '#888',    bg: '#f1f5f9' },
     active:    { label: 'Активна',    color: '#16a34a', bg: '#f0fdf4' },
+    booked:    { label: 'Заброньовано', color: '#7c3aed', bg: '#f5f3ff' },
+    overdue:   { label: 'Термін повернення прострочено', color: '#b91c1c', bg: '#fee2e2' },
     returned:  { label: 'Повернуто',  color: '#2563eb', bg: '#eff6ff' },
     cancelled: { label: 'Скасована',  color: '#dc2626', bg: '#fef2f2' },
 };
@@ -88,6 +90,8 @@ export default function AdminRentalApplications() {
                     <option value="all">Всі статуси</option>
                     <option value="draft">Чернетки</option>
                     <option value="active">Активні</option>
+                    <option value="booked">Заброньовані</option>
+                    <option value="overdue">Прострочені</option>
                     <option value="returned">Повернуто</option>
                     <option value="cancelled">Скасовані</option>
                 </select>
@@ -132,7 +136,7 @@ export default function AdminRentalApplications() {
                                             {app.rentFrom ? `${formatDate(app.rentFrom)} — ${formatDate(app.rentTo)}` : '—'}
                                         </td>
                                         <td style={{ fontWeight: 700 }}>
-                                            {app.totalAmount > 0 ? `${Number(app.totalAmount).toLocaleString('uk-UA')} ₴` : '—'}
+                                            {app.totalAmount >= 0 ? `${Number(app.totalAmount).toLocaleString('uk-UA')} ₴` : '—'}
                                         </td>
                                         <td>
                                             <span style={{ background: st.bg, color: st.color, padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
