@@ -94,7 +94,7 @@ router.get('/', async (req, res) => {
         }
 
         // Handle dynamic spec filters (anything else in query)
-        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit'];
+        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit', 'includeHiddenRent'];
         Object.keys(req.query).forEach(key => {
             if (!standardParams.includes(key) && req.query[key]) {
                 // For JSONB specs filtering

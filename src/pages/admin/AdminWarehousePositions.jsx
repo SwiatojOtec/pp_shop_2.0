@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, X, Warehouse, Plus, ListTree, Boxes } from 'lucide-react';
+import { ChevronDown, ChevronRight, X, Warehouse, Plus, ListTree, Boxes, ArrowRightLeft } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import WarehouseProductWorkModal from './WarehouseProductWorkModal';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './Admin.css';
 
 const EMPTY_FORM = { name: '', notes: '', isActive: true };
@@ -29,6 +31,17 @@ const stockStatusLabel = (p) => {
     return p.stockStatus || '—';
 };
 
+const loadFontAsBase64 = async (url) => {
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();
+    let binary = '';
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.byteLength; i += 1) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+};
+
 export default function AdminWarehousePositions() {
     const navigate = useNavigate();
     const { token } = useAuth();
@@ -42,6 +55,13 @@ export default function AdminWarehousePositions() {
     const [modalWarehousesOpen, setModalWarehousesOpen] = useState(false);
     const [modalCreateOpen, setModalCreateOpen] = useState(false);
     const [workModalRow, setWorkModalRow] = useState(null);
+    const [searchSuggestions, setSearchSuggestions] = useState([]);
+    const [suggestLoading, setSuggestLoading] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(() => new Set());
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkToId, setBulkToId] = useState('');
+    const [bulkBusy, setBulkBusy] = useState(false);
+    const [bulkQtyById, setBulkQtyById] = useState({});
 
     const authHeaders = useMemo(() => ({
         'Content-Type': 'application/json',
@@ -81,6 +101,11 @@ export default function AdminWarehousePositions() {
         [warehouses, selectedWarehouseId]
     );
 
+    const targetWarehouses = useMemo(
+        () => warehouses.filter((w) => w.id !== selectedWarehouseId),
+        [warehouses, selectedWarehouseId, selectedWarehouseId]
+    );
+
     const createWarehouse = async () => {
         if (!form.name.trim()) return;
         setSaving(true);
@@ -111,6 +136,14 @@ export default function AdminWarehousePositions() {
         if (res.ok) fetchInventory(selectedWarehouseId);
     };
 
+    useEffect(() => {
+        if (!bulkOpen) return;
+        if (!bulkToId) {
+            const first = targetWarehouses[0]?.id ? String(targetWarehouses[0].id) : '';
+            setBulkToId(first);
+        }
+    }, [bulkOpen, bulkToId, targetWarehouses]);
+
     const q = search.trim().toLowerCase();
     const filteredInventory = useMemo(() => {
         if (!q) return inventory;
@@ -122,6 +155,33 @@ export default function AdminWarehousePositions() {
         });
     }, [inventory, q]);
 
+    useEffect(() => {
+        let cancelled = false;
+        const qRaw = String(search || '').trim();
+        if (!qRaw || qRaw.length < 2) {
+            setSearchSuggestions([]);
+            return;
+        }
+        // Підказки потрібні тільки якщо в поточному складі пусто
+        if (filteredInventory.length > 0) {
+            setSearchSuggestions([]);
+            return;
+        }
+        const t = setTimeout(async () => {
+            setSuggestLoading(true);
+            try {
+                const res = await fetch(`${API_URL}/api/inventory/suggest?q=${encodeURIComponent(qRaw)}&warehouseId=${selectedWarehouseId || ''}`, { headers: authHeaders });
+                const data = res.ok ? await res.json() : { suggestions: [] };
+                if (!cancelled) setSearchSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+            } catch {
+                if (!cancelled) setSearchSuggestions([]);
+            } finally {
+                if (!cancelled) setSuggestLoading(false);
+            }
+        }, 260);
+        return () => { cancelled = true; clearTimeout(t); };
+    }, [search, selectedWarehouseId, filteredInventory.length, authHeaders]);
+
     const colSpan = 12;
 
     const selectWarehouseAndClose = (id) => {
@@ -129,11 +189,148 @@ export default function AdminWarehousePositions() {
         setModalWarehousesOpen(false);
     };
 
+    const clearSelection = () => {
+        setSelectedIds(new Set());
+        setBulkQtyById({});
+    };
+
+    const toggleSelect = (inventoryId) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(inventoryId)) next.delete(inventoryId);
+            else next.add(inventoryId);
+            return next;
+        });
+    };
+
+    const selectedRows = useMemo(() => {
+        if (!selectedIds.size) return [];
+        const ids = selectedIds;
+        return filteredInventory.filter((r) => ids.has(r.id));
+    }, [filteredInventory, selectedIds]);
+
+    const openBulkMove = () => {
+        const init = {};
+        for (const row of selectedRows) {
+            init[row.id] = Math.min(1, row.quantity || 0);
+        }
+        setBulkQtyById((prev) => ({ ...init, ...prev }));
+        setBulkOpen(true);
+    };
+
+    const doBulkMove = async () => {
+        const toWarehouseId = Number(bulkToId);
+        if (!toWarehouseId || !selectedWarehouseId) return;
+        setBulkBusy(true);
+        try {
+            for (const row of selectedRows) {
+                const qty = Math.floor(Number(bulkQtyById[row.id] ?? 0));
+                if (!Number.isFinite(qty) || qty <= 0) continue;
+                if (qty > (row.quantity || 0)) {
+                    throw new Error(`Некоректна кількість для «${row.Product?.name || 'товар'}»`);
+                }
+                const res = await fetch(`${API_URL}/api/inventory/move`, {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({
+                        productId: row.productId,
+                        fromWarehouseId: selectedWarehouseId,
+                        toWarehouseId,
+                        quantity: qty
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.message || 'Не вдалося перемістити');
+                }
+            }
+            await fetchInventory(selectedWarehouseId);
+            setBulkOpen(false);
+            clearSelection();
+        } catch (e) {
+            alert(e.message || 'Помилка');
+        } finally {
+            setBulkBusy(false);
+        }
+    };
+
+    const exportCurrentWarehousePdf = async () => {
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const warehouseName = selectedWarehouse?.name || '—';
+        let fontName = 'helvetica';
+
+        try {
+            const [regularB64, boldB64] = await Promise.all([
+                loadFontAsBase64('/fonts/Roboto-Regular.ttf'),
+                loadFontAsBase64('/fonts/Roboto-Bold.ttf')
+            ]);
+            doc.addFileToVFS('Roboto-Regular.ttf', regularB64);
+            doc.addFileToVFS('Roboto-Bold.ttf', boldB64);
+            doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+            doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+            fontName = 'Roboto';
+            doc.setFont(fontName, 'normal');
+        } catch (e) {
+            console.warn('Warehouse PDF font load failed, using fallback', e);
+            doc.setFont('helvetica', 'normal');
+        }
+
+        doc.setFont(fontName, 'bold');
+        doc.setFontSize(16);
+        doc.text('Склади · Звіт по залишках', 40, 40);
+        doc.setFont(fontName, 'normal');
+        doc.setFontSize(10);
+        doc.text(`Склад: ${warehouseName}`, 40, 58);
+        doc.text(`Сформовано: ${dateStr}`, 40, 72);
+        doc.text(`Позицій: ${filteredInventory.length}`, 40, 86);
+
+        const body = filteredInventory.map((row) => {
+            const p = row.Product || {};
+            return [
+                p.name || '—',
+                p.sku || '—',
+                p.category || '—',
+                p.brand || '—',
+                stockStatusLabel(p),
+                row.quantity ?? 0,
+                row.reserved ?? 0,
+                row.minStock ?? 0,
+                p.quantityAvailable ?? 0
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 102,
+            head: [['Товар', 'SKU', 'Категорія', 'Бренд', 'Статус', 'К-сть', 'Резерв', 'Мін.', 'Всього']],
+            body,
+            styles: { font: fontName, fontSize: 8, cellPadding: 4 },
+            headStyles: { fillColor: [26, 26, 26], font: fontName, fontStyle: 'bold' },
+            margin: { left: 24, right: 24 },
+            tableWidth: 'auto',
+            columnStyles: {
+                0: { cellWidth: 265 },
+                1: { cellWidth: 72 },
+                2: { cellWidth: 72 },
+                3: { cellWidth: 60 },
+                4: { cellWidth: 92 },
+                5: { cellWidth: 44, halign: 'right' },
+                6: { cellWidth: 44, halign: 'right' },
+                7: { cellWidth: 36, halign: 'right' },
+                8: { cellWidth: 46, halign: 'right' }
+            }
+        });
+
+        const safeName = String(warehouseName).replace(/[^\w\u0400-\u04FF-]+/g, '_');
+        doc.save(`sklad_${safeName}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.pdf`);
+    };
+
     return (
         <div className="admin-warehouses">
             <div className="admin-warehouses-top">
                 <div className="admin-warehouses-top__text">
-                    <h1 className="admin-title" style={{ margin: 0 }}>Залишки</h1>
+                    <h1 className="admin-title" style={{ margin: 0 }}>Склади</h1>
                     <p className="admin-warehouses-desc">
                         Залишки по складах і ключові поля з картки оренди. Кількість на обраному складі зберігається при виході з поля.
                         Після збереження картки ви повертаєтесь сюди. Дії з товаром — кнопка «Робота з товаром».
@@ -171,19 +368,66 @@ export default function AdminWarehousePositions() {
                         <Plus size={18} />
                         Створити товар
                     </button>
+                    <button
+                        type="button"
+                        className="btn btn-secondary admin-warehouses-toolbar__btn"
+                        onClick={exportCurrentWarehousePdf}
+                        disabled={!filteredInventory.length}
+                    >
+                        Експорт PDF
+                    </button>
                 </div>
             </div>
 
             <div className="admin-section admin-warehouses-search">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Пошук по назві, SKU, категорії, бренду</label>
-                    <input
-                        type="search"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Почніть вводити..."
-                        style={{ maxWidth: '420px' }}
-                    />
+                <div className="admin-warehouse-search-row">
+                    <div className="admin-form" style={{ flex: 1, minWidth: '280px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Пошук по назві, SKU, категорії, бренду</label>
+                            <input
+                                type="search"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Почніть вводити..."
+                                style={{ maxWidth: '520px' }}
+                            />
+                        </div>
+                    </div>
+                    <div className="admin-warehouse-search-hint">
+                        {suggestLoading ? (
+                            <div style={{ color: '#666', fontSize: '0.85rem' }}>Шукаю по інших складах…</div>
+                        ) : searchSuggestions.length > 0 ? (
+                            <div>
+                                <div style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '6px' }}>
+                                    Можливо ви шукаєте:
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {searchSuggestions.map((s) => (
+                                        <button
+                                            key={`${s.productId}-${s.warehouseId}`}
+                                            type="button"
+                                            className="admin-warehouse-suggest-item"
+                                            onClick={() => {
+                                                if (s.warehouseId) setSelectedWarehouseId(s.warehouseId);
+                                                setSearch(s.productName || search);
+                                            }}
+                                            title="Перейти на склад і показати товар"
+                                        >
+                                            <span style={{ fontWeight: 700 }}>{s.productName}</span>
+                                            <span style={{ color: '#666', fontSize: '0.8rem' }}>
+                                                {' — '}склад «{s.warehouseName}» · {s.quantity} шт.
+                                                {s.reserved > 0 ? ` (рез. ${s.reserved})` : ''}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>
+                                {search.trim().length >= 2 ? 'Нічого не знайдено в інших складах' : ' '}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -191,6 +435,20 @@ export default function AdminWarehousePositions() {
                 <table className="admin-table admin-table--warehouses">
                     <thead>
                         <tr>
+                            <th style={{ width: '46px' }}>
+                                <input
+                                    type="checkbox"
+                                    aria-label="Вибрати всі"
+                                    checked={filteredInventory.length > 0 && selectedIds.size === filteredInventory.length}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedIds(new Set(filteredInventory.map((r) => r.id)));
+                                        } else {
+                                            clearSelection();
+                                        }
+                                    }}
+                                />
+                            </th>
                             <th style={{ width: '56px' }} />
                             <th>Товар</th>
                             <th>Ціна / доба</th>
@@ -211,6 +469,14 @@ export default function AdminWarehousePositions() {
                             return (
                                 <React.Fragment key={item.id}>
                                     <tr>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                aria-label="Вибрати товар"
+                                                checked={selectedIds.has(item.id)}
+                                                onChange={() => toggleSelect(item.id)}
+                                            />
+                                        </td>
                                         <td>
                                             <button
                                                 type="button"
@@ -448,6 +714,74 @@ export default function AdminWarehousePositions() {
                 token={token}
                 onUpdated={() => fetchInventory(selectedWarehouseId)}
             />
+
+            {selectedRows.length > 0 && (
+                <div className="admin-warehouse-bulkbar">
+                    <div style={{ fontWeight: 800 }}>Обрано: {selectedRows.length}</div>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button type="button" className="btn btn-secondary" onClick={openBulkMove}>
+                            <ArrowRightLeft size={18} /> Перемістити обрані
+                        </button>
+                        <button type="button" className="btn btn-secondary" onClick={clearSelection}>
+                            Очистити вибір
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {bulkOpen && (
+                <div className="admin-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bulk-move-title" onClick={() => !bulkBusy && setBulkOpen(false)}>
+                    <div className="admin-modal-card admin-modal-card--work-product" onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                            <div>
+                                <h2 id="bulk-move-title" style={{ margin: 0, fontSize: '1.15rem' }}>Перемістити обрані товари</h2>
+                                <p style={{ margin: '6px 0 0', color: '#666', fontSize: '0.9rem' }}>
+                                    Зі складу: <strong>{selectedWarehouse?.name || '—'}</strong>
+                                </p>
+                            </div>
+                            <button type="button" className="action-btn" disabled={bulkBusy} onClick={() => setBulkOpen(false)} aria-label="Закрити">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="admin-form">
+                            <div className="form-group">
+                                <label>Склад призначення</label>
+                                <select value={bulkToId} onChange={(e) => setBulkToId(e.target.value)}>
+                                    {targetWarehouses.map((w) => (
+                                        <option key={w.id} value={w.id}>{w.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: '10px', marginTop: '8px' }}>
+                            {selectedRows.map((row) => (
+                                <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '10px', alignItems: 'center', borderTop: '1px solid var(--admin-border)', paddingTop: '10px' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 800 }}>{row.Product?.name}</div>
+                                        <div style={{ fontSize: '0.85rem', color: '#666' }}>На складі: {row.quantity} шт.</div>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={row.quantity || 0}
+                                        value={bulkQtyById[row.id] ?? 0}
+                                        onChange={(e) => setBulkQtyById((p) => ({ ...p, [row.id]: e.target.value }))} 
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+                            <button type="button" className="btn btn-secondary" disabled={bulkBusy} onClick={() => setBulkOpen(false)}>Скасувати</button>
+                            <button type="button" className="btn btn-primary" disabled={bulkBusy || !bulkToId} onClick={doBulkMove}>
+                                {bulkBusy ? 'Переміщення…' : 'Перемістити'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

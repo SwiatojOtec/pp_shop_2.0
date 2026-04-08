@@ -1,6 +1,6 @@
 import { API_URL } from '../../apiConfig';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
 import './Admin.css';
 import { useAuth } from '../../context/AuthContext';
@@ -14,13 +14,10 @@ export default function AdminRent() {
     const navigate = useNavigate();
     const { token } = useAuth();
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
-
-    const fetchProducts = async () => {
+    async function fetchProducts() {
         try {
-            const res = await fetch(`${API_URL}/api/products?isRent=true&includeHiddenRent=true`);
+            // У цьому розділі показуємо тільки те, що реально видно на клієнтській оренді
+            const res = await fetch(`${API_URL}/api/products?isRent=true`);
             if (res.ok) {
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);
@@ -32,7 +29,14 @@ export default function AdminRent() {
             console.error('Error fetching rent tools:', err);
             setProducts([]);
         }
-    };
+    }
+
+    useEffect(() => {
+        const t = setTimeout(() => {
+            fetchProducts();
+        }, 0);
+        return () => clearTimeout(t);
+    }, []);
 
     const filteredProducts = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,15 +71,22 @@ export default function AdminRent() {
         <div className="admin-products">
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h1 className="admin-title" style={{ margin: 0 }}>Оренда інструменту</h1>
-                <button className="btn btn-primary" onClick={() => navigate('/admin/rent/new')}>
-                    <Plus size={20} /> Додати інструмент
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Link className="btn btn-secondary" to="/admin/rental-applications">
+                        Заявки (оренда)
+                    </Link>
+                    <Link className="btn btn-secondary" to="/admin/clients">
+                        Клієнти
+                    </Link>
+                    <button className="btn btn-primary" onClick={() => navigate('/admin/warehouses/positions')}>
+                        <Plus size={20} /> Додати інструмент зі складу
+                    </button>
+                </div>
             </div>
 
             <p style={{ marginBottom: '15px', color: '#555', fontSize: '0.9rem' }}>
-                Тут відображаються тільки товари з категорією <strong>{RENT_CATEGORY_NAME}</strong>.
-                Для нового інструменту виберіть цю категорію в картці товару та за бажанням заповніть характеристику
-                <strong> "Тип інструменту"</strong> (наприклад: Дрелі, Пили, Шліфмашини).
+                Тут відображаються тільки товари з категорією <strong>{RENT_CATEGORY_NAME}</strong>, які опубліковані у клієнтській оренді.
+                Нові позиції додавайте/створюйте на складі, після чого керуйте показом через прапорець видимості в оренді.
             </p>
 
             <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>

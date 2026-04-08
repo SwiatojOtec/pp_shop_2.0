@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, UserCircle2, ClipboardList, Building2, ContactRound, Warehouse } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, Building2, Warehouse } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
@@ -12,17 +12,18 @@ export default function AdminLayout({ children }) {
     const fullName = user ? `${user.name || ''}${user.lastName ? ' ' + user.lastName : ''}`.trim() : 'Адмін';
     const initials = user && user.name ? user.name.charAt(0).toUpperCase() : 'A';
 
-    const allMenuItems = [
+    const baseTopMenuItems = [
         { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Дашборд' },
-        { path: '/admin/profile', icon: <UserCircle2 size={20} />, label: 'Мій кабінет' },
-        { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
         { path: '/admin/rent', icon: <Wrench size={20} />, label: 'Оренда' },
-        { path: '/admin/rental-applications', icon: <ClipboardList size={20} />, label: 'Заявки (оренда)' },
-        { path: '/admin/clients', icon: <ContactRound size={20} />, label: 'Клієнти' },
         { path: '/admin/warehouses', icon: <Warehouse size={20} />, label: 'Склад' },
         { path: '/admin/pan-pivdenbud', icon: <Building2 size={20} />, label: 'ПАН ПІВДЕНЬБУД' },
+    ];
+    const shopMenuItems = [
+        { path: '/admin/products', icon: <Package size={20} />, label: 'Товари' },
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
         { path: '/admin/blog', icon: <FileText size={20} />, label: 'Блог' },
+    ];
+    const tailMenuItems = [
         { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
         ...(role === 'owner' ? [{ path: '/admin/users', icon: <Users size={20} />, label: 'Користувачі' }] : [])
     ];
@@ -32,10 +33,10 @@ export default function AdminLayout({ children }) {
 
     const menuItems =
         role === 'rent'
-            ? allMenuItems.filter(item => rentBasePaths.includes(item.path))
+            ? baseTopMenuItems.filter(item => rentBasePaths.includes(item.path))
             : role === 'pivdenbud'
-                ? allMenuItems.filter(item => pivdenbudPaths.includes(item.path))
-                : allMenuItems;
+                ? baseTopMenuItems.filter(item => pivdenbudPaths.includes(item.path))
+                : [...baseTopMenuItems, ...tailMenuItems];
 
     useEffect(() => {
         if (role === 'rent' || role === 'pivdenbud') {
@@ -96,6 +97,21 @@ export default function AdminLayout({ children }) {
                             <span>{item.label}</span>
                         </Link>
                     ))}
+                    {role === 'owner' && (
+                        <>
+                            <div className="sidebar-nav-section">Магазин</div>
+                            {shopMenuItems.map(item => (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    className={`${navLinkClass(item.path)} nav-link--sub`}
+                                >
+                                    {item.icon}
+                                    <span>{item.label}</span>
+                                </Link>
+                            ))}
+                        </>
+                    )}
                 </nav>
 
                 <div className="sidebar-footer">
@@ -119,7 +135,7 @@ export default function AdminLayout({ children }) {
             <main className="admin-main">
                 <header className="admin-topbar">
                     <div className="topbar-search" />
-                    <div className="topbar-user">
+                    <Link to="/admin/profile" className="topbar-user topbar-user-link" title="Мій кабінет">
                         <div className="user-avatar">{initials}</div>
                         <div className="topbar-user-info">
                             <span className="topbar-user-name">{fullName}</span>
@@ -130,7 +146,7 @@ export default function AdminLayout({ children }) {
                                 <span className="topbar-user-role">ПАН ПІВДЕНЬБУД · оренда</span>
                             )}
                         </div>
-                    </div>
+                    </Link>
                 </header>
                 <div className="admin-content">
                     {children}

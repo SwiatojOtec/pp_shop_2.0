@@ -27,7 +27,7 @@ const warehouseDashboardRoutes = require('./routes/warehouseDashboardRoutes');
 require('./models/Warehouse');
 require('./models/InventoryItem');
 require('./models/WarehouseEvent');
-const { ensureMainWarehouse, bootstrapRentInventoryFromProducts } = require('./services/inventoryService');
+const { ensureMainWarehouse, ensureRepairWarehouse, bootstrapRentInventoryFromProducts } = require('./services/inventoryService');
 const app = express();
 
 // Middleware
@@ -108,6 +108,7 @@ sequelize.authenticate()
     })
     .then(async () => {
         await ensureMainWarehouse();
+        await ensureRepairWarehouse();
         await bootstrapRentInventoryFromProducts();
     })
     .then(() => {

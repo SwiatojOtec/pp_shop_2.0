@@ -89,6 +89,15 @@
     gap: 5px;
 }
 
+.sidebar-nav-section {
+    margin: 10px 8px 4px;
+    font-size: 0.72rem;
+    color: #8f8f8f;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
 .nav-link {
     display: flex;
     align-items: center;
@@ -115,6 +124,10 @@
 .nav-link.active {
     background: var(--admin-accent);
     color: white;
+}
+
+.nav-link--sub {
+    margin-left: 8px;
 }
 
 .sidebar-footer {
@@ -160,6 +173,18 @@
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.topbar-user-link {
+    text-decoration: none;
+    color: inherit;
+    border-radius: 10px;
+    padding: 4px 6px;
+    transition: background 0.15s ease;
+}
+
+.topbar-user-link:hover {
+    background: #f5f5f5;
 }
 
 .user-avatar {
@@ -1048,4 +1073,54 @@
 .admin-work-product-block {
     padding-top: 12px;
     border-top: 1px solid var(--admin-border);
+}
+
+/* Склад: панель масових дій */
+.admin-warehouse-bulkbar {
+    position: sticky;
+    bottom: 10px;
+    margin-top: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+    z-index: 10;
+}
+
+/* Склад: підказки пошуку по інших складах */
+.admin-warehouse-search-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.admin-warehouse-search-hint {
+    flex: 1;
+    min-width: 260px;
+    padding: 10px 12px;
+    border: 1px dashed #e5e7eb;
+    border-radius: 12px;
+    background: #fafafa;
+}
+
+.admin-warehouse-suggest-item {
+    text-align: left;
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-warehouse-suggest-item:hover {
+    background: #f4f4f4;
+    border-color: #cfcfcf;
 }

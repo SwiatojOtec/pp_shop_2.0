@@ -35,6 +35,7 @@ import AdminClientDetails from './pages/admin/AdminClientDetails';
 import AdminWarehouseLayout from './pages/admin/AdminWarehouseLayout';
 import AdminWarehouseHome from './pages/admin/AdminWarehouseHome';
 import AdminWarehousePositions from './pages/admin/AdminWarehousePositions';
+import AdminWarehouseEvents from './pages/admin/AdminWarehouseEvents';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -255,6 +256,7 @@ function AppContent() {
           >
             <Route index element={<AdminWarehouseHome />} />
             <Route path="positions" element={<AdminWarehousePositions />} />
+            <Route path="events" element={<AdminWarehouseEvents />} />
           </Route>
           <Route
             path="/admin/users"

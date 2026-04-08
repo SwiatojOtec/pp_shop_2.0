@@ -89,16 +89,30 @@ async function moveInventoryBetweenWarehouses({ productId, fromWarehouseId, toWa
     return { ok: true };
 }
 
-async function sendProductToRepair({ productId, user }) {
+async function setRentProductStockStatus({ productId, stockStatus, user, action = 'set_status' }) {
     const product = await Product.findByPk(productId);
     if (!product || !product.isRent) {
         throw new Error('Товар не знайдено або не є орендним');
     }
-    await product.update({ stockStatus: 'in_repair' });
-    const msg = `${userDisplayName(user)} відправив «${product.name}» у ремонт`;
+
+    const allowed = new Set(['in_stock', 'out_of_stock', 'available_later', 'in_procurement', 'needs_repair', 'in_repair']);
+    if (!allowed.has(stockStatus)) {
+        throw new Error('Некоректний статус');
+    }
+
+    await product.update({ stockStatus });
+    const statusLabel =
+        stockStatus === 'in_stock' ? 'В наявності' :
+            stockStatus === 'out_of_stock' ? 'Немає в наявності' :
+                stockStatus === 'available_later' ? 'Буде доступно' :
+                    stockStatus === 'in_procurement' ? 'У закупівлі (на папері)' :
+                        stockStatus === 'needs_repair' ? 'Потребує ремонту' :
+                            stockStatus === 'in_repair' ? 'На ремонті' : stockStatus;
+
+    const msg = `${userDisplayName(user)} змінив статус «${product.name}» на «${statusLabel}»`;
     await logWarehouseEvent({
         user,
-        action: 'send_repair',
+        action,
         productId,
         productName: product.name,
         message: msg
@@ -106,12 +120,33 @@ async function sendProductToRepair({ productId, user }) {
     return product;
 }
 
+async function sendProductToRepair({ productId, user }) {
+    return setRentProductStockStatus({ productId, stockStatus: 'in_repair', user, action: 'send_repair' });
+}
+
+async function sendProductToNeedsRepair({ productId, user }) {
+    return setRentProductStockStatus({ productId, stockStatus: 'needs_repair', user, action: 'needs_repair' });
+}
+
+async function restoreProductInStock({ productId, user }) {
+    return setRentProductStockStatus({ productId, stockStatus: 'in_stock', user, action: 'restore_in_stock' });
+}
+
 const MAIN_WAREHOUSE_NAME = 'Основний склад';
+const REPAIR_WAREHOUSE_NAME = 'У ремонті';
 
 async function ensureMainWarehouse() {
     const [warehouse] = await Warehouse.findOrCreate({
         where: { name: MAIN_WAREHOUSE_NAME },
         defaults: { isActive: true, notes: 'Створено автоматично під час запуску.' }
+    });
+    return warehouse;
+}
+
+async function ensureRepairWarehouse() {
+    const [warehouse] = await Warehouse.findOrCreate({
+        where: { name: REPAIR_WAREHOUSE_NAME },
+        defaults: { isActive: true, notes: 'Службовий склад для інструментів у ремонті.' }
     });
     return warehouse;
 }
@@ -155,13 +190,50 @@ async function bootstrapRentInventoryFromProducts() {
     }
 }
 
+async function moveInventoryToRepairWarehouse({ productId, fromWarehouseId, quantity, user }) {
+    const repairWh = await ensureRepairWarehouse();
+    const fromWh = await Warehouse.findByPk(fromWarehouseId);
+    await moveInventoryBetweenWarehouses({
+        productId,
+        fromWarehouseId,
+        toWarehouseId: repairWh.id,
+        quantity,
+        user
+    });
+    // moveInventoryBetweenWarehouses already logs a move event; additionally set status.
+    await setRentProductStockStatus({ productId, stockStatus: 'in_repair', user, action: 'send_repair' });
+    // Provide more explicit repair message as well (optional)
+    const product = await Product.findByPk(productId);
+    const qty = Math.floor(Number(quantity));
+    const msg = `${userDisplayName(user)} відправив «${product?.name || 'товар'}» (${qty} шт.) у ремонт зі складу «${fromWh?.name || '?'}»`;
+    await logWarehouseEvent({
+        user,
+        action: 'send_repair_move',
+        productId,
+        productName: product?.name,
+        fromWarehouseId,
+        fromWarehouseName: fromWh?.name,
+        toWarehouseId: repairWh.id,
+        toWarehouseName: repairWh.name,
+        quantity: qty,
+        message: msg
+    });
+    return { ok: true, repairWarehouseId: repairWh.id };
+}
+
 module.exports = {
     MAIN_WAREHOUSE_NAME,
+    REPAIR_WAREHOUSE_NAME,
     ensureMainWarehouse,
+    ensureRepairWarehouse,
     recalculateProductQuantity,
     bootstrapRentInventoryFromProducts,
     logWarehouseEvent,
     userDisplayName,
     moveInventoryBetweenWarehouses,
-    sendProductToRepair
+    moveInventoryToRepairWarehouse,
+    setRentProductStockStatus,
+    sendProductToRepair,
+    sendProductToNeedsRepair,
+    restoreProductInStock
 };

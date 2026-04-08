@@ -110,4 +110,54 @@ router.get('/product-rentals/:productId', ...GUARD, async (req, res) => {
     }
 });
 
+router.get('/events/users', ...GUARD, async (_req, res) => {
+    try {
+        const rows = await WarehouseEvent.findAll({
+            attributes: ['userId', 'userDisplayName'],
+            where: { userId: { [Op.ne]: null } },
+            group: ['userId', 'userDisplayName'],
+            order: [['userDisplayName', 'ASC']]
+        });
+        res.json(rows.map((r) => ({ userId: r.userId, userDisplayName: r.userDisplayName })));
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/events', ...GUARD, async (req, res) => {
+    try {
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+        const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+
+        const where = {};
+        if (req.query.userId) {
+            const uid = parseInt(req.query.userId, 10);
+            if (!Number.isNaN(uid)) where.userId = uid;
+        }
+
+        if (req.query.productId) {
+            const pid = parseInt(req.query.productId, 10);
+            if (!Number.isNaN(pid)) where.productId = pid;
+        }
+
+        // from/to: YYYY-MM-DD
+        if (req.query.from || req.query.to) {
+            where.createdAt = {};
+            if (req.query.from) where.createdAt[Op.gte] = new Date(`${req.query.from}T00:00:00.000Z`);
+            if (req.query.to) where.createdAt[Op.lte] = new Date(`${req.query.to}T23:59:59.999Z`);
+        }
+
+        const events = await WarehouseEvent.findAll({
+            where,
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset
+        });
+
+        res.json({ events, limit, offset, count: events.length });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;

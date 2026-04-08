@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Edit2, Plus, Trash2, Users, X } from 'lucide-react';
+import { Edit2, Plus, Trash2, Users, X, ArrowLeft } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Admin.css';
 
 const EMPTY = {
@@ -113,9 +113,18 @@ export default function AdminClients() {
         <div className="admin-products">
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h1 className="admin-title" style={{ margin: 0 }}>Клієнти</h1>
-                <button className="btn btn-primary" onClick={openCreate}>
-                    <Plus size={16} /> Новий клієнт
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Link
+                        to="/admin/rent"
+                        className="btn btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+                    >
+                        <ArrowLeft size={16} /> До оренди
+                    </Link>
+                    <button className="btn btn-primary" onClick={openCreate}>
+                        <Plus size={16} /> Новий клієнт
+                    </button>
+                </div>
             </div>
 
             <div className="admin-section" style={{ marginBottom: '16px' }}>

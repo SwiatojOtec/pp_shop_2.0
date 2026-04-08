@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Package, Warehouse } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
@@ -18,6 +18,7 @@ export default function AdminWarehouseHome() {
     const [data, setData] = useState({ events: [], productLocations: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [eventLimit] = useState(50);
 
     const headers = useMemo(() => ({
         ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -29,7 +30,7 @@ export default function AdminWarehouseHome() {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`${API_URL}/api/warehouse/dashboard?eventLimit=50`, { headers });
+                const res = await fetch(`${API_URL}/api/warehouse/dashboard?eventLimit=${eventLimit}`, { headers });
                 if (!res.ok) throw new Error(await res.text());
                 const json = await res.json();
                 if (!cancelled) setData({
@@ -43,7 +44,7 @@ export default function AdminWarehouseHome() {
             }
         })();
         return () => { cancelled = true; };
-    }, [headers]);
+    }, [headers, eventLimit]);
 
     const inRentHighlight = useMemo(() => (
         data.productLocations.filter((p) => (p.activeRentals || []).length > 0)
@@ -120,35 +121,6 @@ export default function AdminWarehouseHome() {
                 </section>
             )}
 
-            <section className="admin-section admin-warehouse-home__section">
-                <h2 className="admin-warehouse-home__h2">
-                    <Warehouse size={20} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
-                    Розподіл по складах (всі орендні позиції)
-                </h2>
-                <div className="admin-warehouse-home__stock-grid">
-                    {data.productLocations.slice(0, 80).map((p) => (
-                        <div key={p.productId} className="admin-warehouse-home__stock-row">
-                            <Package size={16} style={{ flexShrink: 0, opacity: 0.6 }} />
-                            <span style={{ fontWeight: 600, flex: 1 }}>{p.name}</span>
-                            <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                                {(p.warehouses || []).map((w) => (
-                                    <span key={w.warehouseId} style={{ marginRight: '10px' }}>
-                                        {w.warehouseName}: <strong>{w.quantity}</strong>
-                                        {w.reserved > 0 && <span style={{ color: '#b45309' }}> (рез. {w.reserved})</span>}
-                                    </span>
-                                ))}
-                                {!p.warehouses?.length && '—'}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-                {data.productLocations.length > 80 && (
-                    <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '12px' }}>
-                        Показано 80 з {data.productLocations.length}. Детальна таблиця — у розділі «Залишки».
-                    </p>
-                )}
-            </section>
-
             <section className="admin-section admin-warehouse-home__section" style={{ marginTop: '24px' }}>
                 <h2 className="admin-warehouse-home__h2">Останні події</h2>
                 {data.events.length === 0 ? (
@@ -163,6 +135,11 @@ export default function AdminWarehouseHome() {
                         ))}
                     </ul>
                 )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                    <Link to="/admin/warehouses/events" className="btn btn-secondary">
+                        Всі події →
+                    </Link>
+                </div>
             </section>
         </div>
     );

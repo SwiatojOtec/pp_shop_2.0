@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, FileText, Trash2, Eye } from 'lucide-react';
+import { Plus, FileText, Trash2, Eye, ArrowLeft } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
@@ -68,9 +68,18 @@ export default function AdminRentalApplications() {
                     <h1 className="admin-title">Заявки (оренда)</h1>
                     <p style={{ color: '#888', marginTop: '4px', fontSize: '0.9rem' }}>Договори та заявки на оренду інструменту</p>
                 </div>
-                <Link to="/admin/rental-applications/new" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-                    <Plus size={18} /> Створити заявку
-                </Link>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Link
+                        to="/admin/rent"
+                        className="btn btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+                    >
+                        <ArrowLeft size={16} /> До оренди
+                    </Link>
+                    <Link to="/admin/rental-applications/new" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+                        <Plus size={18} /> Створити заявку
+                    </Link>
+                </div>
             </div>
 
             {/* Filters */}

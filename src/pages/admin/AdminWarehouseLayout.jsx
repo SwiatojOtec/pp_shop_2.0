@@ -17,7 +17,13 @@ export default function AdminWarehouseLayout() {
                     to="/admin/warehouses/positions"
                     className={({ isActive }) => `admin-warehouse-subnav__link${isActive ? ' is-active' : ''}`}
                 >
-                    Залишки
+                    Склади
+                </NavLink>
+                <NavLink
+                    to="/admin/warehouses/events"
+                    className={({ isActive }) => `admin-warehouse-subnav__link${isActive ? ' is-active' : ''}`}
+                >
+                    Події
                 </NavLink>
             </nav>
             <Outlet />
