@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import {
     Save, ArrowLeft, Plus, Trash2, Image as ImageIcon,
@@ -26,6 +26,7 @@ export default function ProductEdit({ context = 'products' }) {
     const [searchParams] = useSearchParams();
     const location = useLocation();
     const isNew = id === 'new';
+    const warehouseIdFromQuery = searchParams.get('warehouseId');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -58,18 +59,32 @@ export default function ProductEdit({ context = 'products' }) {
         weightTotal: '',
         replacementCost: '',
         securityDeposit: '',
-        competitorLinks: []
+        competitorLinks: [],
+        adminImages: [],
+        createWarehouseId: warehouseIdFromQuery || '',
+        createWarehouseQuantity: ''
     });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [newImageUrl, setNewImageUrl] = useState('');
+    const [newAdminImageUrl, setNewAdminImageUrl] = useState('');
     const [newSpec, setNewSpec] = useState({ key: '', value: '' });
     const [newCompetitorUrl, setNewCompetitorUrl] = useState('');
+    const [previewAdminImage, setPreviewAdminImage] = useState('');
     const [relatedSearch, setRelatedSearch] = useState('');
     const [relatedResults, setRelatedResults] = useState([]);
+    const [warehouses, setWarehouses] = useState([]);
     const relatedSearchTimeout = useRef(null);
     const { token } = useAuth();
+    const adminImages = useMemo(
+        () => (Array.isArray(formData.adminImages) ? formData.adminImages : []),
+        [formData.adminImages]
+    );
+    const previewAdminImageIndex = useMemo(
+        () => (previewAdminImage ? adminImages.indexOf(previewAdminImage) : -1),
+        [adminImages, previewAdminImage]
+    );
 
     const isRentContext = context === 'rent';
 
@@ -91,6 +106,7 @@ export default function ProductEdit({ context = 'products' }) {
 
         fetchCategories();
         fetchBrands();
+        if (isRentContext) fetchWarehouses();
         if (!isNew) {
             fetchProduct();
         }
@@ -122,6 +138,22 @@ export default function ProductEdit({ context = 'products' }) {
             }
         } catch (err) {
             console.error('Error fetching brands:', err);
+        }
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const headers = {};
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch(`${API_URL}/api/warehouses`, { headers });
+            const data = res.ok ? await res.json() : [];
+            const list = Array.isArray(data) ? data : [];
+            setWarehouses(list);
+            if (isNew && isRentContext && !formData.createWarehouseId && list.length > 0) {
+                setFormData((prev) => ({ ...prev, createWarehouseId: String(list[0].id) }));
+            }
+        } catch (err) {
+            console.error('Error fetching warehouses:', err);
         }
     };
 
@@ -162,7 +194,10 @@ export default function ProductEdit({ context = 'products' }) {
                     quantityAvailable: data.quantityAvailable ?? '',
                     showInRentCatalog: typeof data.showInRentCatalog === 'boolean' ? data.showInRentCatalog : true,
                     relatedProducts: relatedProductObjects,
-                    competitorLinks: Array.isArray(data.competitorLinks) ? data.competitorLinks : []
+                    competitorLinks: Array.isArray(data.competitorLinks) ? data.competitorLinks : [],
+                    adminImages: Array.isArray(data.adminImages) ? data.adminImages : [],
+                    createWarehouseId: '',
+                    createWarehouseQuantity: ''
                 });
             }
         } catch (err) {
@@ -209,6 +244,11 @@ export default function ProductEdit({ context = 'products' }) {
             const method = isNew ? 'POST' : 'PUT';
 
             // Clean up data before sending
+            if (isRentContext && isNew && !String(formData.createWarehouseId || '').trim()) {
+                alert('Оберіть склад для створення товару.');
+                return;
+            }
+
             const dataToSend = {
                 ...formData,
                 price: formData.price === '' ? null : Number(formData.price),
@@ -217,7 +257,9 @@ export default function ProductEdit({ context = 'products' }) {
                 availableFrom: formData.availableFrom || null,
                 adminNotes: String(formData.adminNotes || '').trim() || null,
                 badge: isRentContext ? null : formData.badge,
-                quantityAvailable: formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable),
+                quantityAvailable: !isRentContext
+                    ? (formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable))
+                    : null,
                 // Store only IDs in DB, not full objects
                 relatedProducts: Array.isArray(formData.relatedProducts)
                     ? formData.relatedProducts.map(r => (typeof r === 'object' ? r.id : r))
@@ -226,7 +268,12 @@ export default function ProductEdit({ context = 'products' }) {
                     ? formData.competitorLinks
                         .map(v => String(v || '').trim())
                         .filter(Boolean)
-                    : []
+                    : [],
+                adminImages: Array.isArray(formData.adminImages)
+                    ? formData.adminImages.map(v => String(v || '').trim()).filter(Boolean)
+                    : [],
+                createWarehouseId: isRentContext && isNew ? Number(formData.createWarehouseId) : undefined,
+                createWarehouseQuantity: isRentContext && isNew ? Number(formData.createWarehouseQuantity || 0) : undefined
             };
 
             const payload = {
@@ -327,6 +374,28 @@ export default function ProductEdit({ context = 'products' }) {
     };
 
     const isSillCategory = formData.category === 'Підвіконня';
+
+    useEffect(() => {
+        if (!previewAdminImage) return;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setPreviewAdminImage('');
+                return;
+            }
+            if (e.key === 'ArrowLeft' && adminImages.length > 1) {
+                const current = previewAdminImageIndex >= 0 ? previewAdminImageIndex : 0;
+                const next = (current - 1 + adminImages.length) % adminImages.length;
+                setPreviewAdminImage(adminImages[next]);
+            }
+            if (e.key === 'ArrowRight' && adminImages.length > 1) {
+                const current = previewAdminImageIndex >= 0 ? previewAdminImageIndex : 0;
+                const next = (current + 1) % adminImages.length;
+                setPreviewAdminImage(adminImages[next]);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [previewAdminImage, adminImages, previewAdminImageIndex]);
 
     if (loading) return <div className="admin-content">Завантаження...</div>;
 
@@ -757,16 +826,47 @@ export default function ProductEdit({ context = 'products' }) {
                                                 />
                                             </div>
                                         )}
+                                        {isNew && (
+                                            <>
+                                                <div style={{ marginTop: '12px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
+                                                        Склад створення (обов'язково)
+                                                    </label>
+                                                    <select
+                                                        value={formData.createWarehouseId || ''}
+                                                        onChange={e => setFormData({ ...formData, createWarehouseId: e.target.value })}
+                                                    >
+                                                        <option value="">— Оберіть склад —</option>
+                                                        {warehouses.map((w) => (
+                                                            <option key={w.id} value={w.id}>{w.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div style={{ marginTop: '12px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
+                                                        Початкова кількість на обраному складі
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={formData.createWarehouseQuantity}
+                                                        onChange={e => setFormData({ ...formData, createWarehouseQuantity: e.target.value })}
+                                                        placeholder="Наприклад: 5"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                         <div style={{ marginTop: '12px' }}>
                                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
-                                                Кількість доступних одиниць на складі
+                                                Кількість доступних одиниць (рахується автоматично зі складів)
                                             </label>
                                             <input
                                                 type="number"
-                                                min="0"
                                                 value={formData.quantityAvailable}
-                                                onChange={e => setFormData({ ...formData, quantityAvailable: e.target.value })}
-                                                placeholder="Наприклад: 5"
+                                                disabled
+                                                readOnly
+                                                placeholder="0"
+                                                style={{ background: '#f5f5f5', color: '#666' }}
                                             />
                                         </div>
                                         <div style={{ marginTop: '12px' }}>
@@ -1004,6 +1104,68 @@ export default function ProductEdit({ context = 'products' }) {
                                         )}
                                     </div>
                                 </div>
+                                <div className="form-group" style={{ marginTop: '20px' }}>
+                                    <label>Адмінські фото (тільки для адмінки)</label>
+                                    <p style={{ fontSize: '0.75rem', color: '#777', marginTop: '4px', marginBottom: '8px' }}>
+                                        Ці фото не показуються на клієнтській частині сайту.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                        <input
+                                            type="url"
+                                            value={newAdminImageUrl}
+                                            onChange={e => setNewAdminImageUrl(e.target.value)}
+                                            placeholder="https://site.com/admin-photo.jpg"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                                let val = String(newAdminImageUrl || '').trim();
+                                                if (!val) return;
+                                                if (!/^https?:\/\//i.test(val)) val = `https://${val}`;
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    adminImages: [...(Array.isArray(prev.adminImages) ? prev.adminImages : []), val]
+                                                }));
+                                                setNewAdminImageUrl('');
+                                            }}
+                                        >
+                                            <Plus size={16} /> Додати
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
+                                        {Array.isArray(formData.adminImages) && formData.adminImages.length > 0 ? (
+                                            formData.adminImages.map((link, idx) => (
+                                                <div key={`${link}-${idx}`} style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc' }}>
+                                                    <button
+                                                        type="button"
+                                                        title="Відкрити фото"
+                                                        onClick={() => setPreviewAdminImage(link)}
+                                                        style={{ width: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }}
+                                                    >
+                                                        <img src={link} alt="" style={{ width: '100%', height: '90px', objectFit: 'cover' }} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="action-btn delete"
+                                                        onClick={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                adminImages: (prev.adminImages || []).filter((_, i) => i !== idx)
+                                                            }));
+                                                        }}
+                                                        title="Видалити фото"
+                                                        style={{ position: 'absolute', top: '6px', right: '6px' }}
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Адмінських фото ще немає</span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1048,6 +1210,51 @@ export default function ProductEdit({ context = 'products' }) {
                     )}
                 </div>
             </div>
+            {previewAdminImage && (
+                <div className="admin-modal-overlay" onClick={() => setPreviewAdminImage('')}>
+                    <div className="admin-modal-card" style={{ width: 'min(92vw, 980px)', padding: '12px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                            <button className="action-btn" onClick={() => setPreviewAdminImage('')} aria-label="Закрити">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <img
+                            src={previewAdminImage}
+                            alt="Адмінське фото"
+                            style={{ width: '100%', maxHeight: '78vh', objectFit: 'contain', borderRadius: '8px', background: '#111' }}
+                        />
+                        {adminImages.length > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', gap: '10px' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        const current = previewAdminImageIndex >= 0 ? previewAdminImageIndex : 0;
+                                        const next = (current - 1 + adminImages.length) % adminImages.length;
+                                        setPreviewAdminImage(adminImages[next]);
+                                    }}
+                                >
+                                    ← Попереднє
+                                </button>
+                                <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                                    {Math.max(1, previewAdminImageIndex + 1)} / {adminImages.length}
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        const current = previewAdminImageIndex >= 0 ? previewAdminImageIndex : 0;
+                                        const next = (current + 1) % adminImages.length;
+                                        setPreviewAdminImage(adminImages[next]);
+                                    }}
+                                >
+                                    Наступне →
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

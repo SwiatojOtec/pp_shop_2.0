@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { X, Edit2, ArrowRightLeft, Wrench, ClipboardList, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { X, Edit2, ArrowRightLeft, Wrench, ClipboardList, CheckCircle2, Trash2 } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 
 const RETURN_TO = '/admin/warehouses/positions';
@@ -29,7 +29,6 @@ export default function WarehouseProductWorkModal({
     const [moveQty, setMoveQty] = useState(1);
     const [moveBusy, setMoveBusy] = useState(false);
     const [repairBusy, setRepairBusy] = useState(false);
-    const [needsRepairBusy, setNeedsRepairBusy] = useState(false);
     const [restoreBusy, setRestoreBusy] = useState(false);
     const [returnToId, setReturnToId] = useState('');
     const [returnBusy, setReturnBusy] = useState(false);
@@ -153,25 +152,22 @@ export default function WarehouseProductWorkModal({
         }
     };
 
-    const doNeedsRepair = async () => {
-        if (!window.confirm(`Позначити «${p.name}» як «Потребує ремонту»?`)) return;
-        setNeedsRepairBusy(true);
+    const doDeleteFromWarehouse = async () => {
+        if (!inventoryRow?.id) return;
+        if (!window.confirm(`Видалити позицію «${p.name}» з поточного складу?`)) return;
         try {
-            const res = await fetch(`${API_URL}/api/inventory/needs-repair`, {
-                method: 'POST',
-                headers: authHeaders,
-                body: JSON.stringify({ productId })
+            const res = await fetch(`${API_URL}/api/inventory/item/${inventoryRow.id}`, {
+                method: 'DELETE',
+                headers: authHeaders
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || 'Не вдалося оновити статус');
+                throw new Error(err.message || 'Не вдалося видалити позицію');
             }
             onUpdated?.();
             onClose();
         } catch (e) {
             alert(e.message || 'Помилка');
-        } finally {
-            setNeedsRepairBusy(false);
         }
     };
 
@@ -337,15 +333,6 @@ export default function WarehouseProductWorkModal({
                             <button
                                 type="button"
                                 className="btn btn-secondary admin-work-product-actions__row"
-                                disabled={needsRepairBusy}
-                                onClick={doNeedsRepair}
-                            >
-                                <ShieldAlert size={18} />
-                                {needsRepairBusy ? 'Збереження…' : 'Потребує ремонту'}
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-secondary admin-work-product-actions__row"
                                 disabled={repairBusy}
                                 onClick={doRepair}
                             >
@@ -370,6 +357,14 @@ export default function WarehouseProductWorkModal({
                             >
                                 <CheckCircle2 size={18} />
                                 {restoreBusy ? 'Збереження…' : 'Повернути в наявність'}
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-secondary admin-work-product-actions__row"
+                                onClick={doDeleteFromWarehouse}
+                            >
+                                <Trash2 size={18} />
+                                Видалити зі складу
                             </button>
                         </div>
                     </div>

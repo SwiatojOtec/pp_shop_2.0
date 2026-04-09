@@ -197,4 +197,30 @@ router.put('/item/:id', ...GUARD, async (req, res) => {
     }
 });
 
+router.delete('/item/:id', ...GUARD, async (req, res) => {
+    try {
+        const row = await InventoryItem.findByPk(req.params.id);
+        if (!row) return res.status(404).json({ message: 'Позицію залишку не знайдено.' });
+
+        const wh = await Warehouse.findByPk(row.warehouseId);
+        const p = await Product.findByPk(row.productId);
+        await row.destroy();
+        await recalculateProductQuantity(row.productId);
+
+        await logWarehouseEvent({
+            user: req.user,
+            action: 'delete_inventory_item',
+            productId: row.productId,
+            productName: p?.name,
+            fromWarehouseId: row.warehouseId,
+            fromWarehouseName: wh?.name,
+            message: `${userDisplayName(req.user)} видалив позицію «${p?.name || 'товар'}» зі складу «${wh?.name || '?'}»`
+        });
+
+        res.json({ ok: true });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
 module.exports = router;

@@ -21,6 +21,7 @@ export default function AdminUsers() {
     const [subMember2, setSubMember2] = useState('');
     const [savingSub, setSavingSub] = useState(false);
     const [showSubForm, setShowSubForm] = useState(false);
+    const [roleDrafts, setRoleDrafts] = useState({});
 
     const fetchUsers = async () => {
         if (!token) return;
@@ -37,6 +38,11 @@ export default function AdminUsers() {
                 throw new Error(data.message || 'Помилка завантаження користувачів');
             }
             setUsers(Array.isArray(data) ? data : []);
+            const nextDrafts = {};
+            (Array.isArray(data) ? data : []).forEach((u) => {
+                nextDrafts[u.id] = u.role || 'rent';
+            });
+            setRoleDrafts(nextDrafts);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -415,7 +421,34 @@ export default function AdminUsers() {
                                 <td>{userRow.name}</td>
                                 <td>{userRow.lastName}</td>
                                 <td>{userRow.email}</td>
-                                <td>{userRow.role}</td>
+                                <td>
+                                    {userRow.role === 'owner' ? (
+                                        <span>{userRow.role}</span>
+                                    ) : (
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <select
+                                                value={roleDrafts[userRow.id] || userRow.role || 'rent'}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setRoleDrafts((prev) => ({ ...prev, [userRow.id]: val }));
+                                                }}
+                                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                            >
+                                                <option value="rent">rent</option>
+                                                <option value="manager">manager</option>
+                                                <option value="pivdenbud">pivdenbud</option>
+                                            </select>
+                                            <button
+                                                className="btn btn-secondary"
+                                                style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+                                                disabled={(roleDrafts[userRow.id] || userRow.role) === userRow.role}
+                                                onClick={() => updateUser(userRow.id, { role: roleDrafts[userRow.id] || userRow.role })}
+                                            >
+                                                Зберегти
+                                            </button>
+                                        </div>
+                                    )}
+                                </td>
                                 <td>{userRow.status}</td>
                                 <td>
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

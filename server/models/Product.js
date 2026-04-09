@@ -155,6 +155,10 @@ const Product = sequelize.define('Product', {
     competitorLinks: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [] // Для оренди: посилання на товари конкурентів для моніторингу цін
+    },
+    adminImages: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: [] // Внутрішні фото для адмінки (не для клієнтської частини)
     }
 });
 

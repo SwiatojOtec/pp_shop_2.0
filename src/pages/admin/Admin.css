@@ -889,6 +889,12 @@
     overflow-y: auto;
 }
 
+.admin-warehouses-modal-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
 .admin-warehouses-modal-item {
     width: 100%;
     text-align: left;
@@ -901,6 +907,23 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.admin-warehouse-delete-request {
+    width: 34px;
+    min-width: 34px;
+    border-radius: 10px;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #dc2626;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-warehouse-delete-request:hover {
+    background: #ffe4e6;
 }
 
 .admin-warehouses-modal-item:hover {
@@ -998,6 +1021,18 @@
     border-radius: 10px;
     padding: 12px 14px;
     background: #fafafa;
+}
+
+.admin-warehouse-home__card--clickable {
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    width: 100%;
+    cursor: pointer;
+}
+
+.admin-warehouse-home__card--clickable:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
 }
 
 .admin-warehouse-home__thumb {

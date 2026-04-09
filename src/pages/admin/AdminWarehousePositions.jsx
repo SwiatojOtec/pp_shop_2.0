@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight, X, Warehouse, Plus, ListTree, Boxes, ArrowRightLeft } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
@@ -11,8 +11,9 @@ import './Admin.css';
 const EMPTY_FORM = { name: '', notes: '', isActive: true };
 
 const RETURN_TO_WAREHOUSES = '/admin/warehouses/positions';
-const rentNewWithReturn = () =>
-    `/admin/rent/new?returnTo=${encodeURIComponent(RETURN_TO_WAREHOUSES)}`;
+const SELECTED_WAREHOUSE_KEY = 'admin.selectedWarehouseId';
+const rentNewWithReturn = (warehouseId) =>
+    `/admin/rent/new?returnTo=${encodeURIComponent(RETURN_TO_WAREHOUSES)}${warehouseId ? `&warehouseId=${encodeURIComponent(String(warehouseId))}` : ''}`;
 
 const formatDate = (d) => {
     if (!d) return '—';
@@ -44,6 +45,7 @@ const loadFontAsBase64 = async (url) => {
 
 export default function AdminWarehousePositions() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { token } = useAuth();
     const [warehouses, setWarehouses] = useState([]);
     const [inventory, setInventory] = useState([]);
@@ -88,9 +90,23 @@ export default function AdminWarehousePositions() {
 
     useEffect(() => {
         if (!selectedWarehouseId && warehouses.length) {
-            setSelectedWarehouseId(warehouses[0].id);
+            const fromQuery = Number(searchParams.get('warehouseId'));
+            const hasQuery = Number.isFinite(fromQuery) && warehouses.some((w) => w.id === fromQuery);
+            if (hasQuery) {
+                setSelectedWarehouseId(fromQuery);
+                return;
+            }
+            const saved = Number(localStorage.getItem(SELECTED_WAREHOUSE_KEY));
+            const hasSaved = Number.isFinite(saved) && warehouses.some((w) => w.id === saved);
+            setSelectedWarehouseId(hasSaved ? saved : warehouses[0].id);
         }
-    }, [warehouses, selectedWarehouseId]);
+    }, [warehouses, selectedWarehouseId, searchParams]);
+
+    useEffect(() => {
+        if (selectedWarehouseId) {
+            localStorage.setItem(SELECTED_WAREHOUSE_KEY, String(selectedWarehouseId));
+        }
+    }, [selectedWarehouseId]);
 
     useEffect(() => {
         fetchInventory(selectedWarehouseId);
@@ -212,7 +228,7 @@ export default function AdminWarehousePositions() {
     const openBulkMove = () => {
         const init = {};
         for (const row of selectedRows) {
-            init[row.id] = Math.min(1, row.quantity || 0);
+            init[row.id] = Math.max(0, row.quantity || 0);
         }
         setBulkQtyById((prev) => ({ ...init, ...prev }));
         setBulkOpen(true);
@@ -363,7 +379,7 @@ export default function AdminWarehousePositions() {
                     <button
                         type="button"
                         className="btn btn-primary admin-warehouses-toolbar__btn"
-                        onClick={() => navigate(rentNewWithReturn())}
+                        onClick={() => navigate(rentNewWithReturn(selectedWarehouseId))}
                     >
                         <Plus size={18} />
                         Створити товар
@@ -617,6 +633,18 @@ export default function AdminWarehousePositions() {
                                                             </ul>
                                                         </div>
                                                     )}
+                                                    {Array.isArray(p.adminImages) && p.adminImages.length > 0 && (
+                                                        <div style={{ gridColumn: '1 / -1' }}>
+                                                            <strong>Адмінські фото</strong>
+                                                            <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '8px' }}>
+                                                                {p.adminImages.map((url, i) => (
+                                                                    <a key={`${url}-${i}`} href={url} target="_blank" rel="noopener noreferrer" title="Відкрити фото" style={{ display: 'block' }}>
+                                                                        <img src={url} alt="" style={{ width: '100%', height: '86px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }} />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -650,14 +678,35 @@ export default function AdminWarehousePositions() {
                         <ul className="admin-warehouses-modal-list">
                             {warehouses.map((w) => (
                                 <li key={w.id}>
-                                    <button
-                                        type="button"
-                                        className={`admin-warehouses-modal-item ${selectedWarehouseId === w.id ? 'is-active' : ''}`}
-                                        onClick={() => selectWarehouseAndClose(w.id)}
-                                    >
-                                        <span className="admin-warehouses-modal-item__name">{w.name}</span>
-                                        {w.notes && <span className="admin-warehouses-modal-item__notes">{w.notes}</span>}
-                                    </button>
+                                    <div className="admin-warehouses-modal-row">
+                                        <button
+                                            type="button"
+                                            className={`admin-warehouses-modal-item ${selectedWarehouseId === w.id ? 'is-active' : ''}`}
+                                            onClick={() => selectWarehouseAndClose(w.id)}
+                                        >
+                                            <span className="admin-warehouses-modal-item__name">{w.name}</span>
+                                            {w.notes && <span className="admin-warehouses-modal-item__notes">{w.notes}</span>}
+                                        </button>
+                                        {w.name !== 'Основний склад' && w.name !== 'У ремонті' && (
+                                            <button
+                                                type="button"
+                                                className="admin-warehouse-delete-request"
+                                                title="Запит на видалення"
+                                                onClick={async () => {
+                                                    if (!window.confirm(`Створити запит на видалення складу «${w.name}»?`)) return;
+                                                    const res = await fetch(`${API_URL}/api/warehouses/${w.id}/request-delete`, {
+                                                        method: 'POST',
+                                                        headers: authHeaders
+                                                    });
+                                                    const data = await res.json().catch(() => ({}));
+                                                    alert(data.message || (res.ok ? 'Запит створено.' : 'Не вдалося створити запит.'));
+                                                    if (res.ok) setModalWarehousesOpen(false);
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </li>
                             ))}
                         </ul>
@@ -756,6 +805,17 @@ export default function AdminWarehousePositions() {
                         </div>
 
                         <div style={{ display: 'grid', gap: '10px', marginTop: '8px' }}>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                    const next = {};
+                                    for (const row of selectedRows) next[row.id] = Math.max(0, row.quantity || 0);
+                                    setBulkQtyById(next);
+                                }}
+                            >
+                                Перенести все (по всіх товарах)
+                            </button>
                             {selectedRows.map((row) => (
                                 <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '10px', alignItems: 'center', borderTop: '1px solid var(--admin-border)', paddingTop: '10px' }}>
                                     <div>

@@ -359,6 +359,10 @@
     flex-direction: column;
     gap: 12px;
 }
+
+.rental-totals--row {
+    width: 100%;
+}
 .total-row {
     display: flex;
     justify-content: space-between;
@@ -531,3 +535,4 @@
     cursor: default;
 }
 .upsell-add-btn.added:hover { transform: none; }
+

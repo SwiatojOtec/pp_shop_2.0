@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const RentCategory = require('../models/RentCategory');
+const Warehouse = require('../models/Warehouse');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const InventoryItem = require('../models/InventoryItem');
@@ -28,16 +29,24 @@ const autoActivateRentCategory = async (data) => {
     }
 };
 
-const ensureMainWarehouseInventoryForProduct = async (product) => {
+const ensureInventoryForNewRentProduct = async (product, payload) => {
     if (!product?.isRent) return;
-    const warehouse = await ensureMainWarehouse();
-    const safeQuantity = Number.isFinite(product.quantityAvailable) ? product.quantityAvailable : 0;
+    const warehouseIdRaw = payload?.createWarehouseId;
+    const qtyRaw = payload?.createWarehouseQuantity;
+
+    const targetWarehouseId = Number(warehouseIdRaw);
+    if (!Number.isFinite(targetWarehouseId) || targetWarehouseId <= 0) {
+        throw new Error('Для орендного товару потрібно обрати склад створення.');
+    }
+    const qty = Math.max(0, Math.floor(Number(qtyRaw || 0)));
+    const warehouse = await Warehouse.findByPk(targetWarehouseId) || await ensureMainWarehouse();
+
     const [row] = await InventoryItem.findOrCreate({
         where: { warehouseId: warehouse.id, productId: product.id },
-        defaults: { quantity: safeQuantity, reserved: 0, minStock: 0 }
+        defaults: { quantity: qty, reserved: 0, minStock: 0 }
     });
-    if (row.quantity !== safeQuantity) {
-        row.quantity = safeQuantity;
+    if (row.quantity !== qty) {
+        row.quantity = qty;
         await row.save();
     }
     await recalculateProductQuantity(product.id);
@@ -162,6 +171,10 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivde
         }
 
         sanitizeNumericFields(data);
+        if (data.isRent) {
+            // Для оренди quantityAvailable рахується лише з inventory.
+            delete data.quantityAvailable;
+        }
 
         // For rent products: auto-set inventoryNumber to SKU if not provided
         if (data.isRent && !data.inventoryNumber) {
@@ -170,7 +183,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivde
 
         const product = await Product.create(data);
         await autoActivateRentCategory(data);
-        await ensureMainWarehouseInventoryForProduct(product);
+        await ensureInventoryForNewRentProduct(product, req.body);
         res.status(201).json(product);
     } catch (err) {
         console.error('CREATE PRODUCT ERROR:', err);
@@ -184,9 +197,16 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
         sanitizeNumericFields(req.body);
-        await product.update(req.body);
+        const payload = { ...req.body };
+        if (product.isRent) {
+            // Забороняємо ручне "накручування" кількості з картки.
+            delete payload.quantityAvailable;
+        }
+        await product.update(payload);
         await autoActivateRentCategory(req.body);
-        await ensureMainWarehouseInventoryForProduct(product);
+        if (product.isRent) {
+            await recalculateProductQuantity(product.id);
+        }
         res.json(product);
     } catch (err) {
         console.error('UPDATE PRODUCT ERROR:', err);

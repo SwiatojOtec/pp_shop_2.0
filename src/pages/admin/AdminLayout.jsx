@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Home, Settings, LogOut, FileText, Wrench, Users, Building2, Warehouse } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Home, LogOut, FileText, Wrench, Building2, Warehouse, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
@@ -23,10 +23,6 @@ export default function AdminLayout({ children }) {
         { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Замовлення' },
         { path: '/admin/blog', icon: <FileText size={20} />, label: 'Блог' },
     ];
-    const tailMenuItems = [
-        { path: '/admin/settings', icon: <Settings size={20} />, label: 'Налаштування' },
-        ...(role === 'owner' ? [{ path: '/admin/users', icon: <Users size={20} />, label: 'Користувачі' }] : [])
-    ];
 
     const rentBasePaths = ['/admin', '/admin/profile', '/admin/rent', '/admin/rental-applications', '/admin/clients', '/admin/warehouses'];
     const pivdenbudPaths = [...rentBasePaths, '/admin/pan-pivdenbud'];
@@ -36,7 +32,7 @@ export default function AdminLayout({ children }) {
             ? baseTopMenuItems.filter(item => rentBasePaths.includes(item.path))
             : role === 'pivdenbud'
                 ? baseTopMenuItems.filter(item => pivdenbudPaths.includes(item.path))
-                : [...baseTopMenuItems, ...tailMenuItems];
+                : [...baseTopMenuItems, { path: '/admin/admin', icon: <ShieldCheck size={20} />, label: 'Адмін' }];
 
     useEffect(() => {
         if (role === 'rent' || role === 'pivdenbud') {

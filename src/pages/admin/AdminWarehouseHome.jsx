@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList } from 'lucide-react';
 import { API_URL } from '../../apiConfig';
 import { useAuth } from '../../context/AuthContext';
@@ -15,10 +16,11 @@ const STATUS_RENT_LABEL = {
 
 export default function AdminWarehouseHome() {
     const { token } = useAuth();
+    const navigate = useNavigate();
     const [data, setData] = useState({ events: [], productLocations: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [eventLimit] = useState(50);
+    const [eventLimit] = useState(12);
 
     const headers = useMemo(() => ({
         ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -49,6 +51,28 @@ export default function AdminWarehouseHome() {
     const inRentHighlight = useMemo(() => (
         data.productLocations.filter((p) => (p.activeRentals || []).length > 0)
     ), [data.productLocations]);
+
+    const warehouseCards = useMemo(() => {
+        const map = new Map();
+        for (const p of data.productLocations || []) {
+            for (const w of p.warehouses || []) {
+                if (!map.has(w.warehouseId)) {
+                    map.set(w.warehouseId, {
+                        id: w.warehouseId,
+                        name: w.warehouseName || '—',
+                        products: 0,
+                        quantity: 0,
+                        reserved: 0
+                    });
+                }
+                const row = map.get(w.warehouseId);
+                row.products += 1;
+                row.quantity += Number(w.quantity || 0);
+                row.reserved += Number(w.reserved || 0);
+            }
+        }
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+    }, [data.productLocations]);
 
     const formatEventLine = (ev) => {
         if (ev.message) return ev.message;
@@ -81,12 +105,38 @@ export default function AdminWarehouseHome() {
                 Огляд останніх дій та позицій у активних заявках оренди.
             </p>
 
-            {inRentHighlight.length > 0 && (
-                <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
-                    <h2 className="admin-warehouse-home__h2">
-                        <ClipboardList size={20} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
-                        У активній оренді / заявці
-                    </h2>
+            <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
+                <h2 className="admin-warehouse-home__h2">Склади</h2>
+                {warehouseCards.length === 0 ? (
+                    <p style={{ color: '#888', fontSize: '0.95rem' }}>Склади поки порожні.</p>
+                ) : (
+                    <div className="admin-warehouse-home__cards">
+                        {warehouseCards.map((w) => (
+                            <button
+                                key={w.id}
+                                type="button"
+                                className="admin-warehouse-home__card admin-warehouse-home__card--clickable"
+                                onClick={() => navigate(`/admin/warehouses/positions?warehouseId=${w.id}`)}
+                                title={`Перейти до складу «${w.name}»`}
+                            >
+                                <div style={{ fontWeight: 800, marginBottom: '8px' }}>{w.name}</div>
+                                <div style={{ fontSize: '0.9rem', color: '#555' }}>Позицій: {w.products}</div>
+                                <div style={{ fontSize: '0.9rem', color: '#555' }}>Кількість: {w.quantity}</div>
+                                <div style={{ fontSize: '0.9rem', color: '#555' }}>Резерв: {w.reserved}</div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
+                <h2 className="admin-warehouse-home__h2">
+                    <ClipboardList size={20} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
+                    У активній оренді / заявці
+                </h2>
+                {inRentHighlight.length === 0 ? (
+                    <p style={{ color: '#888', fontSize: '0.95rem' }}>Наразі немає товарів у заявках.</p>
+                ) : (
                     <div className="admin-warehouse-home__cards">
                         {inRentHighlight.map((p) => (
                             <div key={p.productId} className="admin-warehouse-home__card">
@@ -118,8 +168,8 @@ export default function AdminWarehouseHome() {
                             </div>
                         ))}
                     </div>
-                </section>
-            )}
+                )}
+            </section>
 
             <section className="admin-section admin-warehouse-home__section" style={{ marginTop: '24px' }}>
                 <h2 className="admin-warehouse-home__h2">Останні події</h2>

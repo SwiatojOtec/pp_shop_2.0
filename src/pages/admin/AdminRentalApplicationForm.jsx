@@ -383,8 +383,8 @@ export default function AdminRentalApplicationForm() {
             </div>
 
             <div className="rental-form-body">
-                {/* Two-column: Lessor + Client */}
-                <div className="rental-parties-grid">
+                    {/* Two-column: Lessor + Client */}
+                    <div className="rental-parties-grid">
                     {/* Lessor (static) */}
                     <div className="rental-party-block">
                         <h3 className="party-title">Орендодавець</h3>
@@ -485,10 +485,10 @@ export default function AdminRentalApplicationForm() {
                             <Plus size={13} /> Додати відповідальну особу
                         </button>
                     </div>
-                </div>
+                    </div>
 
-                {/* Product search */}
-                <div className="rental-section">
+                    {/* Product search */}
+                    <div className="rental-section">
                     <div className="rental-section-header">
                         <h2>Інструменти у заявці</h2>
                         <div className="product-search-wrap" style={{ position: 'relative' }}>
@@ -639,9 +639,6 @@ export default function AdminRentalApplicationForm() {
                         </button>
                     </div>
                 </div>
-
-                {/* Totals + Notes */}
-                <div className="rental-footer-grid">
                     <div className="rental-section">
                         <h2>Нотатки</h2>
                         <textarea
@@ -652,7 +649,8 @@ export default function AdminRentalApplicationForm() {
                             style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical', fontSize: '0.9rem' }}
                         />
                     </div>
-                    <div className="rental-totals">
+                <div className="rental-footer-grid">
+                    <div className="rental-totals rental-totals--row">
                         <div className="total-row">
                             <span>Загальна сума оренди:</span>
                             <strong>{totalRental.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>

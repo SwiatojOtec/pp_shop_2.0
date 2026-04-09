@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -36,6 +36,8 @@ import AdminWarehouseLayout from './pages/admin/AdminWarehouseLayout';
 import AdminWarehouseHome from './pages/admin/AdminWarehouseHome';
 import AdminWarehousePositions from './pages/admin/AdminWarehousePositions';
 import AdminWarehouseEvents from './pages/admin/AdminWarehouseEvents';
+import AdminAdminHome from './pages/admin/AdminAdminHome';
+import AdminAdminLayout from './pages/admin/AdminAdminLayout';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -216,13 +218,7 @@ function AppContent() {
           />
           <Route
             path="/admin/settings"
-            element={
-              <RequireAdmin>
-                <AdminLayout>
-                  <AdminCategories />
-                </AdminLayout>
-              </RequireAdmin>
-            }
+            element={<Navigate to="/admin/admin/settings" replace />}
           />
           <Route
             path="/admin/clients"
@@ -259,14 +255,22 @@ function AppContent() {
             <Route path="events" element={<AdminWarehouseEvents />} />
           </Route>
           <Route
-            path="/admin/users"
+            path="/admin/admin"
             element={
               <RequireAdmin>
                 <AdminLayout>
-                  <AdminUsers />
+                  <AdminAdminLayout />
                 </AdminLayout>
               </RequireAdmin>
             }
+          >
+            <Route index element={<AdminAdminHome />} />
+            <Route path="settings" element={<AdminCategories />} />
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
+          <Route
+            path="/admin/users"
+            element={<Navigate to="/admin/admin/users" replace />}
           />
 
           {/* 404 — must be last */}

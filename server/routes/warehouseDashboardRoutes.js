@@ -160,4 +160,18 @@ router.get('/events', ...GUARD, async (req, res) => {
     }
 });
 
+router.get('/delete-requests', authMiddleware, requireRole(['owner']), async (req, res) => {
+    try {
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 100));
+        const events = await WarehouseEvent.findAll({
+            where: { action: 'warehouse_delete_request' },
+            order: [['createdAt', 'DESC']],
+            limit
+        });
+        res.json(events);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;
