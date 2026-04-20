@@ -75,6 +75,7 @@ export default function ProductEdit({ context = 'products' }) {
     const [relatedSearch, setRelatedSearch] = useState('');
     const [relatedResults, setRelatedResults] = useState([]);
     const [warehouses, setWarehouses] = useState([]);
+    const [inventoryRows, setInventoryRows] = useState([]);
     const relatedSearchTimeout = useRef(null);
     const { token } = useAuth();
     const adminImages = useMemo(
@@ -111,6 +112,18 @@ export default function ProductEdit({ context = 'products' }) {
             fetchProduct();
         }
     }, [id]);
+
+    useEffect(() => {
+        if (!isRentContext || isNew || !id || !token) return;
+        fetchInventoryRows(id);
+    }, [id, token, isRentContext, isNew]);
+
+    useEffect(() => {
+        if (!isRentContext || isNew) return;
+        if (formData.editWarehouseId) return;
+        if (warehouses.length === 0) return;
+        setFormData((prev) => ({ ...prev, editWarehouseId: String(warehouses[0].id), editWarehouseQuantity: prev.editWarehouseQuantity || '0' }));
+    }, [warehouses, isRentContext, isNew, formData.editWarehouseId, formData.editWarehouseQuantity]);
 
     const fetchCategories = async () => {
         try {
@@ -197,13 +210,45 @@ export default function ProductEdit({ context = 'products' }) {
                     competitorLinks: Array.isArray(data.competitorLinks) ? data.competitorLinks : [],
                     adminImages: Array.isArray(data.adminImages) ? data.adminImages : [],
                     createWarehouseId: '',
-                    createWarehouseQuantity: ''
+                    createWarehouseQuantity: '',
+                    editWarehouseId: '',
+                    editWarehouseQuantity: ''
                 });
+                await fetchInventoryRows(data.id);
             }
         } catch (err) {
             console.error('Error fetching product:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchInventoryRows = async (productId) => {
+        if (!isRentContext || !productId || !token) return;
+        try {
+            const headers = { Authorization: `Bearer ${token}` };
+            const res = await fetch(`${API_URL}/api/inventory`, { headers });
+            const data = res.ok ? await res.json() : [];
+            const rows = Array.isArray(data)
+                ? data.filter((row) => Number(row.productId) === Number(productId))
+                : [];
+            setInventoryRows(rows);
+            if (rows.length > 0) {
+                const first = rows[0];
+                setFormData((prev) => ({
+                    ...prev,
+                    editWarehouseId: String(first.warehouseId || ''),
+                    editWarehouseQuantity: String(Number(first.quantity || 0))
+                }));
+            } else if (warehouses.length > 0) {
+                setFormData((prev) => ({
+                    ...prev,
+                    editWarehouseId: prev.editWarehouseId || String(warehouses[0].id),
+                    editWarehouseQuantity: prev.editWarehouseQuantity || '0'
+                }));
+            }
+        } catch (err) {
+            console.error('Error fetching inventory rows:', err);
         }
     };
 
@@ -273,7 +318,9 @@ export default function ProductEdit({ context = 'products' }) {
                     ? formData.adminImages.map(v => String(v || '').trim()).filter(Boolean)
                     : [],
                 createWarehouseId: isRentContext && isNew ? Number(formData.createWarehouseId) : undefined,
-                createWarehouseQuantity: isRentContext && isNew ? Number(formData.createWarehouseQuantity || 0) : undefined
+                createWarehouseQuantity: isRentContext && isNew ? Number(formData.createWarehouseQuantity || 0) : undefined,
+                editWarehouseId: isRentContext && !isNew ? Number(formData.editWarehouseId || 0) : undefined,
+                editWarehouseQuantity: isRentContext && !isNew ? Number(formData.editWarehouseQuantity || 0) : undefined
             };
 
             const payload = {
@@ -853,6 +900,47 @@ export default function ProductEdit({ context = 'products' }) {
                                                         onChange={e => setFormData({ ...formData, createWarehouseQuantity: e.target.value })}
                                                         placeholder="Наприклад: 5"
                                                     />
+                                                </div>
+                                            </>
+                                        )}
+                                        {!isNew && (
+                                            <>
+                                                <div style={{ marginTop: '12px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
+                                                        Оновити кількість на складі
+                                                    </label>
+                                                    <select
+                                                        value={formData.editWarehouseId || ''}
+                                                        onChange={e => {
+                                                            const warehouseId = e.target.value;
+                                                            const matched = inventoryRows.find(r => String(r.warehouseId) === warehouseId);
+                                                            setFormData((prev) => ({
+                                                                ...prev,
+                                                                editWarehouseId: warehouseId,
+                                                                editWarehouseQuantity: String(Number(matched?.quantity || 0))
+                                                            }));
+                                                        }}
+                                                    >
+                                                        <option value="">— Оберіть склад —</option>
+                                                        {warehouses.map((w) => (
+                                                            <option key={w.id} value={w.id}>{w.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div style={{ marginTop: '12px' }}>
+                                                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#555' }}>
+                                                        Кількість на обраному складі
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={formData.editWarehouseQuantity}
+                                                        onChange={e => setFormData({ ...formData, editWarehouseQuantity: e.target.value })}
+                                                        placeholder="Наприклад: 5"
+                                                    />
+                                                    <p style={{ fontSize: '0.72rem', color: '#777', marginTop: '4px' }}>
+                                                        Зміна застосовується до обраного складу при збереженні.
+                                                    </p>
                                                 </div>
                                             </>
                                         )}

@@ -29,6 +29,37 @@ const autoActivateRentCategory = async (data) => {
     }
 };
 
+const applyInventoryUpdateForRentProduct = async (product, payload) => {
+    if (!product?.isRent) return;
+
+    const warehouseIdRaw = payload?.editWarehouseId;
+    const qtyRaw = payload?.editWarehouseQuantity;
+    if (warehouseIdRaw === undefined || warehouseIdRaw === null || qtyRaw === undefined || qtyRaw === null || qtyRaw === '') {
+        return;
+    }
+
+    const targetWarehouseId = Number(warehouseIdRaw);
+    if (!Number.isFinite(targetWarehouseId) || targetWarehouseId <= 0) {
+        throw new Error('Оберіть коректний склад для оновлення кількості.');
+    }
+
+    const warehouse = await Warehouse.findByPk(targetWarehouseId);
+    if (!warehouse) {
+        throw new Error('Обраний склад не знайдено.');
+    }
+
+    const qty = Math.max(0, Math.floor(Number(qtyRaw || 0)));
+    const [row] = await InventoryItem.findOrCreate({
+        where: { warehouseId: warehouse.id, productId: product.id },
+        defaults: { quantity: qty, reserved: 0, minStock: 0 }
+    });
+    if (row.quantity !== qty) {
+        row.quantity = qty;
+        await row.save();
+    }
+    await recalculateProductQuantity(product.id);
+};
+
 const ensureInventoryForNewRentProduct = async (product, payload) => {
     if (!product?.isRent) return;
     const warehouseIdRaw = payload?.createWarehouseId;
@@ -155,7 +186,7 @@ router.get('/by-id/:id', async (req, res) => {
 // Create product (admin only)
 router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
     try {
-        const data = req.body;
+        const data = { ...req.body };
 
         // Auto-generate SKU if not provided (more robust)
         if (!data.sku) {
@@ -175,6 +206,10 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivde
             // Для оренди quantityAvailable рахується лише з inventory.
             delete data.quantityAvailable;
         }
+        delete data.createWarehouseId;
+        delete data.createWarehouseQuantity;
+        delete data.editWarehouseId;
+        delete data.editWarehouseQuantity;
 
         // For rent products: auto-set inventoryNumber to SKU if not provided
         if (data.isRent && !data.inventoryNumber) {
@@ -202,6 +237,11 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
             // Забороняємо ручне "накручування" кількості з картки.
             delete payload.quantityAvailable;
         }
+        delete payload.createWarehouseId;
+        delete payload.createWarehouseQuantity;
+        await applyInventoryUpdateForRentProduct(product, payload);
+        delete payload.editWarehouseId;
+        delete payload.editWarehouseQuantity;
         await product.update(payload);
         await autoActivateRentCategory(req.body);
         if (product.isRent) {

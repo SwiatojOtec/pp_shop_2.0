@@ -20,7 +20,9 @@ export default function AdminRent() {
             const res = await fetch(`${API_URL}/api/products?isRent=true`);
             if (res.ok) {
                 const data = await res.json();
-                setProducts(Array.isArray(data) ? data : []);
+                const rows = Array.isArray(data) ? data : [];
+                // У "Оренді" лишаємо тільки позиції, які реально є на складах.
+                setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
             } else {
                 console.error('Failed to fetch rent tools');
                 setProducts([]);
