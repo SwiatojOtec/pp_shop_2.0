@@ -5,7 +5,7 @@ const InventoryItem = require('../models/InventoryItem');
 const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const { authMiddleware, requireRole } = require('../middleware/auth');
-const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName } = require('../services/inventoryService');
+const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName, bootstrapRentInventoryFromProducts, restoreAllRentInventoryOneEach } = require('../services/inventoryService');
 
 const GUARD = [authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud'])];
 
@@ -220,6 +220,28 @@ router.delete('/item/:id', ...GUARD, async (req, res) => {
         res.json({ ok: true });
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+});
+
+router.post('/reconcile', authMiddleware, requireRole(['owner']), async (_req, res) => {
+    try {
+        await bootstrapRentInventoryFromProducts();
+        res.json({ ok: true, message: 'Синхронізацію залишків завершено.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/restore-all-one-each', authMiddleware, requireRole(['owner']), async (req, res) => {
+    try {
+        const result = await restoreAllRentInventoryOneEach({ user: req.user });
+        res.json({
+            ok: true,
+            message: `Готово. Повернуто ${result.touched} товарів на склад «${result.warehouseName}» по 1 шт.`,
+            ...result
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 

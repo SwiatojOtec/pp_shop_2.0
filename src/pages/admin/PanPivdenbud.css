@@ -64,6 +64,13 @@
     min-width: 160px;
 }
 
+.timesheet-select-group {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    min-width: 220px;
+}
+
 .timesheet-hint {
     font-size: 0.78rem;
     color: #888;

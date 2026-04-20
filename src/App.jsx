@@ -12,6 +12,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import InfoPage from './pages/InfoPage';
 import Rent from './pages/Rent';
+import RentPlaceholderPage from './pages/RentPlaceholderPage';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -73,6 +74,8 @@ function AppContent() {
           <Route path="/magazyn/:categorySlug" element={<Shop />} />
           <Route path="/magazyn/:categorySlug/:slug" element={<ProductDetail />} />
           <Route path="/orenda" element={<Rent />} />
+          <Route path="/orenda/lisa-ryshtuvalni" element={<RentPlaceholderPage pageKey="lisa-ryshtuvalni" />} />
+          <Route path="/orenda/opalubka" element={<RentPlaceholderPage pageKey="opalubka" />} />
           <Route path="/orenda/:slug" element={<ProductDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/checkout" element={<Checkout />} />

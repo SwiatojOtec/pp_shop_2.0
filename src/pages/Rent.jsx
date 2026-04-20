@@ -241,6 +241,15 @@ export default function Rent() {
                             <span>Фільтри</span>
                         </div>
 
+                        <div className="rent-info-links">
+                            <Link className="rent-info-link" to="/orenda/lisa-ryshtuvalni">
+                                Ліса риштувальні
+                            </Link>
+                            <Link className="rent-info-link" to="/orenda/opalubka">
+                                Опалубка
+                            </Link>
+                        </div>
+
                         <div className="filter-group">
                             <h4 className="filter-title">Тип інструменту</h4>
                             <div className="filter-options">

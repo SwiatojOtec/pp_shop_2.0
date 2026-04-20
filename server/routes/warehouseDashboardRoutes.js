@@ -24,6 +24,11 @@ router.get('/dashboard', ...GUARD, async (req, res) => {
             order: [['name', 'ASC']]
         });
 
+        const allWarehouses = await Warehouse.findAll({
+            attributes: ['id', 'name'],
+            order: [['id', 'ASC']]
+        });
+
         const invRows = await InventoryItem.findAll({
             include: [
                 { model: Warehouse, attributes: ['id', 'name'] },
@@ -32,7 +37,26 @@ router.get('/dashboard', ...GUARD, async (req, res) => {
         });
 
         const byProduct = new Map();
+        const warehouseSummaryMap = new Map();
+        for (const w of allWarehouses) {
+            warehouseSummaryMap.set(w.id, {
+                warehouseId: w.id,
+                warehouseName: w.name,
+                products: 0,
+                quantity: 0,
+                reserved: 0
+            });
+        }
+
         for (const r of invRows) {
+            const hasPositive = Number(r.quantity || 0) > 0 || Number(r.reserved || 0) > 0;
+            const sumRow = warehouseSummaryMap.get(r.warehouseId);
+            if (sumRow && hasPositive) {
+                sumRow.products += 1;
+                sumRow.quantity += Number(r.quantity || 0);
+                sumRow.reserved += Number(r.reserved || 0);
+            }
+            if (!hasPositive) continue;
             const pid = r.productId;
             if (!byProduct.has(pid)) {
                 byProduct.set(pid, []);
@@ -79,7 +103,8 @@ router.get('/dashboard', ...GUARD, async (req, res) => {
             activeRentals: rentalsByProduct.get(p.id) || []
         }));
 
-        res.json({ events, productLocations });
+        const warehouseSummary = Array.from(warehouseSummaryMap.values());
+        res.json({ events, productLocations, warehouseSummary });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -169,6 +194,68 @@ router.get('/delete-requests', authMiddleware, requireRole(['owner']), async (re
             limit
         });
         res.json(events);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/delete-requests/:id/approve', authMiddleware, requireRole(['owner']), async (req, res) => {
+    try {
+        const ev = await WarehouseEvent.findByPk(req.params.id);
+        if (!ev || ev.action !== 'warehouse_delete_request') {
+            return res.status(404).json({ message: 'Запит не знайдено або вже оброблено.' });
+        }
+        const warehouseId = Number(ev.fromWarehouseId || 0);
+        if (!warehouseId) {
+            return res.status(400).json({ message: 'У запиті відсутній склад.' });
+        }
+        const warehouse = await Warehouse.findByPk(warehouseId);
+        if (!warehouse) {
+            await ev.update({ action: 'warehouse_delete_request_approved' });
+            return res.json({ ok: true, message: 'Склад уже видалено раніше.' });
+        }
+
+        const stockCount = await InventoryItem.count({ where: { warehouseId } });
+        if (stockCount > 0) {
+            return res.status(400).json({ message: 'Склад містить позиції. Спочатку перенесіть або очистіть залишки.' });
+        }
+
+        await warehouse.destroy();
+        await ev.update({ action: 'warehouse_delete_request_approved' });
+        await WarehouseEvent.create({
+            userId: req.user?.id ?? null,
+            userDisplayName: req.user?.name ? `${req.user.name}${req.user.lastName ? ` ${req.user.lastName}` : ''}` : 'Користувач',
+            action: 'warehouse_delete_approved',
+            productId: 0,
+            productName: 'Склад',
+            fromWarehouseId: warehouseId,
+            fromWarehouseName: ev.fromWarehouseName || warehouse.name,
+            message: `Запит на видалення складу «${ev.fromWarehouseName || warehouse.name}» підтверджено. Склад видалено.`
+        });
+        res.json({ ok: true, message: `Склад «${ev.fromWarehouseName || warehouse.name}» видалено.` });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/delete-requests/:id/reject', authMiddleware, requireRole(['owner']), async (req, res) => {
+    try {
+        const ev = await WarehouseEvent.findByPk(req.params.id);
+        if (!ev || ev.action !== 'warehouse_delete_request') {
+            return res.status(404).json({ message: 'Запит не знайдено або вже оброблено.' });
+        }
+        await ev.update({ action: 'warehouse_delete_request_rejected' });
+        await WarehouseEvent.create({
+            userId: req.user?.id ?? null,
+            userDisplayName: req.user?.name ? `${req.user.name}${req.user.lastName ? ` ${req.user.lastName}` : ''}` : 'Користувач',
+            action: 'warehouse_delete_rejected',
+            productId: 0,
+            productName: 'Склад',
+            fromWarehouseId: ev.fromWarehouseId ?? null,
+            fromWarehouseName: ev.fromWarehouseName || null,
+            message: `Запит на видалення складу «${ev.fromWarehouseName || '—'}» відхилено.`
+        });
+        res.json({ ok: true, message: 'Запит відхилено.' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

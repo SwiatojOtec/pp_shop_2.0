@@ -1,0 +1,215 @@
+.rent-placeholder-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.rent-lp-top {
+    display: grid;
+    grid-template-columns: minmax(320px, 460px) minmax(0, 1fr);
+    gap: 28px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+}
+
+.rent-lp-gallery {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+}
+
+.rent-lp-main-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.rent-lp-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.rent-lp-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+}
+
+.rent-lp-badge {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.rent-lp-sku {
+    color: #6b7280;
+}
+
+.rent-lp-name {
+    font-size: 3rem;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    font-weight: 900;
+}
+
+.rent-lp-subtitle {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.45;
+    font-size: 1rem;
+    max-width: 720px;
+}
+
+.rent-lp-price {
+    margin: 2px 0 0;
+    font-size: 2.9rem;
+    font-weight: 900;
+    color: #b91c1c;
+    line-height: 1;
+}
+
+.rent-lp-desc {
+    margin: 0;
+    color: #374151;
+    line-height: 1.58;
+    font-size: 1.05rem;
+    max-width: 760px;
+}
+
+.rent-lp-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.rent-lp-trust {
+    margin-top: 2px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: #6b7280;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.rent-lp-bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 20px;
+}
+
+.rent-lp-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+}
+
+.rent-lp-card h3 {
+    margin: 0 0 12px;
+    font-size: 1.6rem;
+}
+
+.rent-lp-table {
+    border: 1px solid #e5e7eb;
+}
+
+.rent-lp-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.rent-lp-row:last-child {
+    border-bottom: none;
+}
+
+.rent-lp-row:nth-child(even) {
+    background: #fafafa;
+}
+
+.rent-lp-row span {
+    color: #6b7280;
+}
+
+.rent-lp-row strong {
+    text-align: right;
+}
+
+.rent-lp-faq details {
+    border: 1px solid #e5e7eb;
+    margin-bottom: 10px;
+    background: #fff;
+}
+
+.rent-lp-faq summary {
+    cursor: pointer;
+    padding: 12px;
+    font-weight: 600;
+}
+
+.rent-lp-faq p {
+    margin: 0;
+    padding: 0 12px 12px;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.rent-lp-terms {
+    margin-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 12px;
+}
+
+.rent-lp-terms h4 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+}
+
+.rent-lp-terms p {
+    margin: 0 0 8px;
+    color: #4b5563;
+    line-height: 1.5;
+    font-size: 0.92rem;
+}
+
+.rent-lp-cta-note {
+    margin-top: 6px;
+    color: #374151;
+    font-size: 0.92rem;
+}
+
+.rent-lp-back-btn {
+    margin-top: 12px;
+}
+
+@media (max-width: 992px) {
+    .rent-lp-top {
+        grid-template-columns: 1fr;
+    }
+
+    .rent-lp-name {
+        font-size: 2.2rem;
+    }
+
+    .rent-lp-price {
+        font-size: 2.2rem;
+    }
+
+    .rent-lp-bottom {
+        grid-template-columns: 1fr;
+    }
+}

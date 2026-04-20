@@ -52,7 +52,10 @@ const TimesheetEntry = sequelize.define('TimesheetEntry', {
     }
 }, {
     timestamps: true,
-    indexes: [{ fields: ['year', 'month', 'headUserId'] }]
+    indexes: [
+        { fields: ['year', 'month', 'headUserId'] },
+        { unique: true, fields: ['year', 'month', 'day', 'employeeSlot', 'headUserId'] }
+    ]
 });
 
 module.exports = TimesheetEntry;

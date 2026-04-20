@@ -179,7 +179,6 @@ router.get('/overview', authMiddleware, requireRole(['owner', 'manager']), async
                 where: { year, month, headUserId: hid },
                 order: [['day', 'ASC'], ['employeeSlot', 'ASC']]
             });
-            if (entryRows.length === 0) continue;
             const labels = await teamLabelsForHeadUserId(hid);
             sheets.push({
                 headUserId: hid,

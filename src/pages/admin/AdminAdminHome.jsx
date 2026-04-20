@@ -14,6 +14,7 @@ export default function AdminAdminHome() {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [busyId, setBusyId] = useState(null);
 
     const headers = useMemo(() => ({
         ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -38,6 +39,30 @@ export default function AdminAdminHome() {
         return () => { cancelled = true; };
     }, [headers]);
 
+    const reload = async () => {
+        const res = await fetch(`${API_URL}/api/warehouse/delete-requests`, { headers });
+        const data = res.ok ? await res.json() : [];
+        setRows(Array.isArray(data) ? data : []);
+    };
+
+    const handleAction = async (id, action) => {
+        if (!id) return;
+        setBusyId(id);
+        try {
+            const res = await fetch(`${API_URL}/api/warehouse/delete-requests/${id}/${action}`, {
+                method: 'POST',
+                headers
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Не вдалося виконати дію');
+            await reload();
+        } catch (e) {
+            window.alert(e.message || 'Помилка');
+        } finally {
+            setBusyId(null);
+        }
+    };
+
     return (
         <div className="admin-products">
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -61,6 +86,7 @@ export default function AdminAdminHome() {
                                     <th>Хто</th>
                                     <th>Склад</th>
                                     <th>Повідомлення</th>
+                                    <th style={{ textAlign: 'right' }}>Дії</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,6 +96,28 @@ export default function AdminAdminHome() {
                                         <td>{r.userDisplayName || '—'}</td>
                                         <td>{r.fromWarehouseName || '—'}</td>
                                         <td>{r.message || '—'}</td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary"
+                                                    style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                                                    disabled={busyId === r.id}
+                                                    onClick={() => handleAction(r.id, 'approve')}
+                                                >
+                                                    Підтвердити
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary"
+                                                    style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                                                    disabled={busyId === r.id}
+                                                    onClick={() => handleAction(r.id, 'reject')}
+                                                >
+                                                    Відхилити
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

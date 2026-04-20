@@ -34,7 +34,7 @@ function AdminOwnerDashboard({ user, token }) {
 
                 setShopStats({ products: safeProducts.length, orders: safeOrders.length, revenue: revenue.toFixed(2) });
                 setRecentOrders(safeOrders.slice(0, 5));
-                setRentProducts(safeRent);
+                setRentProducts(safeRent.filter((p) => Number(p.quantityAvailable || 0) > 0));
             } catch (err) {
                 console.error('Dashboard fetch error:', err);
             } finally {

@@ -218,6 +218,198 @@
     margin-bottom: var(--spacing-md);
 }
 
+.rent-info-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--color-grey);
+}
+
+.rent-info-link {
+    display: block;
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    color: #111827;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.rent-info-link:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #000;
+}
+
+.rent-placeholder-card {
+    background: #fff;
+    border: 1px solid var(--color-grey);
+    padding: 18px;
+}
+
+.rent-placeholder-layout {
+    display: block;
+}
+
+.rent-placeholder-subtitle {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    color: #4b5563;
+}
+
+.rent-placeholder-top {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+    margin-bottom: 14px;
+}
+
+.rent-placeholder-image-wrap {
+    margin-bottom: 14px;
+}
+
+.rent-placeholder-image-wrap--small {
+    margin-bottom: 0;
+}
+
+.rent-placeholder-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border: 1px solid #e5e7eb;
+}
+
+.rent-placeholder-top-content {
+    min-width: 0;
+}
+
+.rent-placeholder-price {
+    display: inline-block;
+    margin-bottom: 14px;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #b91c1c;
+}
+
+.rent-placeholder-text {
+    margin: 0 0 14px;
+    line-height: 1.65;
+    color: #111827;
+}
+
+.rent-placeholder-terms {
+    margin-bottom: 14px;
+    padding: 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+.rent-placeholder-terms h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.rent-placeholder-terms p {
+    margin: 0 0 8px;
+    line-height: 1.6;
+    color: #1f2937;
+}
+
+.rent-placeholder-terms p:last-child {
+    margin-bottom: 0;
+}
+
+.rent-placeholder-cta {
+    margin: 0 0 16px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.rent-placeholder-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.rent-placeholder-contact {
+    margin-top: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    padding: 12px;
+}
+
+.rent-placeholder-contact h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.rent-placeholder-contact-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 8px;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.rent-placeholder-contact-row:last-child {
+    margin-bottom: 0;
+}
+
+.rent-placeholder-contact-row span {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #374151;
+}
+
+.rent-placeholder-side-link {
+    display: inline-block;
+    font-weight: 700;
+    color: #111827;
+    text-decoration: none;
+}
+
+.rent-placeholder-side-link:hover {
+    color: var(--color-primary);
+}
+
+.rent-placeholder-side-text {
+    margin: 0;
+    color: #4b5563;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.rent-placeholder-bottom-note {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid var(--color-grey);
+    color: #4b5563;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 992px) {
+    .rent-placeholder-top {
+        grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+        gap: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .rent-placeholder-top {
+        grid-template-columns: 1fr;
+    }
+}
+
 .filter-title {
     font-size: 0.9rem;
     text-transform: uppercase;

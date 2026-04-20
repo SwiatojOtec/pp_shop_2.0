@@ -268,7 +268,10 @@ if (token) {
                         const countToday = await Order.count({
                             where: { createdAt: { [Op.gte]: startOfDay } }
                         });
-                        const orderNumber = `${countToday + 1}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const year = now.getFullYear();
+                        const orderNumber = `${countToday + 1}/${day}/${month}/${year}`;
 
                         // 2. Create Order in DB
                         order = await Order.create({

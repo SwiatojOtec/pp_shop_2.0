@@ -30,6 +30,14 @@ require('./models/WarehouseEvent');
 const { ensureMainWarehouse, ensureRepairWarehouse, bootstrapRentInventoryFromProducts } = require('./services/inventoryService');
 const app = express();
 
+async function ensureTimesheetIndexes() {
+    // Legacy schema had a unique index without headUserId, which breaks multiple subdivisions.
+    await sequelize.query('DROP INDEX IF EXISTS timesheet_entries_year_month_day_employee_slot');
+    await sequelize.query(
+        'CREATE UNIQUE INDEX IF NOT EXISTS timesheet_entries_year_month_day_employee_slot_head ON "TimesheetEntries" (year, month, day, "employeeSlot", "headUserId")'
+    );
+}
+
 // Middleware
 const allowedOrigins = [
     'https://pp-shop-2-0.vercel.app',
@@ -107,6 +115,7 @@ sequelize.authenticate()
         return sequelize.sync({ alter: true });
     })
     .then(async () => {
+        await ensureTimesheetIndexes();
         await ensureMainWarehouse();
         await ensureRepairWarehouse();
         await bootstrapRentInventoryFromProducts();

@@ -161,22 +161,29 @@ async function recalculateProductQuantity(productId) {
 
 async function bootstrapRentInventoryFromProducts() {
     const mainWarehouse = await ensureMainWarehouse();
+    const baseWarehouse = await Warehouse.findOne({ where: { name: 'База' } });
+    const fallbackWarehouse = baseWarehouse || mainWarehouse;
     const rentProducts = await Product.findAll({
         where: { isRent: true },
         attributes: ['id', 'quantityAvailable']
     });
 
     for (const product of rentProducts) {
-        const safeQuantity = Number.isFinite(product.quantityAvailable) ? product.quantityAvailable : 0;
-        const [item] = await InventoryItem.findOrCreate({
-            where: { warehouseId: mainWarehouse.id, productId: product.id },
-            defaults: { quantity: safeQuantity, reserved: 0, minStock: 0 }
-        });
-
-        if (item.quantity !== safeQuantity) {
-            item.quantity = safeQuantity;
-            await item.save();
+        const existingRows = await InventoryItem.count({ where: { productId: product.id } });
+        if (existingRows === 0) {
+            const safeQuantity = Math.max(0, Math.floor(Number(product.quantityAvailable || 0)));
+            if (safeQuantity > 0) {
+                await InventoryItem.create({
+                    warehouseId: fallbackWarehouse.id,
+                    productId: product.id,
+                    quantity: safeQuantity,
+                    reserved: 0,
+                    minStock: 0
+                });
+            }
         }
+        // Always sync aggregate quantity from real складські позиції.
+        await recalculateProductQuantity(product.id);
     }
 
     const existingProductIds = rentProducts.map((p) => p.id);
@@ -221,6 +228,44 @@ async function moveInventoryToRepairWarehouse({ productId, fromWarehouseId, quan
     return { ok: true, repairWarehouseId: repairWh.id };
 }
 
+async function restoreAllRentInventoryOneEach({ user }) {
+    const mainWarehouse = await ensureMainWarehouse();
+    const rentProducts = await Product.findAll({
+        where: { isRent: true },
+        attributes: ['id', 'name']
+    });
+
+    let touched = 0;
+    for (const p of rentProducts) {
+        await InventoryItem.destroy({
+            where: {
+                productId: p.id,
+                warehouseId: { [Op.ne]: mainWarehouse.id }
+            }
+        });
+        const [row] = await InventoryItem.findOrCreate({
+            where: { warehouseId: mainWarehouse.id, productId: p.id },
+            defaults: { quantity: 1, reserved: 0, minStock: 0 }
+        });
+        await row.update({ quantity: 1, reserved: 0 });
+        await Product.update({ stockStatus: 'in_stock' }, { where: { id: p.id } });
+        await recalculateProductQuantity(p.id);
+        touched += 1;
+    }
+
+    await logWarehouseEvent({
+        user,
+        action: 'restore_all_inventory_one_each',
+        productId: 0,
+        productName: 'bulk restore',
+        toWarehouseId: mainWarehouse.id,
+        toWarehouseName: mainWarehouse.name,
+        message: `${userDisplayName(user)} виконав масове відновлення: усі орендні товари повернено на «${mainWarehouse.name}» по 1 шт.`
+    });
+
+    return { ok: true, touched, warehouseId: mainWarehouse.id, warehouseName: mainWarehouse.name };
+}
+
 module.exports = {
     MAIN_WAREHOUSE_NAME,
     REPAIR_WAREHOUSE_NAME,
@@ -232,6 +277,7 @@ module.exports = {
     userDisplayName,
     moveInventoryBetweenWarehouses,
     moveInventoryToRepairWarehouse,
+    restoreAllRentInventoryOneEach,
     setRentProductStockStatus,
     sendProductToRepair,
     sendProductToNeedsRepair,

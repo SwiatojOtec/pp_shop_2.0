@@ -164,6 +164,7 @@ export default function PanPivdenbud() {
     const [labels, setLabels] = useState(['', '', '']);
     const [grid, setGrid] = useState(() => ({}));
     const [overviewSheets, setOverviewSheets] = useState([]);
+    const [selectedGroup, setSelectedGroup] = useState('all');
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
@@ -224,6 +225,14 @@ export default function PanPivdenbud() {
             })
             .finally(() => setLoading(false));
     }, [token, year, month, activeTab, isViewer, authLoading, user]);
+
+    useEffect(() => {
+        if (selectedGroup === 'all') return;
+        const hasSelected = overviewSheets.some(sheet => String(sheet.headUserId) === selectedGroup);
+        if (!hasSelected) {
+            setSelectedGroup('all');
+        }
+    }, [overviewSheets, selectedGroup]);
 
     /** Вертикальне колесо → горизонтальний скрол (лише режим редагування) */
     useEffect(() => {
@@ -316,14 +325,26 @@ export default function PanPivdenbud() {
     const handleExportXlsx = async () => {
         setExporting(true);
         try {
-            await downloadTimesheetXlsx({
-                year,
-                month,
-                lastDay,
-                dayMeta,
-                labels,
-                getCell
-            });
+            if (isViewer) {
+                if (visibleOverviewSheets.length === 0) {
+                    throw new Error('Немає даних для експорту');
+                }
+                if (selectedGroup === 'all' && visibleOverviewSheets.length > 1) {
+                    throw new Error('Оберіть конкретний підрозділ для експорту');
+                }
+                const sheet = visibleOverviewSheets[0];
+                await downloadTimesheetXlsx({
+                    year,
+                    month,
+                    lastDay,
+                    dayMeta,
+                    labels: sheet.labels || ['', '', ''],
+                    getCell: entriesToGetCell(sheet.entries || [])
+                });
+                return;
+            }
+
+            await downloadTimesheetXlsx({ year, month, lastDay, dayMeta, labels, getCell });
         } catch (e) {
             alert(e.message || 'Помилка експорту в Excel');
         } finally {
@@ -332,6 +353,10 @@ export default function PanPivdenbud() {
     };
 
     const noopField = () => {};
+    const visibleOverviewSheets = useMemo(() => {
+        if (selectedGroup === 'all') return overviewSheets;
+        return overviewSheets.filter(sheet => String(sheet.headUserId) === selectedGroup);
+    }, [overviewSheets, selectedGroup]);
 
     return (
         <div className="pan-pivdenbud">
@@ -383,27 +408,52 @@ export default function PanPivdenbud() {
                                 ))}
                             </select>
                         </label>
-                        {!isViewer && (
-                            <>
-                                <button
-                                    type="button"
-                                    className="btn btn-primary"
-                                    onClick={handleSave}
-                                    disabled={saving || loading || exporting}
+                        {isViewer && (
+                            <label>
+                                Підрозділ:&nbsp;
+                                <select
+                                    value={selectedGroup}
+                                    onChange={e => setSelectedGroup(e.target.value)}
+                                    className="timesheet-select-group"
                                 >
-                                    {saving ? 'Збереження...' : 'Зберегти табель'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={handleExportXlsx}
-                                    disabled={loading || exporting}
-                                    title="На кожен день 3 стовпці злиті в одну клітинку; час як 12:00, окремо рядок приходу та виходу"
-                                >
-                                    {exporting ? 'Експорт...' : 'Excel (.xlsx)'}
-                                </button>
-                            </>
+                                    <option value="all">Всі підрозділи</option>
+                                    {overviewSheets.map(sheet => {
+                                        const title =
+                                            sheet.subdivisionName ||
+                                            sheet.headDisplayName ||
+                                            `Голова #${sheet.headUserId}`;
+                                        return (
+                                            <option key={`group-${sheet.headUserId}`} value={String(sheet.headUserId)}>
+                                                {title}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </label>
                         )}
+                        {!isViewer && (
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleSave}
+                                disabled={saving || loading || exporting}
+                            >
+                                {saving ? 'Збереження...' : 'Зберегти табель'}
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={handleExportXlsx}
+                            disabled={loading || exporting || (isViewer && visibleOverviewSheets.length === 0)}
+                            title={
+                                isViewer
+                                    ? 'Експорт для обраного підрозділу'
+                                    : 'На кожен день 3 стовпці злиті в одну клітинку; час як 12:00, окремо рядок приходу та виходу'
+                            }
+                        >
+                            {exporting ? 'Експорт...' : 'Excel (.xlsx)'}
+                        </button>
                     </div>
                     {isViewer ? (
                         <p className="timesheet-hint">
@@ -424,14 +474,15 @@ export default function PanPivdenbud() {
                     ) : loading ? (
                         <p style={{ color: '#999' }}>Завантаження...</p>
                     ) : isViewer ? (
-                        overviewSheets.length === 0 ? (
+                        visibleOverviewSheets.length === 0 ? (
                             <p style={{ color: '#888' }}>
-                                Немає збережених табелів за цей місяць (голови підрозділів ще не натиснули «Зберегти
-                                табель» або немає даних).
+                                {overviewSheets.length === 0
+                                    ? 'Немає збережених табелів за цей місяць (голови підрозділів ще не натиснули «Зберегти табель» або немає даних).'
+                                    : 'Для обраного підрозділу ще немає збереженого табеля за цей місяць.'}
                             </p>
                         ) : (
                             <div className="timesheet-overview-list">
-                                {overviewSheets.map(sheet => {
+                                {visibleOverviewSheets.map(sheet => {
                                     const getCellRo = entriesToGetCell(sheet.entries);
                                     const title =
                                         sheet.subdivisionName ||

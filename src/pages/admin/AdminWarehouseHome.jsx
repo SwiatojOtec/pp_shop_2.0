@@ -15,9 +15,9 @@ const STATUS_RENT_LABEL = {
 };
 
 export default function AdminWarehouseHome() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const navigate = useNavigate();
-    const [data, setData] = useState({ events: [], productLocations: [] });
+    const [data, setData] = useState({ events: [], productLocations: [], warehouseSummary: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [eventLimit] = useState(12);
@@ -37,7 +37,8 @@ export default function AdminWarehouseHome() {
                 const json = await res.json();
                 if (!cancelled) setData({
                     events: Array.isArray(json.events) ? json.events : [],
-                    productLocations: Array.isArray(json.productLocations) ? json.productLocations : []
+                    productLocations: Array.isArray(json.productLocations) ? json.productLocations : [],
+                    warehouseSummary: Array.isArray(json.warehouseSummary) ? json.warehouseSummary : []
                 });
             } catch (e) {
                 if (!cancelled) setError(e.message || 'Помилка завантаження');
@@ -52,27 +53,16 @@ export default function AdminWarehouseHome() {
         data.productLocations.filter((p) => (p.activeRentals || []).length > 0)
     ), [data.productLocations]);
 
-    const warehouseCards = useMemo(() => {
-        const map = new Map();
-        for (const p of data.productLocations || []) {
-            for (const w of p.warehouses || []) {
-                if (!map.has(w.warehouseId)) {
-                    map.set(w.warehouseId, {
-                        id: w.warehouseId,
-                        name: w.warehouseName || '—',
-                        products: 0,
-                        quantity: 0,
-                        reserved: 0
-                    });
-                }
-                const row = map.get(w.warehouseId);
-                row.products += 1;
-                row.quantity += Number(w.quantity || 0);
-                row.reserved += Number(w.reserved || 0);
-            }
-        }
-        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-    }, [data.productLocations]);
+    const warehouseCards = useMemo(
+        () => (Array.isArray(data.warehouseSummary) ? data.warehouseSummary.map((w) => ({
+            id: w.warehouseId,
+            name: w.warehouseName || '—',
+            products: Number(w.products || 0),
+            quantity: Number(w.quantity || 0),
+            reserved: Number(w.reserved || 0)
+        })) : []),
+        [data.warehouseSummary]
+    );
 
     const formatEventLine = (ev) => {
         if (ev.message) return ev.message;
@@ -104,7 +94,6 @@ export default function AdminWarehouseHome() {
             <p style={{ color: '#555', fontSize: '0.95rem', marginBottom: '24px', maxWidth: '720px' }}>
                 Огляд останніх дій та позицій у активних заявках оренди.
             </p>
-
             <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
                 <h2 className="admin-warehouse-home__h2">Склади</h2>
                 {warehouseCards.length === 0 ? (

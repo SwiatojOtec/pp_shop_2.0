@@ -3,28 +3,30 @@ const router = express.Router();
 const Order = require('../models/Order');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { sendTelegramMessage } = require('../utils/telegram');
+const { Op } = require('sequelize');
 
 // Create new order
 router.post('/', async (req, res) => {
     try {
         const { customerName, customerPhone, customerEmail, address, deliveryMethod, paymentMethod, items, totalAmount } = req.body;
 
-        // Generate order number: [Count Today + 1]/[Month]/[Year]
+        // Generate order number: [Count Today + 1]/[Day]/[Month]/[Year]
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         const countToday = await Order.count({
             where: {
                 createdAt: {
-                    [require('sequelize').Op.gte]: startOfDay
+                    [Op.gte]: startOfDay
                 }
             }
         });
 
         const dailyNumber = countToday + 1;
+        const day = String(now.getDate()).padStart(2, '0');
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
-        const orderNumber = `${dailyNumber}/${month}/${year}`;
+        const orderNumber = `${dailyNumber}/${day}/${month}/${year}`;
 
         const order = await Order.create({
             orderNumber,

@@ -13,7 +13,8 @@ export default function RentDashboard() {
         fetch(`${API_URL}/api/products?isRent=true&includeHiddenRent=true`)
             .then(res => res.ok ? res.json() : [])
             .then(data => {
-                setProducts(Array.isArray(data) ? data : []);
+                const rows = Array.isArray(data) ? data : [];
+                setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
                 setLoading(false);
             })
             .catch(() => setLoading(false));
