@@ -114,7 +114,9 @@ export default function Rent() {
                 return res.json();
             })
             .then(data => {
-                setProducts(data);
+                const rows = Array.isArray(data) ? data : [];
+                // На клієнтській оренді показуємо тільки позиції з реальним залишком на складі.
+                setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
                 setLoading(false);
             })
             .catch(err => {

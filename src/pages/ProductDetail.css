@@ -292,15 +292,21 @@
 
 .image-lightbox-inner {
     position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .image-lightbox-img {
-    max-width: 100%;
-    max-height: 100%;
+    width: auto;
+    height: auto;
+    max-width: calc(100vw - 72px);
+    max-height: calc(100vh - 72px);
     object-fit: contain;
     border-radius: 8px;
+    display: block;
 }
 
 .image-lightbox-close {
@@ -312,6 +318,40 @@
     color: #fff;
     font-size: 32px;
     cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .image-lightbox {
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .image-lightbox-inner {
+        max-width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+    }
+
+    .image-lightbox-img {
+        max-width: calc(100vw - 28px);
+        max-height: calc(100vh - 96px);
+        border-radius: 6px;
+    }
+
+    .image-lightbox-close {
+        top: 8px;
+        right: 8px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(17, 24, 39, 0.72);
+        color: #fff;
+        font-size: 24px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 .rent-related-name {
@@ -357,6 +397,23 @@
     .rent-gallery   { grid-area: gallery; }
     .rent-specs-col { grid-area: specs;   }
     .rent-sidebar   { grid-area: sidebar; position: static; }
+
+    .rent-product-grid,
+    .rent-gallery,
+    .rent-specs-col,
+    .rent-sidebar,
+    .rent-price-box,
+    .rent-phone-link,
+    .purchase-section {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .purchase-section .buy-btn {
+        min-width: 0;
+        width: 100%;
+    }
 }
 
 /* Mobile ≤ 600px: single column */
@@ -409,6 +466,8 @@
         flex-direction: row;
         gap: 10px;
         align-items: stretch;
+        width: 100%;
+        max-width: 100%;
     }
 
     .purchase-section .quantity-control {
@@ -423,6 +482,12 @@
 
     .purchase-section .quantity-control input {
         width: 48px;
+    }
+
+    .purchase-section .buy-btn {
+        min-width: 0;
+        padding-left: 12px;
+        padding-right: 12px;
     }
 }
 
@@ -865,6 +930,15 @@
 }
 
 @media (max-width: 480px) {
+    .image-lightbox {
+        padding: 6px;
+    }
+
+    .image-lightbox-img {
+        max-width: calc(100vw - 12px);
+        max-height: calc(100vh - 84px);
+    }
+
     .product-title-large {
         font-size: 1.5rem !important;
     }

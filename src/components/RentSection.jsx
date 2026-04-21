@@ -8,6 +8,21 @@ import { getCategorySlug } from '../utils/categoryMapping';
 import { API_URL } from '../apiConfig';
 import './RentSection.css';
 
+const isRentUnavailableNow = (product) => {
+    if (!product) return true;
+    if (typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0) return true;
+    return ['out_of_stock', 'available_later', 'needs_repair', 'in_repair', 'in_procurement'].includes(product.stockStatus);
+};
+
+const rentStatusLabel = (product) => {
+    if (typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0) return 'Немає в наявності';
+    if (product.stockStatus === 'available_later') return `В оренді до ${product.availableFrom || 'уточнення дати'}`;
+    if (product.stockStatus === 'needs_repair') return 'Потребує ремонту';
+    if (product.stockStatus === 'in_repair') return 'На ремонті';
+    if (product.stockStatus === 'in_procurement') return 'У закупівлі';
+    return 'Тимчасово недоступний';
+};
+
 export default function RentSection() {
     const [rentProducts, setRentProducts] = useState([]);
     const { addToCart, cartItems } = useCart();
@@ -16,7 +31,15 @@ export default function RentSection() {
     useEffect(() => {
         fetch(`${API_URL}/api/products?isRent=true`)
             .then(res => res.json())
-            .then(data => setRentProducts(Array.isArray(data) ? data : []))
+            .then(data => {
+                const rows = Array.isArray(data) ? data : [];
+                // На головній показуємо тільки товари, які реально доступні до оренди "зараз".
+                setRentProducts(
+                    rows.filter(
+                        (p) => Number(p.quantityAvailable || 0) > 0 && (p.stockStatus === 'in_stock' || !p.stockStatus)
+                    )
+                );
+            })
             .catch(err => console.error('Error fetching rent products:', err));
     }, []);
 
@@ -93,6 +116,10 @@ export default function RentSection() {
                         <div className="product-grid">
                             {rentProducts.slice(0, 8).map(product => (
                                 <div key={product.id} className="product-card">
+                                    {(() => {
+                                        const unavailableNow = isRentUnavailableNow(product);
+                                        return (
+                                            <>
                                     <div className="product-image-container">
                                         <Link to={`/orenda/${product.slug}`}>
                                             <img src={product.image} alt={product.name} className="product-image" />
@@ -111,12 +138,13 @@ export default function RentSection() {
                                         <div className="price-block">
                                             <span className="product-price">{product.price} ₴ / доба</span>
                                         </div>
-                                        <div className="stock-status in-stock">
-                                            {product.stockStatus === 'out_of_stock' ? 'Немає в наявності'
-                                                : product.stockStatus === 'on_order' ? 'Під замовлення'
-                                                : 'В наявності'}
+                                        <div className={`stock-status ${unavailableNow ? 'out-of-stock' : 'in-stock'}`}>
+                                            {unavailableNow ? rentStatusLabel(product) : 'В наявності'}
                                         </div>
                                     </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             ))}
                         </div>
