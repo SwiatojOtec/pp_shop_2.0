@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Calendar, User, Tag } from 'lucide-react';
-import { API_URL } from '../apiConfig';
+import { blogApi } from '../services/api';
 import './Blog.css';
 
 export default function BlogPost() {
@@ -10,8 +10,7 @@ export default function BlogPost() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/blog/${slug}`)
-            .then(res => res.json())
+        blogApi.get(slug)
             .then(data => {
                 setPost(data);
                 setLoading(false);

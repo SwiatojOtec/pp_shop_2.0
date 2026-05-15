@@ -1,141 +1,162 @@
-import { API_URL } from '../../apiConfig';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { AdminTable, AdminFilters, AdminPageHeader, ConfirmDialog } from '../../components/admin';
+import { productsApi } from '../../services/api';
 import './Admin.css';
-import { useAuth } from '../../context/AuthContext';
+
+const CATEGORY_OPTIONS = [
+    { value: 'Паркетна Дошка',    label: 'Паркетна Дошка' },
+    { value: 'Ламінат',           label: 'Ламінат' },
+    { value: 'Вінілова підлога',  label: 'Вінілова підлога' },
+    { value: 'Підвіконня',        label: 'Підвіконня' },
+    { value: 'Стінові панелі',    label: 'Стінові панелі' },
+    { value: 'Плінтуса',          label: 'Плінтуса' },
+    { value: 'Оренда інструменту',label: 'Оренда інструменту' },
+];
+
+const COLUMNS = (navigate, onDelete) => [
+    {
+        key: 'image',
+        label: 'Фото',
+        width: '64px',
+        render: (val, row) => (
+            <img src={val} alt={row.name} className="admin-table-img" />
+        ),
+    },
+    {
+        key: 'sku',
+        label: 'SKU',
+        render: (val) => val ? <code className="admin-code">{val}</code> : '—',
+    },
+    { key: 'name', label: 'Назва' },
+    {
+        key: 'price',
+        label: 'Ціна',
+        render: (val) => val != null ? `${val} ₴` : '—',
+    },
+    { key: 'category', label: 'Категорія' },
+    {
+        key: 'badge',
+        label: 'Мітка',
+        render: (val) => val
+            ? <span className={`status-badge ${val.toLowerCase()}`}>{val}</span>
+            : null,
+    },
+    {
+        key: 'id',
+        label: 'Дії',
+        width: '90px',
+        render: (id, row) => (
+            <div className="table-actions">
+                <button
+                    className="action-btn edit"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/products/${id}`); }}
+                    title="Редагувати"
+                >
+                    <Edit2 size={16} />
+                </button>
+                <button
+                    className="action-btn delete"
+                    onClick={(e) => { e.stopPropagation(); onDelete(row); }}
+                    title="Видалити"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
+        ),
+    },
+];
 
 export default function AdminProducts() {
-    const [products, setProducts] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterCategory, setFilterCategory] = useState('All');
     const navigate = useNavigate();
-    const { token } = useAuth();
+    const [products, setProducts]       = useState([]);
+    const [loading, setLoading]         = useState(true);
+    const [search, setSearch]           = useState('');
+    const [filterCategory, setCategory] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    useEffect(() => { loadProducts(); }, []);
 
-    const fetchProducts = async () => {
+    async function loadProducts() {
+        setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/products?isRent=false`);
-            if (res.ok) {
-                const data = await res.json();
-                setProducts(Array.isArray(data) ? data : []);
-            } else {
-                console.error('Failed to fetch products');
-                setProducts([]);
-            }
+            const data = await productsApi.list({ isRent: false });
+            setProducts(Array.isArray(data) ? data : []);
         } catch (err) {
-            console.error('Error fetching products:', err);
+            console.error('Помилка завантаження товарів:', err);
             setProducts([]);
+        } finally {
+            setLoading(false);
         }
-    };
+    }
 
-    const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = filterCategory === 'All' || p.category === filterCategory;
-        return matchesSearch && matchesCategory;
-    });
-
-    const handleDelete = async (id) => {
-        if (!window.confirm('Ви впевнені?')) return;
+    async function handleDeleteConfirm() {
+        if (!deleteTarget) return;
+        setDeleteLoading(true);
         try {
-            const headers = {};
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
-            await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE', headers });
-            fetchProducts();
+            await productsApi.remove(deleteTarget.id);
+            setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
         } catch (err) {
-            console.error('Error deleting product:', err);
+            console.error('Помилка видалення:', err);
+        } finally {
+            setDeleteLoading(false);
+            setDeleteTarget(null);
         }
-    };
+    }
+
+    const filtered = products.filter((p) => {
+        const matchSearch = !search
+            || p.name?.toLowerCase().includes(search.toLowerCase())
+            || p.sku?.toLowerCase().includes(search.toLowerCase());
+        const matchCat = !filterCategory || p.category === filterCategory;
+        return matchSearch && matchCat;
+    });
 
     return (
         <div className="admin-products">
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>Товари</h1>
-                <button className="btn btn-primary" onClick={() => navigate('/admin/products/new')}>
-                    <Plus size={20} /> Додати товар
-                </button>
-            </div>
+            <AdminPageHeader
+                title="Товари"
+                subtitle={`${products.length} позицій`}
+                actions={
+                    <button className="btn-primary" onClick={() => navigate('/admin/products/new')}>
+                        <Plus size={16} /> Додати товар
+                    </button>
+                }
+            />
 
-            <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                <div className="search-box" style={{ flex: 1, position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-                    <input
-                        type="text"
-                        placeholder="Пошук за назвою або SKU..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
-                    />
-                </div>
-                <div className="filter-box" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Filter size={18} style={{ color: '#999' }} />
-                    <select
-                        value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value)}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
-                    >
-                        <option value="All">Всі категорії</option>
-                        <option value="Паркетна Дошка">Паркетна Дошка</option>
-                        <option value="Ламінат">Ламінат</option>
-                        <option value="Вінілова підлога">Вінілова підлога</option>
-                        <option value="Підвіконня">Підвіконня</option>
-                        <option value="Стінові панелі">Стінові панелі</option>
-                        <option value="Плінтуса">Плінтуса</option>
-                        <option value="Оренда інструменту">Оренда інструменту</option>
-                    </select>
-                </div>
-            </div>
+            <AdminFilters
+                search={search}
+                onSearch={setSearch}
+                placeholder="Пошук за назвою або SKU..."
+                filters={[
+                    {
+                        key: 'category',
+                        label: 'Всі категорії',
+                        value: filterCategory,
+                        options: CATEGORY_OPTIONS,
+                    },
+                ]}
+                onFilter={(_, val) => setCategory(val)}
+            />
 
-            <div className="admin-table-container">
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Зображення</th>
-                            <th>SKU</th>
-                            <th>Назва</th>
-                            <th>Ціна</th>
-                            <th>Категорія</th>
-                            <th>Мітка</th>
-                            <th>Дії</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredProducts.map(product => (
-                            <tr key={product.id}>
-                                <td><img src={product.image} alt={product.name} className="admin-table-img" /></td>
-                                <td><code style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>{product.sku}</code></td>
-                                <td>{product.name}</td>
-                                <td>{product.price} ₴</td>
-                                <td>{product.category}</td>
-                                <td>
-                                    {product.badge && (
-                                        <span className={`status-badge ${product.badge.toLowerCase()}`} style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                                            {product.badge}
-                                        </span>
-                                    )}
-                                </td>
-                                <td>
-                                    <div className="table-actions">
-                                        <button onClick={() => navigate(`/admin/products/${product.id}`)} className="action-btn edit"><Edit2 size={18} /></button>
-                                        <button onClick={() => handleDelete(product.id)} className="action-btn delete"><Trash2 size={18} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {filteredProducts.length === 0 && (
-                            <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Товарів не знайдено</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <AdminTable
+                columns={COLUMNS(navigate, setDeleteTarget)}
+                rows={filtered}
+                loading={loading}
+                empty="Товарів не знайдено"
+            />
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити товар?"
+                message={deleteTarget ? `Ви впевнені, що хочете видалити «${deleteTarget.name}»? Цю дію не можна скасувати.` : ''}
+                confirmText="Видалити"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setDeleteTarget(null)}
+                loading={deleteLoading}
+            />
         </div>
     );
 }

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Heart, ShoppingCart, MapPin, Phone, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { API_URL } from '../apiConfig';
+import { productsApi } from '../services/api';
 import { getCategorySlug } from '../utils/categoryMapping';
 import './Header.css';
 
@@ -40,8 +40,7 @@ export default function Header({ onCartClick }) {
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(query)}&limit=7`);
-        const data = res.ok ? await res.json() : [];
+        const data = await productsApi.list({ search: query.trim(), limit: 7 });
         const items = Array.isArray(data) ? data : (data.products || []);
         setSuggestions(items.slice(0, 7));
         setShowSuggestions(true);

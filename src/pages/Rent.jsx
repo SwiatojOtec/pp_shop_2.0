@@ -5,10 +5,19 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
-import { API_URL } from '../apiConfig';
+import { productsApi, brandsApi, rentCategoriesApi } from '../services/api';
 import './Shop.css';
 
 const RENT_CATEGORY_NAME = 'Оренда інструменту';
+
+function formatUkDateFromIso(dateIso) {
+    if (!dateIso) return '';
+    const s = String(dateIso).slice(0, 10);
+    const parts = s.split('-');
+    if (parts.length !== 3) return s;
+    const [y, m, d] = parts;
+    return `${d.padStart(2, '0')}.${m.padStart(2, '0')}.${y}`;
+}
 
 const isRentUnavailableNow = (product) => {
     if (!product) return true;
@@ -17,13 +26,32 @@ const isRentUnavailableNow = (product) => {
 };
 
 const rentStatusLabel = (product) => {
-    if (typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0) return 'Немає в наявності';
+    if (typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0) {
+        if (product.rentOutNextAvailableFrom) {
+            return `Буде доступно з ${formatUkDateFromIso(product.rentOutNextAvailableFrom)}`;
+        }
+        if (product.rentOutBusyUntil) {
+            return `В оренді до ${formatUkDateFromIso(product.rentOutBusyUntil)}`;
+        }
+        return 'Немає в наявності';
+    }
     if (product.stockStatus === 'available_later') return `В оренді до ${product.availableFrom || 'уточнення дати'}`;
     if (product.stockStatus === 'needs_repair') return 'Потребує ремонту';
     if (product.stockStatus === 'in_repair') return 'На ремонті';
     if (product.stockStatus === 'in_procurement') return 'У закупівлі';
     return 'Тимчасово недоступний';
 };
+
+function rentCatalogTopBadgeText(product) {
+    if (!isRentUnavailableNow(product)) return null;
+    if (product.rentOutNextAvailableFrom) {
+        return `Буде доступно з ${formatUkDateFromIso(product.rentOutNextAvailableFrom)}`;
+    }
+    if (product.rentOutBusyUntil) {
+        return `В оренді до ${formatUkDateFromIso(product.rentOutBusyUntil)}`;
+    }
+    return 'Недоступно';
+}
 
 export default function Rent() {
     const navigate = useNavigate();
@@ -45,18 +73,16 @@ export default function Rent() {
 
     useEffect(() => {
         // Fetch brands for sidebar filter (rent only)
-        fetch(`${API_URL}/api/brands?context=rent`)
-            .then(res => res.json())
+        brandsApi.list({ context: 'rent' })
             .then((brandData) => {
-                setBrands(brandData);
+                setBrands(Array.isArray(brandData) ? brandData : []);
             })
             .catch(err => console.error('Error fetching brands:', err));
 
-        // Fetch rent categories for sidebar filter (only active ones)
-        fetch(`${API_URL}/api/rent-categories`)
-            .then(res => res.json())
+        rentCategoriesApi.list()
             .then((catData) => {
-                setRentCategories(catData.filter(c => c.isActive !== false));
+                const rows = Array.isArray(catData) ? catData : [];
+                setRentCategories(rows.filter(c => c.isActive !== false));
             })
             .catch(err => console.error('Error fetching rent categories:', err));
 
@@ -106,17 +132,10 @@ export default function Rent() {
         // Вказуємо, що це сторінка оренди
         params.isRent = 'true';
 
-        const query = new URLSearchParams(params).toString();
-
-        fetch(`${API_URL}/api/products?${query}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Помилка завантаження інструментів');
-                return res.json();
-            })
+        productsApi.list(params)
             .then(data => {
                 const rows = Array.isArray(data) ? data : [];
-                // На клієнтській оренді показуємо тільки позиції з реальним залишком на складі.
-                setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
+                setProducts(rows);
                 setLoading(false);
             })
             .catch(err => {
@@ -236,7 +255,7 @@ export default function Rent() {
                     </div>
                 )}
 
-                <div className="shop-layout">
+                <div className="shop-layout rent-catalog-layout">
                     <aside className="shop-sidebar">
                         <div className="filter-header">
                             <Filter size={20} />
@@ -321,9 +340,13 @@ export default function Rent() {
                         <div className="product-grid">
                             {sortedProducts.map((product) => {
                                 const unavailableNow = isRentUnavailableNow(product);
+                                const topBadge = rentCatalogTopBadgeText(product);
                                 return (
                                 <div key={product._id || product.id} className={`product-card ${unavailableNow ? 'product-card--unavailable' : ''}`}>
                                     <div className="product-image-container">
+                                        {topBadge && (
+                                            <span className="rent-card-availability-badge">{topBadge}</span>
+                                        )}
                                         {product.badge && (
                                             <span className={`badge badge-${product.badge.toLowerCase()}`}>
                                                 {product.badge === 'SALE' ? 'Розпродаж' :

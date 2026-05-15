@@ -44,7 +44,8 @@ router.post('/', authMiddleware, requireRole(allowedRoles), async (req, res) => 
             address: req.body.address || null,
             siteAddress: req.body.siteAddress || null,
             discountPercent: Math.max(0, Math.min(100, Number(req.body.discountPercent || 0))),
-            notes: req.body.notes || null
+            notes: req.body.notes || null,
+            claims: req.body.claims || null
         };
         const created = await Client.create(payload);
         res.status(201).json(created);
@@ -57,7 +58,7 @@ router.put('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) =
     try {
         const client = await Client.findByPk(req.params.id);
         if (!client) return res.status(404).json({ message: 'Клієнта не знайдено' });
-        await client.update({
+        const updates = {
             fullName: req.body.fullName,
             phone: req.body.phone,
             email: req.body.email || null,
@@ -65,8 +66,12 @@ router.put('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) =
             address: req.body.address || null,
             siteAddress: req.body.siteAddress || null,
             discountPercent: Math.max(0, Math.min(100, Number(req.body.discountPercent || 0))),
-            notes: req.body.notes || null
-        });
+            notes: req.body.notes || null,
+        };
+        if (Object.prototype.hasOwnProperty.call(req.body, 'claims')) {
+            updates.claims = req.body.claims || null;
+        }
+        await client.update(updates);
         res.json(client);
     } catch (err) {
         res.status(400).json({ message: err.message });

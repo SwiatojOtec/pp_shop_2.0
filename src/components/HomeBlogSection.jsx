@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { API_URL } from '../apiConfig';
+import { blogApi } from '../services/api';
 import './HomeBlogSection.css';
 
 const fmtDate = (d) => {
@@ -15,8 +15,7 @@ export default function HomeBlogSection() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/blog`)
-            .then(r => r.ok ? r.json() : [])
+        blogApi.list()
             .then(data => { setPosts(Array.isArray(data) ? data.slice(0, 3) : []); setLoading(false); })
             .catch(() => setLoading(false));
     }, []);

@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
-import { API_URL } from '../../apiConfig';
-import { useAuth } from '../../context/AuthContext';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ClipboardList, Warehouse, ArrowRight } from 'lucide-react';
+import { warehouseApi } from '../../services/api';
+import { AdminPageHeader } from '../../components/admin';
 import './Admin.css';
 
 const STATUS_RENT_LABEL = {
@@ -11,20 +10,14 @@ const STATUS_RENT_LABEL = {
     booked: 'Заброньовано',
     overdue: 'Прострочено',
     returned: 'Повернено',
-    draft: 'Чернетка'
+    draft: 'Чернетка',
 };
 
 export default function AdminWarehouseHome() {
-    const { token, user } = useAuth();
     const navigate = useNavigate();
     const [data, setData] = useState({ events: [], productLocations: [], warehouseSummary: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [eventLimit] = useState(12);
-
-    const headers = useMemo(() => ({
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }), [token]);
 
     useEffect(() => {
         let cancelled = false;
@@ -32,14 +25,14 @@ export default function AdminWarehouseHome() {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`${API_URL}/api/warehouse/dashboard?eventLimit=${eventLimit}`, { headers });
-                if (!res.ok) throw new Error(await res.text());
-                const json = await res.json();
-                if (!cancelled) setData({
-                    events: Array.isArray(json.events) ? json.events : [],
-                    productLocations: Array.isArray(json.productLocations) ? json.productLocations : [],
-                    warehouseSummary: Array.isArray(json.warehouseSummary) ? json.warehouseSummary : []
-                });
+                const json = await warehouseApi.dashboard({ eventLimit: 12 });
+                if (!cancelled) {
+                    setData({
+                        events: Array.isArray(json?.events) ? json.events : [],
+                        productLocations: Array.isArray(json?.productLocations) ? json.productLocations : [],
+                        warehouseSummary: Array.isArray(json?.warehouseSummary) ? json.warehouseSummary : [],
+                    });
+                }
             } catch (e) {
                 if (!cancelled) setError(e.message || 'Помилка завантаження');
             } finally {
@@ -47,22 +40,29 @@ export default function AdminWarehouseHome() {
             }
         })();
         return () => { cancelled = true; };
-    }, [headers, eventLimit]);
+    }, []);
 
-    const inRentHighlight = useMemo(() => (
-        data.productLocations.filter((p) => (p.activeRentals || []).length > 0)
-    ), [data.productLocations]);
+    const inRentHighlight = useMemo(
+        () => data.productLocations.filter((p) => (p.activeRentals || []).length > 0),
+        [data.productLocations]
+    );
 
     const warehouseCards = useMemo(
-        () => (Array.isArray(data.warehouseSummary) ? data.warehouseSummary.map((w) => ({
+        () => data.warehouseSummary.map((w) => ({
             id: w.warehouseId,
             name: w.warehouseName || '—',
             products: Number(w.products || 0),
             quantity: Number(w.quantity || 0),
-            reserved: Number(w.reserved || 0)
-        })) : []),
+            reserved: Number(w.reserved || 0),
+        })),
         [data.warehouseSummary]
     );
+
+    const fmt = (d) => {
+        if (!d) return '';
+        const x = new Date(d);
+        return `${String(x.getDate()).padStart(2, '0')}.${String(x.getMonth() + 1).padStart(2, '0')}.${x.getFullYear()} ${String(x.getHours()).padStart(2, '0')}:${String(x.getMinutes()).padStart(2, '0')}`;
+    };
 
     const formatEventLine = (ev) => {
         if (ev.message) return ev.message;
@@ -75,29 +75,32 @@ export default function AdminWarehouseHome() {
         return `${ev.userDisplayName || ''} · ${ev.action || 'подія'}`;
     };
 
-    const fmt = (d) => {
-        if (!d) return '';
-        const x = new Date(d);
-        return `${String(x.getDate()).padStart(2, '0')}.${String(x.getMonth() + 1).padStart(2, '0')}.${x.getFullYear()} ${String(x.getHours()).padStart(2, '0')}:${String(x.getMinutes()).padStart(2, '0')}`;
-    };
-
-    if (loading) {
-        return <p style={{ color: '#666' }}>Завантаження…</p>;
-    }
-    if (error) {
-        return <p className="admin-alert error">{error}</p>;
-    }
+    if (loading) return <p className="admin-page-muted">Завантаження…</p>;
+    if (error) return <p className="admin-alert error">{error}</p>;
 
     return (
         <div className="admin-warehouse-home">
-            <h1 className="admin-title" style={{ marginBottom: '8px' }}>Склад · головна</h1>
-            <p style={{ color: '#555', fontSize: '0.95rem', marginBottom: '24px', maxWidth: '720px' }}>
-                Огляд останніх дій та позицій у активних заявках оренди.
-            </p>
+            <AdminPageHeader
+                title="Склад"
+                subtitle="Огляд складів, активних заявок і останніх подій"
+                actions={
+                    <Link
+                        to="/admin/warehouses/positions"
+                        className="btn btn-primary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+                    >
+                        Позиції на складі <ArrowRight size={16} />
+                    </Link>
+                }
+            />
+
             <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
-                <h2 className="admin-warehouse-home__h2">Склади</h2>
+                <h2 className="admin-warehouse-home__h2">
+                    <Warehouse size={20} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
+                    Склади
+                </h2>
                 {warehouseCards.length === 0 ? (
-                    <p style={{ color: '#888', fontSize: '0.95rem' }}>Склади поки порожні.</p>
+                    <p className="admin-page-muted">Склади поки порожні.</p>
                 ) : (
                     <div className="admin-warehouse-home__cards">
                         {warehouseCards.map((w) => (
@@ -121,10 +124,10 @@ export default function AdminWarehouseHome() {
             <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
                 <h2 className="admin-warehouse-home__h2">
                     <ClipboardList size={20} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
-                    У активній оренді / заявці
+                    У активній оренді
                 </h2>
                 {inRentHighlight.length === 0 ? (
-                    <p style={{ color: '#888', fontSize: '0.95rem' }}>Наразі немає товарів у заявках.</p>
+                    <p className="admin-page-muted">Наразі немає товарів у заявках.</p>
                 ) : (
                     <div className="admin-warehouse-home__cards">
                         {inRentHighlight.map((p) => (
@@ -137,7 +140,10 @@ export default function AdminWarehouseHome() {
                                         <div style={{ marginTop: '8px', fontSize: '0.88rem' }}>
                                             {(p.activeRentals || []).map((r) => (
                                                 <div key={r.applicationId} style={{ marginBottom: '6px' }}>
-                                                    <Link to={`/admin/rental-applications/${r.applicationId}`} style={{ color: 'var(--admin-accent)', fontWeight: 700 }}>
+                                                    <Link
+                                                        to={`/admin/rental-applications/${r.applicationId}`}
+                                                        style={{ color: 'var(--admin-accent)', fontWeight: 700 }}
+                                                    >
                                                         {r.applicationNumber}
                                                     </Link>
                                                     {' · '}
@@ -160,10 +166,15 @@ export default function AdminWarehouseHome() {
                 )}
             </section>
 
-            <section className="admin-section admin-warehouse-home__section" style={{ marginTop: '24px' }}>
-                <h2 className="admin-warehouse-home__h2">Останні події</h2>
+            <section className="admin-section admin-warehouse-home__section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                    <h2 className="admin-warehouse-home__h2" style={{ margin: 0 }}>Останні події</h2>
+                    <Link to="/admin/warehouses/events" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+                        Всі події →
+                    </Link>
+                </div>
                 {data.events.length === 0 ? (
-                    <p style={{ color: '#888', fontSize: '0.95rem' }}>Подій ще немає (переміщення, ремонт тощо з’являться тут).</p>
+                    <p className="admin-page-muted">Подій ще немає.</p>
                 ) : (
                     <ul className="admin-warehouse-home__feed">
                         {data.events.map((ev) => (
@@ -174,11 +185,6 @@ export default function AdminWarehouseHome() {
                         ))}
                     </ul>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-                    <Link to="/admin/warehouses/events" className="btn btn-secondary">
-                        Всі події →
-                    </Link>
-                </div>
             </section>
         </div>
     );

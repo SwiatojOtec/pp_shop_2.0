@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategorySlug } from '../utils/categoryMapping';
-import { API_URL } from '../apiConfig';
+import { productsApi } from '../services/api';
 import './ProductGrid.css';
 
 export default function ProductGrid() {
@@ -19,8 +19,7 @@ export default function ProductGrid() {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`${API_URL}/api/products`)
-            .then(res => res.json())
+        productsApi.list()
             .then(data => {
                 setProducts(Array.isArray(data) ? data : []);
                 setLoading(false);

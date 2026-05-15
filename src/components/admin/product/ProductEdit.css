@@ -1,0 +1,343 @@
+/* ─── ProductEdit layout ────────────────────────────────────────────────────── */
+
+.product-edit-page {
+    padding-bottom: 60px;
+}
+
+.product-edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.product-edit-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+}
+
+@media (max-width: 900px) {
+    .product-edit-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Section card ─────────────────────────────────────────────────────────── */
+
+.admin-section {
+    background: #fff;
+    padding: 28px 30px;
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin: 0 0 20px;
+    color: var(--admin-dark);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.section-hint {
+    font-size: 0.83rem;
+    color: #6b7280;
+    margin: 0 0 14px;
+    line-height: 1.5;
+}
+
+/* ─── Form helpers ─────────────────────────────────────────────────────────── */
+
+.field-hint {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    margin: 4px 0 0;
+}
+
+.field-sublabel {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.input-disabled {
+    background: #f5f5f5 !important;
+    color: #888 !important;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* ─── Breadcrumbs ──────────────────────────────────────────────────────────── */
+
+.admin-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.admin-breadcrumbs a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.admin-breadcrumbs a:hover { color: var(--admin-dark); }
+
+.breadcrumb-current {
+    color: var(--admin-dark);
+    font-weight: 700;
+}
+
+/* ─── Specs list ───────────────────────────────────────────────────────────── */
+
+.specs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f9f9f9;
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.spec-item-text {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.add-spec-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+}
+
+.empty-hint {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin: 0;
+}
+
+/* ─── Price matrix ─────────────────────────────────────────────────────────── */
+
+.price-matrix-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.price-matrix-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+/* ─── Image gallery ────────────────────────────────────────────────────────── */
+
+.image-upload-area {
+    border: 2px dashed var(--admin-border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    background: #fcfcfc;
+}
+
+.image-placeholder {
+    color: #9ca3af;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.image-remove-btn {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: var(--admin-accent);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ─── Related products search ──────────────────────────────────────────────── */
+
+.related-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    min-height: 36px;
+}
+
+.related-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
+.related-tag-img {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.related-tag-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #e53e3e;
+    padding: 0 2px;
+    display: flex;
+    align-items: center;
+}
+
+.related-search-wrapper {
+    position: relative;
+}
+
+.related-search-wrapper input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--admin-border);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+.related-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.related-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+
+.related-dropdown-item:last-child { border-bottom: none; }
+.related-dropdown-item:hover { background: #f8fafc; }
+
+.related-dropdown-img {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.related-dropdown-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.related-dropdown-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* ─── Competitor links ─────────────────────────────────────────────────────── */
+
+.competitor-link-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+.competitor-link-url {
+    flex: 1;
+    font-size: 0.82rem;
+    color: #2563eb;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+/* ─── Admin images grid ────────────────────────────────────────────────────── */
+
+.admin-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.admin-image-card {
+    position: relative;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.admin-image-preview-btn {
+    width: 100%;
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: zoom-in;
+}
+
+.admin-image-preview-btn img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    display: block;
+}
+
+.admin-image-delete-btn {
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+}

@@ -3,8 +3,7 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Plus, Trash2, Save, Printer, Download, Search, X, Sparkles } from 'lucide-react';
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
-import { API_URL } from '../../apiConfig';
-import { useAuth } from '../../context/AuthContext';
+import { clientsApi, rentalApplicationsApi, productsApi } from '../../services/api';
 import RentalApplicationPrint from './RentalApplicationPrint';
 import './Admin.css';
 import './RentalApplicationForm.css';
@@ -52,11 +51,11 @@ export default function AdminRentalApplicationForm() {
     const isNew = !id || id === 'new';
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { token } = useAuth();
     const printRef = useRef();
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
+    const [tab, setTab] = useState('parties'); // 'parties' | 'items' | 'document'
     const [applicationNumber, setApplicationNumber] = useState('');
     const [status, setStatus] = useState('draft');
     const [notes, setNotes] = useState('');
@@ -87,12 +86,10 @@ export default function AdminRentalApplicationForm() {
     const handlePrint = useReactToPrint({ contentRef: printRef });
 
     useEffect(() => {
-        if (!token) return;
-        fetch(`${API_URL}/api/clients`, { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => (r.ok ? r.json() : []))
+        clientsApi.list()
             .then(data => setClients(Array.isArray(data) ? data : []))
             .catch(() => setClients([]));
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         if (!isNew || clients.length === 0) return;
@@ -117,8 +114,7 @@ export default function AdminRentalApplicationForm() {
     // Load existing application
     useEffect(() => {
         if (!isNew) {
-            fetch(`${API_URL}/api/rental-applications/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-                .then(r => r.ok ? r.json() : null)
+            rentalApplicationsApi.get(id)
                 .then(data => {
                     if (!data) return;
                     setApplicationNumber(data.applicationNumber || '');
@@ -147,18 +143,27 @@ export default function AdminRentalApplicationForm() {
                         : [emptyItem()]
                     );
                 })
+                .catch(() => {})
                 .finally(() => setLoading(false));
         }
-    }, [id]);
+    }, [id, isNew]);
 
     // Product search with debounce
     useEffect(() => {
         clearTimeout(searchTimeout.current);
         if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
         searchTimeout.current = setTimeout(async () => {
-            const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(searchQuery)}&isRent=true&includeHiddenRent=true`);
-            const data = res.ok ? await res.json() : [];
-            setSearchResults(data.slice(0, 8));
+            try {
+                const data = await productsApi.list({
+                    search: searchQuery.trim(),
+                    isRent: true,
+                    includeHiddenRent: true,
+                });
+                const rows = Array.isArray(data) ? data : [];
+                setSearchResults(rows.slice(0, 8));
+            } catch {
+                setSearchResults([]);
+            }
         }, 300);
     }, [searchQuery]);
 
@@ -195,8 +200,8 @@ export default function AdminRentalApplicationForm() {
         // Load related products for upsell panel
         if (product.relatedProducts && product.relatedProducts.length > 0) {
             const related = await Promise.all(
-                product.relatedProducts.map(pid =>
-                    fetch(`${API_URL}/api/products/by-id/${pid}`).then(r => r.ok ? r.json() : null)
+                product.relatedProducts.map((pid) =>
+                    productsApi.getById(pid).catch(() => null)
                 )
             );
             const filtered = related.filter(Boolean);
@@ -292,27 +297,19 @@ export default function AdminRentalApplicationForm() {
         };
 
         const doSave = async (attempt = 1) => {
-            const currentToken = token || window.localStorage.getItem('authToken') || '';
-            const url = isNew
-                ? `${API_URL}/api/rental-applications`
-                : `${API_URL}/api/rental-applications/${id}`;
-            const res = await fetch(url, {
-                method: isNew ? 'POST' : 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
-                body: JSON.stringify(payload),
-            });
-            if (res.ok) {
-                const saved = await res.json();
+            try {
+                const saved = isNew
+                    ? await rentalApplicationsApi.create(payload)
+                    : await rentalApplicationsApi.update(id, payload);
                 if (isNew) navigate(`/admin/rental-applications/${saved.id}`, { replace: true });
                 return true;
+            } catch (err) {
+                if (attempt === 1 && (err.status === 503 || err.status === 401)) {
+                    await new Promise(r => setTimeout(r, 600));
+                    return doSave(2);
+                }
+                throw err;
             }
-            // Retry once on 503 (DB overload) or 401 (possible timing issue)
-            if (attempt === 1 && (res.status === 503 || res.status === 401)) {
-                await new Promise(r => setTimeout(r, 600));
-                return doSave(2);
-            }
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.message || `Помилка ${res.status}`);
         };
 
         try {
@@ -352,39 +349,33 @@ export default function AdminRentalApplicationForm() {
                         <option value="returned">Повернуто</option>
                         <option value="cancelled">Скасована</option>
                     </select>
-                    <button
-                        onClick={() =>
-                            generateRentalPdf({
-                                applicationNumber,
-                                lessor: LESSOR,
-                                client,
-                                responsible,
-                                items,
-                                totalRental,
-                                totalDeposit,
-                                discountType,
-                                discountValue: parsedDiscount,
-                                discountAmount,
-                                totalRentalAfterDiscount
-                            }).catch(console.error)
-                        }
-                        className="btn-secondary-icon"
-                        title="Скачати PDF"
-                    >
-                        <Download size={18} /> Скачати PDF
-                    </button>
-                    <button onClick={handlePrint} className="btn-secondary-icon" title="Друк">
-                        <Printer size={18} /> Друк
-                    </button>
                     <button onClick={handleSave} disabled={saving} className="btn btn-primary">
                         <Save size={16} /> {saving ? 'Збереження...' : 'Зберегти'}
                     </button>
                 </div>
             </div>
 
+            {/* Tab navigation */}
+            <div className="rental-tabs-nav">
+                {[
+                    { key: 'parties',  label: 'Сторони' },
+                    { key: 'items',    label: `Позиції (${items.length})` },
+                    { key: 'document', label: 'Документ' },
+                ].map(t => (
+                    <button
+                        key={t.key}
+                        className={`rental-tab-btn${tab === t.key ? ' is-active' : ''}`}
+                        onClick={() => setTab(t.key)}
+                        type="button"
+                    >
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
             <div className="rental-form-body">
-                    {/* Two-column: Lessor + Client */}
-                    <div className="rental-parties-grid">
+                    {/* ── TAB: Сторони ── */}
+                    {tab === 'parties' && <div className="rental-parties-grid">
                     {/* Lessor (static) */}
                     <div className="rental-party-block">
                         <h3 className="party-title">Орендодавець</h3>
@@ -485,8 +476,10 @@ export default function AdminRentalApplicationForm() {
                             <Plus size={13} /> Додати відповідальну особу
                         </button>
                     </div>
-                    </div>
+                    </div>}
 
+                    {/* ── TAB: Позиції ── */}
+                    {tab === 'items' && <>
                     {/* Product search */}
                     <div className="rental-section">
                     <div className="rental-section-header">
@@ -639,16 +632,6 @@ export default function AdminRentalApplicationForm() {
                         </button>
                     </div>
                 </div>
-                    <div className="rental-section">
-                        <h2>Нотатки</h2>
-                        <textarea
-                            value={notes}
-                            onChange={e => setNotes(e.target.value)}
-                            placeholder="Додаткові умови, примітки, особливості..."
-                            rows={4}
-                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical', fontSize: '0.9rem' }}
-                        />
-                    </div>
                 <div className="rental-footer-grid">
                     <div className="rental-totals rental-totals--row">
                         <div className="total-row">
@@ -695,6 +678,67 @@ export default function AdminRentalApplicationForm() {
                         </div>
                     </div>
                 </div>
+                    </>}
+
+                    {/* ── TAB: Документ ── */}
+                    {tab === 'document' && (
+                        <div className="rental-section">
+                            <h2>Документ</h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '480px' }}>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button
+                                        onClick={() =>
+                                            generateRentalPdf({
+                                                applicationNumber,
+                                                lessor: LESSOR,
+                                                client,
+                                                responsible,
+                                                items,
+                                                totalRental,
+                                                totalDeposit,
+                                                discountType,
+                                                discountValue: parsedDiscount,
+                                                discountAmount,
+                                                totalRentalAfterDiscount
+                                            }).catch(console.error)
+                                        }
+                                        className="btn-secondary-icon"
+                                        title="Скачати PDF"
+                                        style={{ flex: 1 }}
+                                    >
+                                        <Download size={18} /> Скачати PDF
+                                    </button>
+                                    <button onClick={handlePrint} className="btn-secondary-icon" title="Друк" style={{ flex: 1 }}>
+                                        <Printer size={18} /> Друк
+                                    </button>
+                                </div>
+
+                                <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '16px', border: '1px solid #e5e7eb' }}>
+                                    <div className="party-field"><span>№ заявки:</span><strong>{applicationNumber || '(буде присвоєно після збереження)'}</strong></div>
+                                    <div className="party-field"><span>Клієнт:</span><strong>{client.name || '—'}</strong></div>
+                                    <div className="party-field"><span>Телефон:</span>{client.phone || '—'}</div>
+                                    <div className="party-field"><span>Позицій:</span>{items.length} шт.</div>
+                                    <div className="party-field"><span>Оренда:</span><strong>{totalRentalAfterDiscount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong></div>
+                                    <div className="party-field"><span>Застава:</span><strong>{totalDeposit.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong></div>
+                                    <div className="party-field" style={{ borderTop: '1px solid #e5e7eb', marginTop: '8px', paddingTop: '8px' }}>
+                                        <span>Всього:</span>
+                                        <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>{grandTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Нотатки</label>
+                                    <textarea
+                                        value={notes}
+                                        onChange={e => setNotes(e.target.value)}
+                                        placeholder="Додаткові умови, примітки, особливості..."
+                                        rows={4}
+                                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical', fontSize: '0.9rem' }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
             </div>
 
             {/* Upsell panel */}

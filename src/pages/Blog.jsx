@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { API_URL } from '../apiConfig';
+import { blogApi } from '../services/api';
 import './Blog.css';
 
 export default function Blog() {
@@ -8,8 +8,7 @@ export default function Blog() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/blog`)
-            .then(res => res.json())
+        blogApi.list()
             .then(data => {
                 setPosts(Array.isArray(data) ? data : []);
                 setLoading(false);

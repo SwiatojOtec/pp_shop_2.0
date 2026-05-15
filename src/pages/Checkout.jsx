@@ -3,7 +3,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin } from 'lucide-react';
-import { API_URL } from '../apiConfig';
+import { ordersApi } from '../services/api';
 import './Checkout.css';
 
 export default function Checkout() {
@@ -72,19 +72,9 @@ export default function Checkout() {
         };
 
         try {
-            const res = await fetch(`${API_URL}/api/orders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(orderData)
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                clearCart();
-                setSuccessOrder(data);
-            } else {
-                throw new Error('Помилка при оформленні замовлення');
-            }
+            const data = await ordersApi.create(orderData);
+            clearCart();
+            setSuccessOrder(data);
         } catch (err) {
             showToast(err.message || 'Помилка при оформленні замовлення', 'error');
         } finally {

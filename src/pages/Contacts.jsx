@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { API_URL } from '../apiConfig';
+import { contactApi } from '../services/api';
 import './Contacts.css';
 
 export default function Contacts() {
@@ -23,24 +23,11 @@ export default function Contacts() {
         setStatus({ type: '', message: '' });
 
         try {
-            const response = await fetch(`${API_URL}/api/contact`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setStatus({ type: 'success', message: 'Дякуємо! Ваше повідомлення надіслано.' });
-                setFormData({ name: '', email: '', message: '' });
-            } else {
-                setStatus({ type: 'error', message: data.message || 'Щось пішло не так. Спробуйте пізніше.' });
-            }
+            await contactApi.send(formData);
+            setStatus({ type: 'success', message: 'Дякуємо! Ваше повідомлення надіслано.' });
+            setFormData({ name: '', email: '', message: '' });
         } catch (error) {
-            setStatus({ type: 'error', message: 'Помилка з\'єднання з сервером.' });
+            setStatus({ type: 'error', message: error.message || 'Помилка з\'єднання з сервером.' });
         } finally {
             setIsSubmitting(false);
         }

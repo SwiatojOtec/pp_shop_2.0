@@ -39,6 +39,7 @@ import AdminWarehousePositions from './pages/admin/AdminWarehousePositions';
 import AdminWarehouseEvents from './pages/admin/AdminWarehouseEvents';
 import AdminAdminHome from './pages/admin/AdminAdminHome';
 import AdminAdminLayout from './pages/admin/AdminAdminLayout';
+import AdminSubdivisions from './pages/admin/AdminSubdivisions';
 import { CartProvider } from './context/CartContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -219,9 +220,36 @@ function AppContent() {
               </RequireAdmin>
             }
           />
+          {/* Flattened enterprise routes */}
           <Route
             path="/admin/settings"
-            element={<Navigate to="/admin/admin/settings" replace />}
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminCategories />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminUsers />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/subdivisions"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminSubdivisions />
+                </AdminLayout>
+              </RequireAdmin>
+            }
           />
           <Route
             path="/admin/clients"
@@ -271,10 +299,10 @@ function AppContent() {
             <Route path="settings" element={<AdminCategories />} />
             <Route path="users" element={<AdminUsers />} />
           </Route>
-          <Route
-            path="/admin/users"
-            element={<Navigate to="/admin/admin/users" replace />}
-          />
+          {/* Legacy redirects — keep for backward compatibility */}
+          <Route path="/admin/admin" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/admin/admin/users" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/admin/admin/settings" element={<Navigate to="/admin/settings" replace />} />
 
           {/* 404 — must be last */}
           <Route path="*" element={<NotFound />} />

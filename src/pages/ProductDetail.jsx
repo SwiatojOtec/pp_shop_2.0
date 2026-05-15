@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus, Phone } from 'lucide-react';
+import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategorySlug } from '../utils/categoryMapping';
-import { API_URL } from '../apiConfig';
+import { productsApi } from '../services/api';
 import './ProductDetail.css';
+
+function formatUkDateFromIso(dateIso) {
+    if (!dateIso) return '';
+    const s = String(dateIso).slice(0, 10);
+    const parts = s.split('-');
+    if (parts.length !== 3) return s;
+    const [y, m, d] = parts;
+    return `${d.padStart(2, '0')}.${m.padStart(2, '0')}.${y}`;
+}
 
 export default function ProductDetail() {
     const { slug } = useParams();
@@ -33,11 +42,7 @@ export default function ProductDetail() {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`${API_URL}/api/products/${slug}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Товар не знайдено');
-                return res.json();
-            })
+        productsApi.get(slug)
             .then(data => {
                 setProduct(data);
                 setActiveImg(data.image);
@@ -49,19 +54,19 @@ export default function ProductDetail() {
                 // Fetch related products for rent items
                 if (data.isRent && data.relatedProducts && data.relatedProducts.length > 0) {
                     Promise.all(
-                        data.relatedProducts.map(pid =>
-                            fetch(`${API_URL}/api/products/by-id/${pid}`).then(r => r.ok ? r.json() : null)
+                        data.relatedProducts.map((pid) =>
+                            productsApi.getById(pid).catch(() => null)
                         )
                     ).then(items => setRelatedItems(items.filter(Boolean)));
                 }
 
                 // Fetch variants if groupId exists
                 if (data.groupId) {
-                    fetch(`${API_URL}/api/products?groupId=${data.groupId}`)
-                        .then(res => res.json())
+                    productsApi.list({ groupId: data.groupId })
                         .then(allProducts => {
+                            const rows = Array.isArray(allProducts) ? allProducts : [];
                             // Filter out current product
-                            setVariants(allProducts.filter(p => p.id !== data.id));
+                            setVariants(rows.filter(p => p.id !== data.id));
                         })
                         .catch(err => console.error('Error fetching variants:', err));
                 } else {
@@ -119,6 +124,55 @@ export default function ProductDetail() {
         }
     }, [sillWidth, sillLength, product]);
 
+    const galleryUrls = useMemo(() => {
+        if (!product?.image) return [];
+        const seen = new Set();
+        const out = [];
+        const push = (u) => {
+            if (u == null || u === '') return;
+            const s = typeof u === 'string' ? u : String(u);
+            if (seen.has(s)) return;
+            seen.add(s);
+            out.push(s);
+        };
+        push(product.image);
+        for (const u of product.images || []) push(u);
+        return out;
+    }, [product]);
+
+    const stepGallery = useCallback(
+        (delta) => {
+            setActiveImg((prev) => {
+                if (galleryUrls.length < 2) return prev;
+                const idx = galleryUrls.indexOf(prev);
+                const i = idx >= 0 ? idx : 0;
+                return galleryUrls[(i + delta + galleryUrls.length) % galleryUrls.length];
+            });
+        },
+        [galleryUrls]
+    );
+
+    useEffect(() => {
+        if (!imageZoomOpen) return undefined;
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setImageZoomOpen(false);
+                return;
+            }
+            if (galleryUrls.length < 2) return;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                stepGallery(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                stepGallery(1);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [imageZoomOpen, galleryUrls.length, stepGallery]);
+
     const handleAddSillToCart = () => {
         if (!product || !sillWidth || !sillLength || sillError) return;
 
@@ -158,6 +212,51 @@ export default function ProductDetail() {
 
     const isRent = product.isRent;
 
+    const renderImageLightbox = () => {
+        if (!imageZoomOpen || !activeImg) return null;
+        return (
+            <div className="image-lightbox" onClick={() => setImageZoomOpen(false)}>
+                <div className="image-lightbox-inner" onClick={(e) => e.stopPropagation()}>
+                    <img src={activeImg} alt={product.name} className="image-lightbox-img" />
+                    {galleryUrls.length > 1 && (
+                        <>
+                            <button
+                                type="button"
+                                className="image-lightbox-nav image-lightbox-nav--prev"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    stepGallery(-1);
+                                }}
+                                aria-label="Попереднє зображення"
+                            >
+                                <ChevronLeft size={34} strokeWidth={2.25} />
+                            </button>
+                            <button
+                                type="button"
+                                className="image-lightbox-nav image-lightbox-nav--next"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    stepGallery(1);
+                                }}
+                                aria-label="Наступне зображення"
+                            >
+                                <ChevronRight size={34} strokeWidth={2.25} />
+                            </button>
+                        </>
+                    )}
+                    <button
+                        type="button"
+                        className="image-lightbox-close"
+                        onClick={() => setImageZoomOpen(false)}
+                        aria-label="Закрити зображення"
+                    >
+                        ×
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     // Rent-specific compact layout
     if (isRent) {
         return (
@@ -178,12 +277,49 @@ export default function ProductDetail() {
                     <div className="rent-product-grid">
                         {/* LEFT: image */}
                         <div className="rent-gallery">
-                            <div className="rent-main-image-wrap" onClick={() => setImageZoomOpen(true)}>
-                                <img src={activeImg} alt={product.name} className="rent-main-image" />
+                            <div className="rent-main-image-wrap">
+                                <img
+                                    src={activeImg}
+                                    alt={product.name}
+                                    className="rent-main-image"
+                                    onClick={() => setImageZoomOpen(true)}
+                                    style={{ cursor: 'zoom-in' }}
+                                />
+                                {galleryUrls.length > 1 && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="gallery-nav gallery-nav--prev"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                stepGallery(-1);
+                                            }}
+                                            aria-label="Попереднє зображення"
+                                        >
+                                            <ChevronLeft size={26} strokeWidth={2.25} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="gallery-nav gallery-nav--next"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                stepGallery(1);
+                                            }}
+                                            aria-label="Наступне зображення"
+                                        >
+                                            <ChevronRight size={26} strokeWidth={2.25} />
+                                        </button>
+                                    </>
+                                )}
                                 <button
+                                    type="button"
                                     className={`wishlist-btn-large ${isFavorite(product._id || product.id) ? 'active' : ''}`}
-                                    onClick={() => toggleFavorite(product)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleFavorite(product);
+                                    }}
                                     style={{ top: '12px', right: '12px', width: '38px', height: '38px' }}
+                                    aria-label={isFavorite(product._id || product.id) ? 'Прибрати з обраного' : 'Додати в обране'}
                                 >
                                     <Heart size={18} fill={isFavorite(product._id || product.id) ? "currentColor" : "none"} />
                                 </button>
@@ -285,9 +421,28 @@ export default function ProductDetail() {
                                         </span>
                                     )}
                                     {(!product.stockStatus || product.stockStatus === 'in_stock') && (
-                                        typeof product.quantityAvailable === 'number'
-                                            ? <>В наявності: <strong>{product.quantityAvailable}</strong> {product.unit || 'шт'}</>
-                                            : <span style={{ color: '#22c55e', fontWeight: 700 }}>В наявності</span>
+                                        typeof product.quantityAvailable === 'number' && product.quantityAvailable <= 0 ? (
+                                            <span style={{ color: '#6b7280', fontWeight: 600, fontSize: '0.92rem', lineHeight: 1.45 }}>
+                                                {product.rentOutNextAvailableFrom && (
+                                                    <>
+                                                        Буде доступно з <strong>{formatUkDateFromIso(product.rentOutNextAvailableFrom)}</strong>
+                                                        {product.rentOutBusyUntil && (
+                                                            <> · в оренді до <strong>{formatUkDateFromIso(product.rentOutBusyUntil)}</strong></>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {!product.rentOutNextAvailableFrom && product.rentOutBusyUntil && (
+                                                    <>В оренді до <strong>{formatUkDateFromIso(product.rentOutBusyUntil)}</strong></>
+                                                )}
+                                                {!product.rentOutNextAvailableFrom && !product.rentOutBusyUntil && (
+                                                    <span style={{ color: '#ef4444', fontWeight: 700 }}>Немає в наявності</span>
+                                                )}
+                                            </span>
+                                        ) : typeof product.quantityAvailable === 'number' ? (
+                                            <>В наявності: <strong>{product.quantityAvailable}</strong> {product.unit || 'шт'}</>
+                                        ) : (
+                                            <span style={{ color: '#22c55e', fontWeight: 700 }}>В наявності</span>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -339,20 +494,7 @@ export default function ProductDetail() {
                         </div>
                     </div>
                 </div>
-                {imageZoomOpen && activeImg && (
-                    <div className="image-lightbox" onClick={() => setImageZoomOpen(false)}>
-                        <div className="image-lightbox-inner" onClick={e => e.stopPropagation()}>
-                            <button
-                                className="image-lightbox-close"
-                                onClick={() => setImageZoomOpen(false)}
-                                aria-label="Закрити зображення"
-                            >
-                                ×
-                            </button>
-                            <img src={activeImg} alt={product.name} className="image-lightbox-img" />
-                        </div>
-                    </div>
-                )}
+                {renderImageLightbox()}
             </div>
         );
     }
@@ -366,8 +508,14 @@ export default function ProductDetail() {
 
                 <div className="product-main-grid">
                         <div className="product-gallery">
-                        <div className="main-image-container" onClick={() => setImageZoomOpen(true)}>
-                            <img src={activeImg} alt={product.name} className="main-image" />
+                        <div className="main-image-container">
+                            <img
+                                src={activeImg}
+                                alt={product.name}
+                                className="main-image"
+                                onClick={() => setImageZoomOpen(true)}
+                                style={{ cursor: 'zoom-in' }}
+                            />
                             {product.badge && (
                                 <span className={`badge badge-${product.badge.toLowerCase()}`} style={{ top: '20px', left: '20px' }}>
                                     {product.badge === 'SALE' ? 'Розпродаж' :
@@ -376,9 +524,40 @@ export default function ProductDetail() {
                                                 product.badge === 'TOP' ? 'Топ' : product.badge}
                                 </span>
                             )}
+                            {galleryUrls.length > 1 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="gallery-nav gallery-nav--prev"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            stepGallery(-1);
+                                        }}
+                                        aria-label="Попереднє зображення"
+                                    >
+                                        <ChevronLeft size={28} strokeWidth={2.25} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="gallery-nav gallery-nav--next"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            stepGallery(1);
+                                        }}
+                                        aria-label="Наступне зображення"
+                                    >
+                                        <ChevronRight size={28} strokeWidth={2.25} />
+                                    </button>
+                                </>
+                            )}
                             <button
+                                type="button"
                                 className={`wishlist-btn-large ${isFavorite(product._id || product.id) ? 'active' : ''}`}
-                                onClick={() => toggleFavorite(product)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(product);
+                                }}
+                                aria-label={isFavorite(product._id || product.id) ? 'Прибрати з обраного' : 'Додати в обране'}
                             >
                                 <Heart size={24} fill={isFavorite(product._id || product.id) ? "currentColor" : "none"} />
                             </button>
@@ -659,20 +838,7 @@ export default function ProductDetail() {
                     </div>
                 </div>
             </div>
-            {imageZoomOpen && activeImg && (
-                <div className="image-lightbox" onClick={() => setImageZoomOpen(false)}>
-                    <div className="image-lightbox-inner" onClick={e => e.stopPropagation()}>
-                        <button
-                            className="image-lightbox-close"
-                            onClick={() => setImageZoomOpen(false)}
-                            aria-label="Закрити зображення"
-                        >
-                            ×
-                        </button>
-                        <img src={activeImg} alt={product.name} className="image-lightbox-img" />
-                    </div>
-                </div>
-            )}
+            {renderImageLightbox()}
         </div>
     );
 }

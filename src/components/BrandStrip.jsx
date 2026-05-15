@@ -1,14 +1,13 @@
 import React, { memo, useState, useEffect } from 'react';
-import { API_URL } from '../apiConfig';
+import { brandsApi } from '../services/api';
 import './BrandStrip.css';
 
 const BrandStrip = memo(function BrandStrip() {
     const [brands, setBrands] = useState([]);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/brands`)
-            .then(res => res.json())
-            .then(data => setBrands(data))
+        brandsApi.list()
+            .then(data => setBrands(Array.isArray(data) ? data : []))
             .catch(err => console.error('Error fetching brands:', err));
     }, []);
 

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { API_URL } from '../../apiConfig';
-import { useAuth } from '../../context/AuthContext';
+import React, { useEffect, useState } from 'react';
+import { warehouseApi } from '../../services/api';
+import { AdminPageHeader } from '../../components/admin';
 import './Admin.css';
 
 const fmt = (d) => {
@@ -10,15 +10,15 @@ const fmt = (d) => {
 };
 
 export default function AdminAdminHome() {
-    const { token } = useAuth();
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [busyId, setBusyId] = useState(null);
 
-    const headers = useMemo(() => ({
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }), [token]);
+    const reload = async () => {
+        const data = await warehouseApi.deleteRequests();
+        setRows(Array.isArray(data) ? data : []);
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -26,9 +26,7 @@ export default function AdminAdminHome() {
             setLoading(true);
             setError('');
             try {
-                const res = await fetch(`${API_URL}/api/warehouse/delete-requests`, { headers });
-                if (!res.ok) throw new Error('Не вдалося завантажити запити');
-                const data = await res.json();
+                const data = await warehouseApi.deleteRequests();
                 if (!cancelled) setRows(Array.isArray(data) ? data : []);
             } catch (e) {
                 if (!cancelled) setError(e.message || 'Помилка');
@@ -37,24 +35,17 @@ export default function AdminAdminHome() {
             }
         })();
         return () => { cancelled = true; };
-    }, [headers]);
-
-    const reload = async () => {
-        const res = await fetch(`${API_URL}/api/warehouse/delete-requests`, { headers });
-        const data = res.ok ? await res.json() : [];
-        setRows(Array.isArray(data) ? data : []);
-    };
+    }, []);
 
     const handleAction = async (id, action) => {
         if (!id) return;
         setBusyId(id);
         try {
-            const res = await fetch(`${API_URL}/api/warehouse/delete-requests/${id}/${action}`, {
-                method: 'POST',
-                headers
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.message || 'Не вдалося виконати дію');
+            if (action === 'approve') {
+                await warehouseApi.approveDeleteRequest(id);
+            } else {
+                await warehouseApi.rejectDeleteRequest(id);
+            }
             await reload();
         } catch (e) {
             window.alert(e.message || 'Помилка');
@@ -65,9 +56,7 @@ export default function AdminAdminHome() {
 
     return (
         <div className="admin-products">
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>Адмін · головна</h1>
-            </div>
+            <AdminPageHeader title="Адмін · головна" subtitle={rows.length > 0 ? `${rows.length} запитів на розгляді` : 'Запити на видалення складів'} />
 
             <div className="admin-section">
                 <h2 style={{ fontSize: '1rem', marginBottom: '12px', fontWeight: 800 }}>Запити на видалення складів</h2>

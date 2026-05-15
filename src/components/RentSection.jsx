@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { getCategorySlug } from '../utils/categoryMapping';
-import { API_URL } from '../apiConfig';
+import { productsApi } from '../services/api';
 import './RentSection.css';
 
 const isRentUnavailableNow = (product) => {
@@ -29,8 +29,7 @@ export default function RentSection() {
     const { showToast } = useToast();
 
     useEffect(() => {
-        fetch(`${API_URL}/api/products?isRent=true`)
-            .then(res => res.json())
+        productsApi.list({ isRent: true })
             .then(data => {
                 const rows = Array.isArray(data) ? data : [];
                 // На головній показуємо тільки товари, які реально доступні до оренди "зараз".

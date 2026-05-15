@@ -1,4 +1,10 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+/* Prevent Tailwind preflight from breaking the public site font */
+@layer base {
+    body { font-family: 'Outfit', sans-serif; }
+}
 
 :root {
   --color-primary: #D62828;

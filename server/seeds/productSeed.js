@@ -80,7 +80,19 @@ const products = [
 const seedDB = async () => {
     try {
         await sequelize.authenticate();
-        await sequelize.sync({ force: true }); // This will drop the table and recreate it
+
+        const [[{ c }]] = await sequelize.query('SELECT COUNT(*)::int AS c FROM "Products"').catch(() => [[{ c: 0 }]]);
+        if (c > 0) {
+            console.error(`REFUSED: "Products" already has ${c} rows. seed uses sync({ force: true }) and would DELETE all data.`);
+            console.error('Use only on an empty dev database.');
+            process.exit(1);
+        }
+        if (process.env.NODE_ENV === 'production') {
+            console.error('REFUSED: npm run seed is disabled when NODE_ENV=production.');
+            process.exit(1);
+        }
+
+        await sequelize.sync({ force: true }); // DEV ONLY — drops and recreates tables
         await Product.bulkCreate(products);
         console.log('Database Seeded with PostgreSQL!');
         process.exit();

@@ -4,7 +4,7 @@ import { Filter, ChevronDown, Plus, X, Heart, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategoryName, getCategorySlug } from '../utils/categoryMapping';
-import { API_URL } from '../apiConfig';
+import { productsApi, categoriesApi, brandsApi } from '../services/api';
 import './Shop.css';
 
 export default function Shop() {
@@ -28,8 +28,8 @@ export default function Shop() {
     useEffect(() => {
         // Fetch categories and brands
         Promise.all([
-            fetch(`${API_URL}/api/categories`).then(res => res.json()),
-            fetch(`${API_URL}/api/brands?context=shop`).then(res => res.json())
+            categoriesApi.list(),
+            brandsApi.list({ context: 'shop' }),
         ]).then(([catData, brandData]) => {
             setCategories(catData);
             setBrands(brandData);
@@ -88,15 +88,9 @@ export default function Shop() {
             params.category = getCategoryName(activeCategorySlug);
         }
 
-        const query = new URLSearchParams(params).toString();
-
-        fetch(`${API_URL}/api/products?${query}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Помилка завантаження товарів');
-                return res.json();
-            })
+        productsApi.list(params)
             .then(data => {
-                setProducts(data);
+                setProducts(Array.isArray(data) ? data : []);
                 setLoading(false);
             })
             .catch(err => {

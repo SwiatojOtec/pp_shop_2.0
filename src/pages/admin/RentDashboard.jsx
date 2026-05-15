@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Wrench, CheckCircle, Clock, AlertTriangle, Plus, FileClock, WrenchIcon, ShieldAlert } from 'lucide-react';
-import { API_URL } from '../../apiConfig';
+import { productsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { AdminPageHeader } from '../../components/admin';
 
 export default function RentDashboard() {
     const { user } = useAuth();
@@ -10,8 +11,7 @@ export default function RentDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/products?isRent=true&includeHiddenRent=true`)
-            .then(res => res.ok ? res.json() : [])
+        productsApi.list({ isRent: true, includeHiddenRent: true })
             .then(data => {
                 const rows = Array.isArray(data) ? data : [];
                 setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
@@ -46,12 +46,10 @@ export default function RentDashboard() {
 
     return (
         <div className="admin-dashboard">
-            <div className="dashboard-header">
-                <h1 className="admin-title">Оренда інструменту</h1>
-                <p className="admin-subtitle">
-                    Вітаємо{user ? `, ${user.name}${user.lastName ? ' ' + user.lastName : ''}` : ''}! Ось поточний стан вашого складу.
-                </p>
-            </div>
+            <AdminPageHeader
+                title="Оренда інструменту"
+                subtitle={`Вітаємо${user ? `, ${user.name}${user.lastName ? ' ' + user.lastName : ''}` : ''}! Ось поточний стан вашого складу.`}
+            />
 
             {/* Stat Cards */}
             <div className="stats-grid">

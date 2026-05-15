@@ -1,125 +1,158 @@
-import { API_URL } from '../../apiConfig';
-import React, { useState, useEffect } from 'react';
-import { Trash2, CheckCircle, Clock, Truck, Search, Filter, Edit2, Plus, X, Save, ClipboardList } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useState, useEffect } from 'react';
+import { ordersApi, productsApi, rentalApplicationsApi } from '../../services/api';
+import {
+    Trash2, Search, Filter, Save, ClipboardList,
+    ChevronDown, ChevronUp, Plus, X,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AdminPageHeader, ConfirmDialog } from '../../components/admin';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import './Admin.css';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const STATUS_OPTIONS = [
+    { value: 'pending',       label: 'Новий'             },
+    { value: 'invoice_sent',  label: 'Рахунок виставлено' },
+    { value: 'paid',          label: 'Оплачено'           },
+    { value: 'processing',    label: 'В роботі'           },
+    { value: 'completed',     label: 'Виконано'           },
+    { value: 'cancelled',     label: 'Скасовано'          },
+];
+
+const STATUS_VARIANT = {
+    pending:      'warning',
+    invoice_sent: 'secondary',
+    paid:         'success',
+    processing:   'default',
+    completed:    'success',
+    cancelled:    'danger',
+};
+
+function getLabel(status) {
+    return STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function AdminOrders() {
-    const { token } = useAuth();
-    const navigate = useNavigate();
-    const [orders, setOrders] = useState([]);
-    const [products, setProducts] = useState([]);
+    const navigate  = useNavigate();
+
+    const [orders,    setOrders]    = useState([]);
+    const [products,  setProducts]  = useState([]);
+    const [loading,   setLoading]   = useState(true);
+    const [search,    setSearch]    = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [expanded,  setExpanded]  = useState(null);  // order id
+    const [draft,     setDraft]     = useState(null);   // editable copy of expanded order
+    const [productSearch, setProductSearch] = useState('');
+    const [saving,    setSaving]    = useState(false);
     const [converting, setConverting] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [productSearchTerm, setProductSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('All');
-    const [editingOrder, setEditingOrder] = useState(null);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     useEffect(() => {
-        fetchOrders();
-        fetchProducts();
-    }, [token]);
+        loadOrders();
+        loadProducts();
+    }, []);
 
-    const authHeaders = () => ({ Authorization: `Bearer ${token}` });
-
-    const fetchOrders = async () => {
+    async function loadOrders() {
+        setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/orders`, { headers: authHeaders() });
-            if (res.ok) {
-                const data = await res.json();
-                setOrders(Array.isArray(data) ? data : []);
-            }
-        } catch (err) {
-            console.error('Error fetching orders:', err);
+            const data = await ordersApi.list();
+            setOrders(Array.isArray(data) ? data : []);
+        } catch {
+            setOrders([]);
+        } finally {
+            setLoading(false);
         }
-    };
+    }
 
-    const fetchProducts = async () => {
+    async function loadProducts() {
         try {
-            const res = await fetch(`${API_URL}/api/products`);
-            if (res.ok) {
-                const data = await res.json();
-                setProducts(Array.isArray(data) ? data : []);
-            }
-        } catch (err) {
-            console.error('Error fetching products:', err);
+            const data = await productsApi.list();
+            setProducts(Array.isArray(data) ? data : []);
+        } catch {
+            setProducts([]);
         }
-    };
+    }
 
-    const updateStatus = async (id, status) => {
-        await fetch(`${API_URL}/api/orders/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', ...authHeaders() },
-            body: JSON.stringify({ status })
-        });
-        fetchOrders();
-    };
+    function toggleExpand(order) {
+        if (expanded === order.id) {
+            setExpanded(null);
+            setDraft(null);
+        } else {
+            setExpanded(order.id);
+            setDraft({ ...order, items: order.items ? [...order.items.map((i) => ({ ...i }))] : [] });
+            setProductSearch('');
+        }
+    }
 
-    const handleSaveEdit = async () => {
+    async function updateStatus(id, status) {
         try {
-            const res = await fetch(`${API_URL}/api/orders/${editingOrder.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                body: JSON.stringify(editingOrder)
-            });
-            if (res.ok) {
-                setIsEditModalOpen(false);
-                setEditingOrder(null);
-                fetchOrders();
-            }
+            await ordersApi.update(id, { status });
+            setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
         } catch (err) {
-            alert('Помилка при збереженні');
+            alert(err.message || 'Помилка оновлення статусу');
         }
-    };
+    }
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Видалити замовлення?')) {
-            await fetch(`${API_URL}/api/orders/${id}`, { method: 'DELETE', headers: authHeaders() });
-            fetchOrders();
+    async function handleSave() {
+        setSaving(true);
+        try {
+            const updated = await ordersApi.update(draft.id, draft);
+            setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o));
+            setExpanded(null);
+            setDraft(null);
+        } catch (err) {
+            alert(err.message || 'Помилка збереження');
+        } finally {
+            setSaving(false);
         }
-    };
+    }
 
-    // IDs of rental products for quick lookup
-    const rentProductIds = new Set(products.filter(p => p.isRent).map(p => p.id));
+    async function handleDelete() {
+        if (!deleteTarget) return;
+        try {
+            await ordersApi.remove(deleteTarget.id);
+            setOrders((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+            if (expanded === deleteTarget.id) { setExpanded(null); setDraft(null); }
+        } catch (err) {
+            alert(err.message || 'Помилка видалення');
+        } finally {
+            setDeleteTarget(null);
+        }
+    }
 
-    const orderHasRentItems = (order) =>
-        order.items && order.items.some(i => rentProductIds.has(i.id));
+    const rentProductIds = new Set(products.filter((p) => p.isRent).map((p) => p.id));
 
-    const convertToRentalApp = async (order) => {
-        if (!window.confirm(`Перенести замовлення ${order.orderNumber || '#' + order.id} до заявок оренди?`)) return;
+    async function convertToRental(order) {
         setConverting(order.id);
         try {
-            // Map order items to rental application format
             const rentItems = (order.items || [])
-                .filter(i => rentProductIds.has(i.id))
-                .map(i => {
-                    const fullProduct = products.find(p => p.id === i.id) || {};
+                .filter((i) => rentProductIds.has(i.id))
+                .map((i) => {
+                    const full = products.find((p) => p.id === i.id) || {};
                     return {
                         productId: i.id,
                         name: i.name,
-                        serialNumber: fullProduct.serialNumber || '',
-                        inventoryNumber: fullProduct.inventoryNumber || '',
-                        technicalCondition: fullProduct.technicalCondition || 'справний',
+                        serialNumber: full.serialNumber || '',
+                        inventoryNumber: full.inventoryNumber || '',
+                        technicalCondition: full.technicalCondition || 'справний',
                         unit: i.unit || 'шт',
                         quantity: i.quantity || 1,
-                        weightTotal: fullProduct.weightTotal || '',
-                        replacementCostPerUnit: parseFloat(fullProduct.replacementCost || 0),
-                        replacementCostTotal: parseFloat(fullProduct.replacementCost || 0) * (i.quantity || 1),
+                        weightTotal: full.weightTotal || '',
+                        replacementCostPerUnit: parseFloat(full.replacementCost || 0),
+                        replacementCostTotal: parseFloat(full.replacementCost || 0) * (i.quantity || 1),
                         depositPercent: 30,
-                        depositAmount: (parseFloat(fullProduct.replacementCost || 0) * (i.quantity || 1) * 0.3).toFixed(2),
+                        depositAmount: (parseFloat(full.replacementCost || 0) * (i.quantity || 1) * 0.3).toFixed(2),
                         pricePerDay: parseFloat(i.price || 0),
-                        rentFrom: '',
-                        rentTo: '',
-                        days: 0,
-                        totalRental: '',
-                        kitItems: fullProduct.kitItems || [],
+                        rentFrom: '', rentTo: '', days: 0, totalRental: '',
+                        kitItems: full.kitItems || [],
                     };
                 });
 
             const totalDeposit = rentItems.reduce((s, i) => s + parseFloat(i.depositAmount || 0), 0);
-
             const payload = {
                 clientName: order.customerName || '',
                 clientPhone: order.customerPhone || '',
@@ -131,294 +164,262 @@ export default function AdminOrders() {
                 depositAmount: totalDeposit.toFixed(2),
             };
 
-            const res = await fetch(`${API_URL}/api/rental-applications`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify(payload),
-            });
-            if (!res.ok) throw new Error('Помилка створення заявки');
-            const created = await res.json();
+            const created = await rentalApplicationsApi.create(payload);
             navigate(`/admin/rental-applications/${created.id}`);
         } catch (err) {
             alert(`Помилка: ${err.message}`);
         } finally {
             setConverting(null);
         }
-    };
+    }
 
-    const addItemToOrder = (product) => {
-        const newItem = {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            quantity: 1,
-            unit: product.unit,
-            packSize: product.packSize || 1
-        };
-        const updatedItems = [...editingOrder.items, newItem];
-        const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
-        setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
-        setProductSearchTerm(''); // Clear search after adding
-    };
+    // Draft helpers
+    function setDraftField(field, value) {
+        setDraft((prev) => ({ ...prev, [field]: value }));
+    }
 
-    const removeItemFromOrder = (index) => {
-        const updatedItems = editingOrder.items.filter((_, i) => i !== index);
-        const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
-        setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
-    };
+    function addItem(product) {
+        setDraft((prev) => {
+            const items = [...prev.items, { id: product.id, name: product.name, price: product.price, quantity: 1, unit: product.unit, packSize: product.packSize || 1 }];
+            return { ...prev, items, totalAmount: calcTotal(items) };
+        });
+        setProductSearch('');
+    }
 
-    const updateItemQuantity = (index, qty) => {
-        const updatedItems = [...editingOrder.items];
-        updatedItems[index].quantity = parseFloat(qty) || 0;
-        const newTotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity * (item.packSize || 1)), 0);
-        setEditingOrder({ ...editingOrder, items: updatedItems, totalAmount: newTotal });
-    };
+    function removeItem(idx) {
+        setDraft((prev) => {
+            const items = prev.items.filter((_, i) => i !== idx);
+            return { ...prev, items, totalAmount: calcTotal(items) };
+        });
+    }
 
-    const filteredOrders = orders.filter(o => {
-        const matchesSearch =
-            (o.customerName && o.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (o.customerPhone && o.customerPhone.includes(searchTerm)) ||
-            (o.orderNumber && o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesStatus = filterStatus === 'All' || o.status === filterStatus;
-        return matchesSearch && matchesStatus;
+    function updateQty(idx, qty) {
+        setDraft((prev) => {
+            const items = prev.items.map((item, i) => i === idx ? { ...item, quantity: parseFloat(qty) || 0 } : item);
+            return { ...prev, items, totalAmount: calcTotal(items) };
+        });
+    }
+
+    function calcTotal(items) {
+        return items.reduce((s, i) => s + (i.price * i.quantity * (i.packSize || 1)), 0);
+    }
+
+    const filteredOrders = orders.filter((o) => {
+        const q = search.toLowerCase();
+        const matchSearch = !q || (o.customerName || '').toLowerCase().includes(q) || (o.customerPhone || '').includes(q) || (o.orderNumber || '').toLowerCase().includes(q);
+        const matchStatus = statusFilter === 'All' || o.status === statusFilter;
+        return matchSearch && matchStatus;
     });
 
-    const filteredProducts = productSearchTerm.length > 1
-        ? products.filter(p =>
-            p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(productSearchTerm.toLowerCase()))
+    const suggestedProducts = productSearch.length > 1
+        ? products.filter((p) =>
+            p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+            (p.sku && p.sku.toLowerCase().includes(productSearch.toLowerCase()))
         ).slice(0, 8)
         : [];
 
-    const getStatusLabel = (status) => {
-        const labels = {
-            'pending': 'Новий',
-            'invoice_sent': 'Рахунок виставлено',
-            'paid': 'Оплачено',
-            'processing': 'В роботі',
-            'completed': 'Виконано',
-            'cancelled': 'Скасовано'
-        };
-        return labels[status] || status;
-    };
-
     return (
-        <div className="admin-orders">
-            <h1 className="admin-title" style={{ marginBottom: '30px' }}>Замовлення</h1>
+        <div>
+            <AdminPageHeader title="Замовлення" subtitle={`${filteredOrders.length} з ${orders.length}`} />
 
-            <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                <div className="search-box" style={{ flex: 1, position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', background: 'white', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
                     <input
                         type="text"
                         placeholder="Пошук за ім'ям, телефоном або № замовлення..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{ width: '100%', padding: '9px 9px 9px 38px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', fontSize: '0.9rem' }}
                     />
                 </div>
-                <div className="filter-box" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Filter size={18} style={{ color: '#999' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Filter size={16} style={{ color: '#9ca3af', flexShrink: 0 }} />
                     <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="admin-select-mini"
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none', minWidth: '180px' }}
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', fontSize: '0.9rem', background: 'white' }}
                     >
                         <option value="All">Всі статуси</option>
-                        <option value="pending">Новий</option>
-                        <option value="invoice_sent">Рахунок виставлено</option>
-                        <option value="paid">Оплачено</option>
-                        <option value="processing">В роботі</option>
-                        <option value="completed">Виконано</option>
-                        <option value="cancelled">Скасовано</option>
+                        {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                 </div>
             </div>
 
+            {/* Table */}
             <div className="admin-table-container">
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>№ Замовлення</th>
-                            <th>Клієнт</th>
-                            <th>Товари</th>
-                            <th>Доставка</th>
-                            <th>Сума</th>
-                            <th>Статус</th>
-                            <th>Дії</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredOrders.map(order => (
-                            <tr key={order.id}>
-                                <td style={{ fontWeight: 800, color: 'var(--admin-accent)' }}>
-                                    {order.orderNumber || `#${order.id}`}
-                                </td>
-                                <td>
-                                    <div className="client-info" style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <strong style={{ fontSize: '0.95rem' }}>{order.customerName}</strong>
-                                        <span style={{ color: '#666', fontSize: '0.85rem' }}>{order.customerPhone}</span>
-                                        {order.customerEmail && <span style={{ color: '#999', fontSize: '0.8rem' }}>{order.customerEmail}</span>}
-                                    </div>
-                                </td>
-                                <td style={{ maxWidth: '250px' }}>
-                                    <div className="order-items-summary" style={{ fontSize: '0.85rem' }}>
-                                        {order.items && order.items.map((item, idx) => (
-                                            <div key={idx} style={{ marginBottom: '2px' }}>
-                                                • {item.name} x {item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </td>
-                                <td style={{ fontSize: '0.85rem', color: '#666' }}>
-                                    <div style={{ fontWeight: 600, color: '#333' }}>
-                                        {order.deliveryMethod === 'pickup' ? 'Самовивіз' : 'Доставка'}
-                                    </div>
-                                    <div style={{ fontSize: '0.75rem' }}>{order.address}</div>
-                                </td>
-                                <td style={{ fontWeight: 800 }}>{parseFloat(order.totalAmount).toLocaleString()} ₴</td>
-                                <td>
-                                    <div className="status-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                        <span className={`status-badge ${order.status}`} style={{ textAlign: 'center' }}>
-                                            {getStatusLabel(order.status)}
-                                        </span>
-                                        <select
-                                            value={order.status}
-                                            onChange={(e) => updateStatus(order.id, e.target.value)}
-                                            style={{ padding: '4px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}
-                                        >
-                                            <option value="pending">Новий</option>
-                                            <option value="invoice_sent">Рахунок виставлено</option>
-                                            <option value="paid">Оплачено</option>
-                                            <option value="processing">В роботі</option>
-                                            <option value="completed">Виконано</option>
-                                            <option value="cancelled">Скасовано</option>
-                                        </select>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                        {orderHasRentItems(order) && (
-                                            <button
-                                                onClick={() => convertToRentalApp(order)}
-                                                disabled={converting === order.id}
-                                                className="action-btn"
-                                                title="Перенести в заявку оренди"
-                                                style={{ color: '#7c3aed' }}
-                                            >
-                                                <ClipboardList size={18} />
-                                            </button>
-                                        )}
-                                        <button onClick={() => { setEditingOrder({ ...order }); setIsEditModalOpen(true); }} className="action-btn" title="Редагувати">
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button onClick={() => handleDelete(order.id)} className="action-btn delete" title="Видалити">
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {filteredOrders.length === 0 && (
-                            <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Замовлень не знайдено</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                {loading ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>Завантаження...</div>
+                ) : filteredOrders.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>Замовлень не знайдено</div>
+                ) : (
+                    filteredOrders.map((order) => (
+                        <div key={order.id} className="order-row-wrap">
+                            {/* ── Summary row ── */}
+                            <div
+                                className={`order-row-summary${expanded === order.id ? ' is-open' : ''}`}
+                                onClick={() => toggleExpand(order)}
+                            >
+                                <div className="order-row-num">{order.orderNumber || `#${order.id}`}</div>
 
-            {isEditModalOpen && editingOrder && (
-                <div className="admin-modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                    <div className="admin-modal" style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                            <h2 style={{ margin: 0 }}>Редагування замовлення {editingOrder.orderNumber}</h2>
-                            <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
-                        </div>
-
-                        <div className="admin-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-                            <div className="form-group">
-                                <label>Ім'я клієнта</label>
-                                <input type="text" value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label>Телефон</label>
-                                <input type="text" value={editingOrder.customerPhone} onChange={e => setEditingOrder({ ...editingOrder, customerPhone: e.target.value })} />
-                            </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                <label>Адреса / Спосіб доставки</label>
-                                <input type="text" value={editingOrder.address} onChange={e => setEditingOrder({ ...editingOrder, address: e.target.value })} />
-                            </div>
-                        </div>
-
-                        <h3 style={{ marginBottom: '15px' }}>Товари в замовленні</h3>
-                        <div className="edit-order-items" style={{ marginBottom: '20px' }}>
-                            {editingOrder.items.map((item, idx) => (
-                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 40px', gap: '15px', alignItems: 'center', marginBottom: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '8px' }}>
-                                    <div style={{ fontWeight: 600 }}>{item.name}</div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        <input
-                                            type="number"
-                                            value={item.quantity}
-                                            onChange={e => updateItemQuantity(idx, e.target.value)}
-                                            style={{ width: '70px', padding: '5px' }}
-                                        />
-                                        <span>{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
-                                    </div>
-                                    <div style={{ textAlign: 'right', fontWeight: 700 }}>
-                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
-                                    </div>
-                                    <button onClick={() => removeItemFromOrder(idx)} style={{ color: '#e63946', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                <div className="order-row-client">
+                                    <span className="font-semibold">{order.customerName}</span>
+                                    <span className="text-sm text-gray-500">{order.customerPhone}</span>
                                 </div>
-                            ))}
-                        </div>
 
-                        <div className="add-item-section" style={{ marginBottom: '30px', position: 'relative' }}>
-                            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>Додати товар</label>
-                            <div style={{ position: 'relative' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Почніть вводити назву або артикул товару..."
-                                    value={productSearchTerm}
-                                    onChange={(e) => setProductSearchTerm(e.target.value)}
-                                    style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '8px', border: '1px solid #ddd' }}
-                                />
+                                <div className="order-row-items text-sm text-gray-600">
+                                    {(order.items || []).slice(0, 2).map((i, idx) => (
+                                        <span key={idx}>{i.name} ×{i.quantity}{idx < Math.min(order.items.length, 2) - 1 ? ', ' : ''}</span>
+                                    ))}
+                                    {(order.items || []).length > 2 && <span className="text-gray-400"> +{order.items.length - 2}</span>}
+                                </div>
+
+                                <div className="order-row-amount font-bold">{parseFloat(order.totalAmount).toLocaleString()} ₴</div>
+
+                                <div className="order-row-status" onClick={(e) => e.stopPropagation()}>
+                                    <Badge variant={STATUS_VARIANT[order.status] || 'secondary'}>
+                                        {getLabel(order.status)}
+                                    </Badge>
+                                    <select
+                                        value={order.status}
+                                        onChange={(e) => updateStatus(order.id, e.target.value)}
+                                        className="order-status-select"
+                                        title="Змінити статус"
+                                    >
+                                        {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="order-row-chevron">
+                                    {expanded === order.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                </div>
                             </div>
 
-                            {filteredProducts.length > 0 && (
-                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #ddd', borderRadius: '8px', marginTop: '5px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10 }}>
-                                    {filteredProducts.map(p => (
-                                        <div
-                                            key={p.id}
-                                            onClick={() => addItemToOrder(p)}
-                                            style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                                            onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
-                                            onMouseLeave={(e) => e.target.style.background = 'white'}
-                                        >
-                                            <div>
-                                                <div style={{ fontWeight: 600 }}>{p.name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#888' }}>SKU: {p.sku}</div>
+                            {/* ── Expanded detail panel ── */}
+                            {expanded === order.id && draft && (
+                                <div className="order-row-detail">
+                                    {/* Client info */}
+                                    <div className="order-detail-section">
+                                        <h4 className="order-detail-label">Клієнт</h4>
+                                        <div className="order-detail-grid2">
+                                            <div className="form-group">
+                                                <label>Ім'я</label>
+                                                <input type="text" value={draft.customerName || ''} onChange={(e) => setDraftField('customerName', e.target.value)} />
                                             </div>
-                                            <div style={{ fontWeight: 700, color: 'var(--admin-accent)' }}>{p.price} ₴</div>
+                                            <div className="form-group">
+                                                <label>Телефон</label>
+                                                <input type="text" value={draft.customerPhone || ''} onChange={(e) => setDraftField('customerPhone', e.target.value)} />
+                                            </div>
+                                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                                <label>Адреса доставки</label>
+                                                <input type="text" value={draft.address || ''} onChange={(e) => setDraftField('address', e.target.value)} />
+                                            </div>
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    {/* Items */}
+                                    <div className="order-detail-section">
+                                        <h4 className="order-detail-label">Товари</h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                                            {draft.items.map((item, idx) => (
+                                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 110px 100px 36px', gap: '10px', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                                    <span className="font-medium text-sm">{item.name}</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            value={item.quantity}
+                                                            onChange={(e) => updateQty(idx, e.target.value)}
+                                                            style={{ width: '60px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem' }}
+                                                        />
+                                                        <span className="text-xs text-gray-500">{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
+                                                    </div>
+                                                    <span className="text-right font-bold text-sm">
+                                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
+                                                    </span>
+                                                    <button type="button" onClick={() => removeItem(idx)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Add product search */}
+                                        <div style={{ position: 'relative', maxWidth: '420px' }}>
+                                            <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                                            <input
+                                                type="text"
+                                                placeholder="Додати товар: введіть назву або артикул..."
+                                                value={productSearch}
+                                                onChange={(e) => setProductSearch(e.target.value)}
+                                                style={{ width: '100%', padding: '8px 8px 8px 34px', border: '1px dashed #d1d5db', borderRadius: '8px', fontSize: '0.88rem', outline: 'none' }}
+                                            />
+                                            {suggestedProducts.length > 0 && (
+                                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 20, maxHeight: '260px', overflowY: 'auto' }}>
+                                                    {suggestedProducts.map((p) => (
+                                                        <div
+                                                            key={p.id}
+                                                            onClick={() => addItem(p)}
+                                                            style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between' }}
+                                                            className="hover:bg-gray-50"
+                                                        >
+                                                            <div>
+                                                                <div className="font-semibold text-sm">{p.name}</div>
+                                                                {p.sku && <div className="text-xs text-gray-400">SKU: {p.sku}</div>}
+                                                            </div>
+                                                            <span className="font-bold text-[#e63946]">{p.price} ₴</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #e5e7eb', marginTop: '8px', flexWrap: 'wrap', gap: '10px' }}>
+                                        <div className="text-sm">
+                                            Разом: <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>{parseFloat(draft.totalAmount || 0).toLocaleString()} ₴</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                            {order.items && order.items.some((i) => rentProductIds.has(i.id)) && (
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => convertToRental(order)}
+                                                    disabled={converting === order.id}
+                                                    title="Перенести в заявку оренди"
+                                                    style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
+                                                >
+                                                    <ClipboardList size={14} /> До заявки оренди
+                                                </Button>
+                                            )}
+                                            <Button variant="ghost" size="sm" className="text-red-500" onClick={() => { setExpanded(null); setDraft(null); setDeleteTarget(order); }}>
+                                                <Trash2 size={14} /> Видалити
+                                            </Button>
+                                            <Button variant="secondary" size="sm" onClick={() => { setExpanded(null); setDraft(null); }}>
+                                                Скасувати
+                                            </Button>
+                                            <Button size="sm" onClick={handleSave} disabled={saving}>
+                                                <Save size={14} /> {saving ? 'Збереження...' : 'Зберегти'}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
+                    ))
+                )}
+            </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #eee', paddingTop: '20px' }}>
-                            <div style={{ fontSize: '1.2rem' }}>
-                                Разом: <strong style={{ fontSize: '1.5rem', color: 'var(--admin-accent)' }}>{editingOrder.totalAmount.toLocaleString()} ₴</strong>
-                            </div>
-                            <button onClick={handleSaveEdit} className="btn btn-primary" style={{ padding: '12px 30px' }}>
-                                <Save size={20} /> Зберегти зміни
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити замовлення?"
+                message={deleteTarget ? `Видалити замовлення ${deleteTarget.orderNumber || '#' + deleteTarget.id}? Цю дію неможливо скасувати.` : ''}
+                confirmText="Видалити"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </div>
     );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { API_URL } from '../../apiConfig';
+import { timesheetApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { downloadTimesheetXlsx } from '../../utils/timesheetExport';
 import './PanPivdenbud.css';
@@ -193,10 +193,7 @@ export default function PanPivdenbud() {
         if (!token || activeTab !== 'timesheet' || authLoading || !user) return;
         setLoading(true);
         if (isViewer) {
-            fetch(`${API_URL}/api/timesheet/overview?year=${year}&month=${month}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
-                .then(r => (r.ok ? r.json() : null))
+            timesheetApi.overview({ year, month })
                 .then(data => {
                     if (!data) return;
                     setOverviewSheets(Array.isArray(data.sheets) ? data.sheets : []);
@@ -204,10 +201,7 @@ export default function PanPivdenbud() {
                 .finally(() => setLoading(false));
             return;
         }
-        fetch(`${API_URL}/api/timesheet?year=${year}&month=${month}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-            .then(r => (r.ok ? r.json() : null))
+        timesheetApi.list({ year, month })
             .then(data => {
                 if (!data) return;
                 setLabels(data.labels || ['', '', '']);
@@ -302,18 +296,7 @@ export default function PanPivdenbud() {
             }
         }
         try {
-            const res = await fetch(`${API_URL}/api/timesheet/month`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ year, month, cells })
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || 'Помилка збереження');
-            }
+            await timesheetApi.saveMonth({ year, month, cells });
             alert('Табель збережено');
         } catch (e) {
             alert(e.message);

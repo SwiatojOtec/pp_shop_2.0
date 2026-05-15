@@ -31,3 +31,6 @@ dist
 .env.local
 .env.*.local
 
+# DB backups (keep locally, not in git)
+server/backups/
+

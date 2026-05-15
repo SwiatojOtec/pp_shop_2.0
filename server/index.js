@@ -27,7 +27,7 @@ const warehouseDashboardRoutes = require('./routes/warehouseDashboardRoutes');
 require('./models/Warehouse');
 require('./models/InventoryItem');
 require('./models/WarehouseEvent');
-const { ensureMainWarehouse, ensureRepairWarehouse, bootstrapRentInventoryFromProducts } = require('./services/inventoryService');
+const { ensureMainWarehouse, ensureRepairWarehouse, bootstrapRentInventoryFromProducts, syncAllRentProductQuantitiesFromApplications } = require('./services/inventoryService');
 const app = express();
 
 async function ensureTimesheetIndexes() {
@@ -48,12 +48,11 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            return callback(null, true); // Allow all for now to debug, or specify origins
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
         }
-        return callback(null, true);
+        return callback(new Error(`CORS: origin "${origin}" not allowed`));
     },
     credentials: true
 }));
@@ -112,13 +111,16 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
     .then(() => {
         console.log('Connected to PostgreSQL');
-        return sequelize.sync({ alter: true });
+        // sync({ force: false }) creates missing tables but never alters existing ones.
+        // Schema changes should be applied via: npm run migrate (in server/)
+        return sequelize.sync({ force: false });
     })
     .then(async () => {
         await ensureTimesheetIndexes();
         await ensureMainWarehouse();
         await ensureRepairWarehouse();
         await bootstrapRentInventoryFromProducts();
+        await syncAllRentProductQuantitiesFromApplications();
     })
     .then(() => {
         console.log('Database synced');

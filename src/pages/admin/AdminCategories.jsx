@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { API_URL } from '../../apiConfig';
 import { Plus, Trash2, FolderTree, Award, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { categoriesApi, rentCategoriesApi, brandsApi } from '../../services/api';
+import { AdminPageHeader } from '../../components/admin';
 import './Admin.css';
-import { useAuth } from '../../context/AuthContext';
 
 export default function AdminSettings() {
     const [activeTab, setActiveTab] = useState('categories');
@@ -15,8 +15,6 @@ export default function AdminSettings() {
     const [newBrand, setNewBrand] = useState({ name: '', logo: '' });
     const [loading, setLoading] = useState(true);
     const [openRentGroups, setOpenRentGroups] = useState({});
-    const { token } = useAuth();
-
     useEffect(() => {
         fetchData();
     }, []);
@@ -24,18 +22,14 @@ export default function AdminSettings() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const headers = {};
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
-            const [catRes, rentCatRes, brandRes] = await Promise.all([
-                fetch(`${API_URL}/api/categories`, { headers }),
-                fetch(`${API_URL}/api/rent-categories`, { headers }),
-                fetch(`${API_URL}/api/brands`, { headers })
+            const [cats, rentCats, brandRows] = await Promise.all([
+                categoriesApi.list(),
+                rentCategoriesApi.list(),
+                brandsApi.list(),
             ]);
-            if (catRes.ok) setCategories(await catRes.json());
-            if (rentCatRes.ok) setRentCategories(await rentCatRes.json());
-            if (brandRes.ok) setBrands(await brandRes.json());
+            setCategories(Array.isArray(cats) ? cats : []);
+            setRentCategories(Array.isArray(rentCats) ? rentCats : []);
+            setBrands(Array.isArray(brandRows) ? brandRows : []);
         } catch (err) {
             console.error('Error fetching settings data:', err);
         } finally {
@@ -48,17 +42,9 @@ export default function AdminSettings() {
         e.preventDefault();
         if (!newCategory.trim()) return;
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(`${API_URL}/api/categories`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ name: newCategory.trim() })
-            });
-            if (res.ok) {
-                setNewCategory('');
-                fetchData();
-            }
+            await categoriesApi.create({ name: newCategory.trim() });
+            setNewCategory('');
+            fetchData();
         } catch (err) {
             console.error('Error adding category:', err);
         }
@@ -67,9 +53,7 @@ export default function AdminSettings() {
     const handleDeleteCategory = async (id) => {
         if (!window.confirm('Ви впевнені?')) return;
         try {
-            const headers = {};
-            if (token) headers.Authorization = `Bearer ${token}`;
-            await fetch(`${API_URL}/api/categories/${id}`, { method: 'DELETE', headers });
+            await categoriesApi.remove(id);
             fetchData();
         } catch (err) {
             console.error('Error deleting category:', err);
@@ -81,18 +65,13 @@ export default function AdminSettings() {
         e.preventDefault();
         if (!newRentCategory.trim()) return;
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(`${API_URL}/api/rent-categories`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ name: newRentCategory.trim(), group: newRentGroup.trim() || null })
+            await rentCategoriesApi.create({
+                name: newRentCategory.trim(),
+                group: newRentGroup.trim() || null,
             });
-            if (res.ok) {
-                setNewRentCategory('');
-                setNewRentGroup('');
-                fetchData();
-            }
+            setNewRentCategory('');
+            setNewRentGroup('');
+            fetchData();
         } catch (err) {
             console.error('Error adding rent category:', err);
         }
@@ -101,9 +80,7 @@ export default function AdminSettings() {
     const handleDeleteRentCategory = async (id) => {
         if (!window.confirm('Ви впевнені?')) return;
         try {
-            const headers = {};
-            if (token) headers.Authorization = `Bearer ${token}`;
-            await fetch(`${API_URL}/api/rent-categories/${id}`, { method: 'DELETE', headers });
+            await rentCategoriesApi.remove(id);
             fetchData();
         } catch (err) {
             console.error('Error deleting rent category:', err);
@@ -112,13 +89,7 @@ export default function AdminSettings() {
 
     const handleUpdateRentCategoryGroup = async (id, group) => {
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            await fetch(`${API_URL}/api/rent-categories/${id}`, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify({ group })
-            });
+            await rentCategoriesApi.update(id, { group });
             fetchData();
         } catch (err) {
             console.error('Error updating rent category group:', err);
@@ -130,17 +101,9 @@ export default function AdminSettings() {
         e.preventDefault();
         if (!newBrand.name.trim()) return;
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(`${API_URL}/api/brands`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(newBrand)
-            });
-            if (res.ok) {
-                setNewBrand({ name: '', logo: '' });
-                fetchData();
-            }
+            await brandsApi.create(newBrand);
+            setNewBrand({ name: '', logo: '' });
+            fetchData();
         } catch (err) {
             console.error('Error adding brand:', err);
         }
@@ -149,9 +112,7 @@ export default function AdminSettings() {
     const handleDeleteBrand = async (id) => {
         if (!window.confirm('Ви впевнені?')) return;
         try {
-            const headers = {};
-            if (token) headers.Authorization = `Bearer ${token}`;
-            await fetch(`${API_URL}/api/brands/${id}`, { method: 'DELETE', headers });
+            await brandsApi.remove(id);
             fetchData();
         } catch (err) {
             console.error('Error deleting brand:', err);
@@ -160,36 +121,17 @@ export default function AdminSettings() {
 
     const handleToggleRentCategory = async (id, value) => {
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(`${API_URL}/api/rent-categories/${id}`, {
-                method: 'PATCH',
-                headers,
-                body: JSON.stringify({ isActive: value })
-            });
-            if (res.ok) {
-                setRentCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: value } : c));
-            } else {
-                const data = await res.json();
-                alert(data.message || 'Помилка при зміні статусу категорії');
-            }
+            await rentCategoriesApi.patch(id, { isActive: value });
+            setRentCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: value } : c));
         } catch (err) {
-            console.error('Error toggling rent category:', err);
+            alert(err.message || 'Помилка при зміні статусу категорії');
         }
     };
 
     const handleToggleBrand = async (id, field, value) => {
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(`${API_URL}/api/brands/${id}`, {
-                method: 'PATCH',
-                headers,
-                body: JSON.stringify({ [field]: value })
-            });
-            if (res.ok) {
-                setBrands(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
-            }
+            await brandsApi.patch(id, { [field]: value });
+            setBrands(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
         } catch (err) {
             console.error('Error toggling brand:', err);
         }
@@ -197,7 +139,7 @@ export default function AdminSettings() {
 
     return (
         <div className="admin-settings-page">
-            <h1 className="admin-title" style={{ marginBottom: '30px' }}>Налаштування</h1>
+            <AdminPageHeader title="Налаштування" subtitle="Категорії, бренди та оренда" />
 
             <div className="settings-tabs" style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid #eee' }}>
                 <button

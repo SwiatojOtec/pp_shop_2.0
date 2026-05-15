@@ -6,6 +6,15 @@
     --admin-border: #e0e0e0;
 }
 
+.admin-code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #374151;
+}
+
 .admin-layout {
     display: flex;
     height: 100vh;
@@ -26,6 +35,7 @@
     flex-direction: column;
     height: 100vh;
     flex-shrink: 0;
+    overflow-x: hidden;
 }
 
 .sidebar-header {
@@ -83,10 +93,32 @@
 
 .sidebar-nav {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px 15px;
     display: flex;
     flex-direction: column;
     gap: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.28);
 }
 
 .sidebar-nav-section {
@@ -102,7 +134,7 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 12px 15px;
+    padding: 13px 18px;
     color: #a0a0a0;
     text-decoration: none;
     border-radius: 8px;
@@ -113,6 +145,14 @@
     width: 100%;
     text-align: left;
     cursor: pointer;
+    min-width: 0;
+}
+
+.nav-link span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .nav-link:hover,
@@ -160,14 +200,30 @@
     flex-shrink: 0;
 }
 
-.topbar-search input {
-    padding: 10px 20px;
-    border: 1px solid var(--admin-border);
-    border-radius: 20px;
-    width: 300px;
-    outline: none;
-    font-size: 0.9rem;
+/* Topbar breadcrumb */
+.topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: #9ca3af;
 }
+
+.topbar-breadcrumb-role {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.topbar-breadcrumb-sep {
+    color: #d1d5db;
+    flex-shrink: 0;
+}
+
+.topbar-breadcrumb-page {
+    font-weight: 700;
+    color: var(--admin-dark);
+}
+
 
 .topbar-user {
     display: flex;
@@ -216,10 +272,111 @@
 }
 
 .admin-content {
-    padding: 30px;
+    padding: 28px 32px 36px;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
+}
+
+/* ── Expandable order rows ──────────────────────────────────────────────────── */
+
+.order-row-wrap {
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    background: white;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+
+.order-row-wrap:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.order-row-summary {
+    display: grid;
+    grid-template-columns: 110px 200px 1fr 120px 200px 36px;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.order-row-summary:hover,
+.order-row-summary.is-open {
+    background: #fafafa;
+}
+
+.order-row-num {
+    font-weight: 800;
+    color: var(--admin-accent);
+    font-size: 0.95rem;
+}
+
+.order-row-client {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.order-row-items {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.order-row-amount {
+    text-align: right;
+    font-size: 1rem;
+}
+
+.order-row-status {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.order-status-select {
+    padding: 4px 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    background: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.order-row-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+}
+
+.order-row-detail {
+    border-top: 1px solid #f0f0f0;
+    padding: 20px 20px 16px;
+    background: #f9fafb;
+}
+
+.order-detail-section {
+    margin-bottom: 18px;
+}
+
+.order-detail-label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    margin-bottom: 10px;
+}
+
+.order-detail-grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 /* Form Styles Fix */
@@ -342,24 +499,102 @@
     opacity: 1;
 }
 
-.add-image-btn {
-    aspect-ratio: 1;
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #999;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: none;
+
+/* ── Dashboard (owner) — breathing room ─────────────────────── */
+
+.admin-dashboard .dashboard-header {
+    margin-bottom: 22px;
+    padding-bottom: 6px;
 }
 
-.add-image-btn:hover {
-    border-color: var(--admin-dark);
+.admin-dashboard .admin-title {
+    margin: 0 0 10px;
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.admin-dashboard .admin-subtitle {
+    margin: 0;
+    max-width: 52rem;
+    color: #6b7280;
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.admin-dash-section-title {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin: 0 0 16px;
+}
+
+.admin-dash-section-title--spaced {
+    margin-top: 2.25rem;
+}
+
+.admin-dash-stats-grid {
+    gap: 22px 26px;
+    margin-bottom: 2.25rem;
+}
+
+/* Stat tiles on owner dashboard (Tailwind Card + this padding) */
+.admin-dash-stat {
+    padding: 1.35rem 1.5rem;
+    min-height: 5.25rem;
+    box-sizing: border-box;
+}
+
+.admin-dash-stat > div:first-child {
+    flex-shrink: 0;
+}
+
+.admin-dash-orders-card {
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.admin-dash-orders-card .admin-dash-orders-body {
+    padding: 1.625rem 1.75rem 1.75rem;
+}
+
+.admin-dash-orders-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 1.125rem;
+    padding-bottom: 4px;
+}
+
+.admin-dash-orders-head h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--admin-dark);
-    background: #f0f0f0;
+}
+
+.admin-dash-orders-card .admin-table-container {
+    border-radius: 10px;
+}
+
+/* Rent manager dashboard: table panel had no padding (admin-section only in ProductEdit.css) */
+.admin-dashboard .admin-section {
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 14px;
+    padding: 22px 24px 26px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.admin-dashboard .dashboard-sections {
+    margin-top: 4px;
 }
 
 /* Dashboard Cards */
@@ -372,24 +607,32 @@
 
 .stat-card {
     background: white;
-    padding: 25px;
+    padding: 22px 26px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 22px;
     border: 1px solid var(--admin-border);
 }
 
 .stat-icon {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
     background: #f0f4f8;
     color: var(--admin-dark);
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
 }
 
 .stat-info .stat-label {
@@ -420,7 +663,7 @@
 
 .admin-table th {
     background: #fcfcfc;
-    padding: 15px 20px;
+    padding: 16px 22px;
     text-align: left;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -429,7 +672,7 @@
 }
 
 .admin-table td {
-    padding: 15px 20px;
+    padding: 16px 22px;
     border-bottom: 1px solid var(--admin-border);
     font-size: 0.95rem;
 }
@@ -1042,26 +1285,6 @@
     border-radius: 8px;
 }
 
-.admin-warehouse-home__stock-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 420px;
-    overflow-y: auto;
-}
-
-.admin-warehouse-home__stock-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 0.9rem;
-    padding: 6px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.admin-warehouse-home__stock-row:last-child {
-    border-bottom: none;
-}
 
 .admin-warehouse-home__feed {
     list-style: none;

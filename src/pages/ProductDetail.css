@@ -300,6 +300,8 @@
 }
 
 .image-lightbox-img {
+    position: relative;
+    z-index: 0;
     width: auto;
     height: auto;
     max-width: calc(100vw - 72px);
@@ -309,10 +311,42 @@
     display: block;
 }
 
+.image-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(17, 24, 39, 0.45);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.image-lightbox-nav:hover {
+    background: rgba(17, 24, 39, 0.65);
+    transform: translateY(-50%) scale(1.06);
+}
+
+.image-lightbox-nav--prev {
+    left: 8px;
+}
+
+.image-lightbox-nav--next {
+    right: 8px;
+}
+
 .image-lightbox-close {
     position: absolute;
     top: -40px;
     right: 0;
+    z-index: 3;
     background: transparent;
     border: none;
     color: #fff;
@@ -518,10 +552,44 @@
     transform: scale(1.05);
 }
 
+.gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 4;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.94);
+    color: #111827;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.12);
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.gallery-nav:hover {
+    background: #fff;
+    transform: translateY(-50%) scale(1.06);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+}
+
+.gallery-nav--prev {
+    left: 12px;
+}
+
+.gallery-nav--next {
+    right: 12px;
+}
+
 .wishlist-btn-large {
     position: absolute;
     top: 20px;
     right: 20px;
+    z-index: 5;
     background: white;
     border: none;
     width: 50px;

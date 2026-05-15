@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { API_URL } from '../apiConfig';
+import { authApi } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -16,16 +16,8 @@ export function AuthProvider({ children }) {
         }
 
         setLoading(true);
-        fetch(`${API_URL}/api/auth/me`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
-            .then(res => {
-                if (!res.ok) throw new Error('Unauthorized');
-                return res.json();
-            })
-            .then(data => {
+        authApi.me()
+            .then((data) => {
                 setUser(data.user);
                 setLoading(false);
             })
@@ -38,57 +30,39 @@ export function AuthProvider({ children }) {
     }, [token]);
 
     const login = async (email, password) => {
-        const res = await fetch(`${API_URL}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.message || 'Помилка входу');
-        }
-        window.localStorage.setItem('authToken', data.token);
-        setToken(data.token);
-        setUser(data.user);
-    };
-
-    const register = async (name, lastName, email, password) => {
-        const res = await fetch(`${API_URL}/api/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, lastName, email, password })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.message || 'Помилка реєстрації');
-        }
-        // Якщо це перший користувач – сервер поверне токен
-        if (data.token && data.user) {
+        try {
+            const data = await authApi.login({ email, password });
             window.localStorage.setItem('authToken', data.token);
             setToken(data.token);
             setUser(data.user);
+        } catch (err) {
+            throw new Error(err.message || 'Помилка входу');
         }
-        return data;
+    };
+
+    const register = async (name, lastName, email, password) => {
+        try {
+            const data = await authApi.register({ name, lastName, email, password });
+            if (data.token && data.user) {
+                window.localStorage.setItem('authToken', data.token);
+                setToken(data.token);
+                setUser(data.user);
+            }
+            return data;
+        } catch (err) {
+            throw new Error(err.message || 'Помилка реєстрації');
+        }
     };
 
     const updateProfile = async (payload) => {
         if (!token) throw new Error('Not authenticated');
-        const res = await fetch(`${API_URL}/api/auth/me`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.message || 'Помилка оновлення профілю');
+        try {
+            const data = await authApi.updateProfile(payload);
+            if (data.user) setUser(data.user);
+            return data.user;
+        } catch (err) {
+            throw new Error(err.message || 'Помилка оновлення профілю');
         }
-        if (data.user) {
-            setUser(data.user);
-        }
-        return data.user;
     };
 
     const logout = () => {
@@ -97,10 +71,16 @@ export function AuthProvider({ children }) {
         window.localStorage.removeItem('authToken');
     };
 
+    useEffect(() => {
+        const handleUnauthorized = () => logout();
+        window.addEventListener('api:unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('api:unauthorized', handleUnauthorized);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const value = { user, token, loading, login, register, logout, updateProfile };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);
-

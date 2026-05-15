@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight, X, Warehouse, Plus, ListTree, Boxes, ArrowRightLeft } from 'lucide-react';
-import { API_URL } from '../../apiConfig';
-import { useAuth } from '../../context/AuthContext';
+import { warehousesApi, inventoryApi } from '../../services/api';
 import WarehouseProductWorkModal from './WarehouseProductWorkModal';
+import { ConfirmDialog } from '../../components/admin';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Admin.css';
@@ -46,7 +46,6 @@ const loadFontAsBase64 = async (url) => {
 export default function AdminWarehousePositions() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { token } = useAuth();
     const [warehouses, setWarehouses] = useState([]);
     const [inventory, setInventory] = useState([]);
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
@@ -64,25 +63,27 @@ export default function AdminWarehousePositions() {
     const [bulkToId, setBulkToId] = useState('');
     const [bulkBusy, setBulkBusy] = useState(false);
     const [bulkQtyById, setBulkQtyById] = useState({});
-
-    const authHeaders = useMemo(() => ({
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }), [token]);
+    const [qtyConfirm, setQtyConfirm] = useState(null); // { id, newVal, oldVal, inputEl, productName }
 
     const fetchWarehouses = useCallback(async () => {
-        const res = await fetch(`${API_URL}/api/warehouses`, { headers: authHeaders });
-        const data = res.ok ? await res.json() : [];
-        setWarehouses(Array.isArray(data) ? data : []);
-    }, [authHeaders]);
+        try {
+            const data = await warehousesApi.list();
+            setWarehouses(Array.isArray(data) ? data : []);
+        } catch {
+            setWarehouses([]);
+        }
+    }, []);
 
     const fetchInventory = useCallback(async (warehouseId) => {
         if (!warehouseId) return setInventory([]);
-        const res = await fetch(`${API_URL}/api/inventory?warehouseId=${warehouseId}`, { headers: authHeaders });
-        const data = res.ok ? await res.json() : [];
-        const rows = Array.isArray(data) ? data.filter((i) => i?.Product?.isRent) : [];
-        setInventory(rows);
-    }, [authHeaders]);
+        try {
+            const data = await inventoryApi.list({ warehouseId });
+            const rows = Array.isArray(data) ? data.filter((i) => i?.Product?.isRent) : [];
+            setInventory(rows);
+        } catch {
+            setInventory([]);
+        }
+    }, []);
 
     useEffect(() => {
         fetchWarehouses();
@@ -126,30 +127,40 @@ export default function AdminWarehousePositions() {
         if (!form.name.trim()) return;
         setSaving(true);
         try {
-            const res = await fetch(`${API_URL}/api/warehouses`, {
-                method: 'POST',
-                headers: authHeaders,
-                body: JSON.stringify({ name: form.name.trim(), notes: form.notes || null, isActive: form.isActive })
+            const created = await warehousesApi.create({
+                name: form.name.trim(),
+                notes: form.notes || null,
+                isActive: form.isActive,
             });
-            if (res.ok) {
-                const created = await res.json();
-                setForm(EMPTY_FORM);
-                setModalCreateOpen(false);
-                await fetchWarehouses();
-                if (created?.id) setSelectedWarehouseId(created.id);
-            }
+            setForm(EMPTY_FORM);
+            setModalCreateOpen(false);
+            await fetchWarehouses();
+            if (created?.id) setSelectedWarehouseId(created.id);
         } finally {
             setSaving(false);
         }
     };
 
     const updateInventory = async (id, patch) => {
-        const res = await fetch(`${API_URL}/api/inventory/item/${id}`, {
-            method: 'PUT',
-            headers: authHeaders,
-            body: JSON.stringify(patch)
+        try {
+            await inventoryApi.updateItem(id, patch);
+            fetchInventory(selectedWarehouseId);
+        } catch (e) {
+            alert(e.message || 'Помилка оновлення');
+        }
+    };
+
+    const handleQtyBlur = (e, item) => {
+        const newVal = Number(e.target.value) || 0;
+        const oldVal = item.quantity ?? 0;
+        if (newVal === oldVal) return;
+        setQtyConfirm({
+            id: item.id,
+            newVal,
+            oldVal,
+            inputEl: e.target,
+            productName: item.Product?.name || `#${item.id}`,
         });
-        if (res.ok) fetchInventory(selectedWarehouseId);
     };
 
     useEffect(() => {
@@ -186,9 +197,8 @@ export default function AdminWarehousePositions() {
         const t = setTimeout(async () => {
             setSuggestLoading(true);
             try {
-                const res = await fetch(`${API_URL}/api/inventory/suggest?q=${encodeURIComponent(qRaw)}&warehouseId=${selectedWarehouseId || ''}`, { headers: authHeaders });
-                const data = res.ok ? await res.json() : { suggestions: [] };
-                if (!cancelled) setSearchSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+                const data = await inventoryApi.suggest({ q: qRaw, warehouseId: selectedWarehouseId || '' });
+                if (!cancelled) setSearchSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
             } catch {
                 if (!cancelled) setSearchSuggestions([]);
             } finally {
@@ -196,7 +206,7 @@ export default function AdminWarehousePositions() {
             }
         }, 260);
         return () => { cancelled = true; clearTimeout(t); };
-    }, [search, selectedWarehouseId, filteredInventory.length, authHeaders]);
+    }, [search, selectedWarehouseId, filteredInventory.length]);
 
     const colSpan = 12;
 
@@ -245,20 +255,12 @@ export default function AdminWarehousePositions() {
                 if (qty > (row.quantity || 0)) {
                     throw new Error(`Некоректна кількість для «${row.Product?.name || 'товар'}»`);
                 }
-                const res = await fetch(`${API_URL}/api/inventory/move`, {
-                    method: 'POST',
-                    headers: authHeaders,
-                    body: JSON.stringify({
-                        productId: row.productId,
-                        fromWarehouseId: selectedWarehouseId,
-                        toWarehouseId,
-                        quantity: qty
-                    })
+                await inventoryApi.move({
+                    productId: row.productId,
+                    fromWarehouseId: selectedWarehouseId,
+                    toWarehouseId,
+                    quantity: qty,
                 });
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    throw new Error(err.message || 'Не вдалося перемістити');
-                }
             }
             await fetchInventory(selectedWarehouseId);
             setBulkOpen(false);
@@ -536,7 +538,7 @@ export default function AdminWarehousePositions() {
                                                 min="0"
                                                 className="admin-input-inline"
                                                 defaultValue={item.quantity}
-                                                onBlur={(e) => updateInventory(item.id, { quantity: Number(e.target.value) || 0 })}
+                                                onBlur={(e) => handleQtyBlur(e, item)}
                                             />
                                         </td>
                                         <td>
@@ -694,13 +696,13 @@ export default function AdminWarehousePositions() {
                                                 title="Запит на видалення"
                                                 onClick={async () => {
                                                     if (!window.confirm(`Створити запит на видалення складу «${w.name}»?`)) return;
-                                                    const res = await fetch(`${API_URL}/api/warehouses/${w.id}/request-delete`, {
-                                                        method: 'POST',
-                                                        headers: authHeaders
-                                                    });
-                                                    const data = await res.json().catch(() => ({}));
-                                                    alert(data.message || (res.ok ? 'Запит створено.' : 'Не вдалося створити запит.'));
-                                                    if (res.ok) setModalWarehousesOpen(false);
+                                                    try {
+                                                        const data = await warehousesApi.requestDelete(w.id);
+                                                        alert(data?.message || 'Запит створено.');
+                                                        setModalWarehousesOpen(false);
+                                                    } catch (e) {
+                                                        alert(e.message || 'Не вдалося створити запит.');
+                                                    }
                                                 }}
                                             >
                                                 <X size={16} />
@@ -760,7 +762,6 @@ export default function AdminWarehousePositions() {
                 inventoryRow={workModalRow}
                 warehouses={warehouses}
                 selectedWarehouseId={selectedWarehouseId}
-                token={token}
                 onUpdated={() => fetchInventory(selectedWarehouseId)}
             />
 
@@ -842,6 +843,29 @@ export default function AdminWarehousePositions() {
                     </div>
                 </div>
             )}
+
+            {/* Qty change confirmation */}
+            <ConfirmDialog
+                open={!!qtyConfirm}
+                title="Змінити кількість на складі?"
+                message={
+                    qtyConfirm
+                        ? `«${qtyConfirm.productName}»: ${qtyConfirm.oldVal} → ${qtyConfirm.newVal} шт. Підтвердіть зміну.`
+                        : ''
+                }
+                confirmText="Підтвердити"
+                onConfirm={async () => {
+                    if (!qtyConfirm) return;
+                    await updateInventory(qtyConfirm.id, { quantity: qtyConfirm.newVal });
+                    setQtyConfirm(null);
+                }}
+                onCancel={() => {
+                    if (qtyConfirm?.inputEl) {
+                        qtyConfirm.inputEl.value = String(qtyConfirm.oldVal);
+                    }
+                    setQtyConfirm(null);
+                }}
+            />
         </div>
     );
 }

@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Save } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { API_URL } from '../../apiConfig';
+import { blogApi } from '../../services/api';
 import { transliterate } from '../../utils/transliterate';
+import { AdminPageHeader } from '../../components/admin';
 import './Admin.css';
 
 export default function AdminBlogEdit() {
@@ -40,14 +41,11 @@ export default function AdminBlogEdit() {
 
     const fetchPost = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/blog/${id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setFormData({
-                    ...data,
-                    date: data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0]
-                });
-            }
+            const data = await blogApi.get(id);
+            setFormData({
+                ...data,
+                date: data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0]
+            });
         } catch (err) {
             console.error('Error fetching post:', err);
         }
@@ -67,23 +65,15 @@ export default function AdminBlogEdit() {
         setLoading(true);
 
         try {
-            const url = isNew ? `${API_URL}/api/blog` : `${API_URL}/api/blog/${id}`;
-            const method = isNew ? 'POST' : 'PUT';
-
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-
-            if (res.ok) {
-                navigate('/admin/blog');
+            if (isNew) {
+                await blogApi.create(formData);
             } else {
-                alert('Помилка збереження');
+                await blogApi.update(id, formData);
             }
+            navigate('/admin/blog');
         } catch (err) {
             console.error('Error saving post:', err);
-            alert('Помилка збереження');
+            alert(err.message || 'Помилка збереження');
         } finally {
             setLoading(false);
         }
@@ -108,16 +98,17 @@ export default function AdminBlogEdit() {
 
     return (
         <div className="admin-product-edit">
-            <div className="admin-header" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '30px' }}>
-                <button onClick={() => navigate('/admin/blog')} className="back-btn">
-                    <ChevronLeft size={24} />
-                </button>
-                <h1 className="admin-title" style={{ margin: 0 }}>
-                    {isNew ? 'Нова стаття' : 'Редагування статті'}
-                </h1>
-            </div>
+            <AdminPageHeader
+                title={isNew ? 'Нова стаття' : 'Редагування статті'}
+                backTo="/admin/blog"
+                actions={
+                    <button type="submit" form="blog-edit-form" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Save size={16} /> Зберегти
+                    </button>
+                }
+            />
 
-            <form onSubmit={handleSubmit} className="edit-form admin-form">
+            <form id="blog-edit-form" onSubmit={handleSubmit} className="edit-form admin-form">
                 <div className="form-grid">
                     <div className="form-section">
                         <h3 className="form-section-title">Основна інформація</h3>
@@ -219,12 +210,6 @@ export default function AdminBlogEdit() {
                     </div>
                 </div>
 
-                <div className="form-actions" style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button type="submit" className="btn btn-primary" disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Save size={20} />
-                        {loading ? 'Збереження...' : 'Зберегти статтю'}
-                    </button>
-                </div>
             </form>
         </div>
     );

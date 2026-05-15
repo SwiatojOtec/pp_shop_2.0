@@ -1,7 +1,8 @@
-import { API_URL } from '../../apiConfig';
+import { blogApi } from '../../services/api';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { AdminPageHeader } from '../../components/admin';
 import './Admin.css';
 
 export default function AdminBlog() {
@@ -15,14 +16,8 @@ export default function AdminBlog() {
 
     const fetchPosts = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/blog`);
-            if (res.ok) {
-                const data = await res.json();
-                setPosts(Array.isArray(data) ? data : []);
-            } else {
-                console.error('Failed to fetch posts');
-                setPosts([]);
-            }
+            const data = await blogApi.list();
+            setPosts(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Error fetching posts:', err);
             setPosts([]);
@@ -35,19 +30,22 @@ export default function AdminBlog() {
 
     const handleDelete = async (id) => {
         if (window.confirm('Ви впевнені, що хочете видалити цю статтю?')) {
-            await fetch(`${API_URL}/api/blog/${id}`, { method: 'DELETE' });
+            await blogApi.remove(id);
             fetchPosts();
         }
     };
 
     return (
         <div className="admin-products">
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>Блог</h1>
-                <button className="btn btn-primary" onClick={() => navigate('/admin/blog/new')}>
-                    <Plus size={20} /> Додати статтю
-                </button>
-            </div>
+            <AdminPageHeader
+                title="Блог"
+                subtitle={`${filteredPosts.length} з ${posts.length} статей`}
+                actions={
+                    <Link to="/admin/blog/new" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Plus size={16} /> Додати статтю
+                    </Link>
+                }
+            />
 
             <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
                 <div className="search-box" style={{ flex: 1, position: 'relative' }}>

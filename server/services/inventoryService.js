@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const InventoryItem = require('../models/InventoryItem');
 const WarehouseEvent = require('../models/WarehouseEvent');
+const RentalApplication = require('../models/RentalApplication');
 
 function userDisplayName(user) {
     if (!user) return 'Система';
@@ -151,12 +152,52 @@ async function ensureRepairWarehouse() {
     return warehouse;
 }
 
+/** Скільки одиниць товару зараз зайнято активними заявками оренди (для публічного «в наявності»). */
+async function sumActiveRentalQuantityForProduct(productId) {
+    const pid = Number(productId);
+    if (!Number.isFinite(pid)) return 0;
+    const apps = await RentalApplication.findAll({
+        where: { status: { [Op.in]: ['active', 'booked', 'overdue'] } },
+        attributes: ['items'],
+    });
+    let sum = 0;
+    for (const app of apps) {
+        for (const line of app.items || []) {
+            if (Number(line.productId) !== pid) continue;
+            const q = Math.floor(Number(line.quantity));
+            sum += Number.isFinite(q) && q > 0 ? q : 1;
+        }
+    }
+    return sum;
+}
+
 async function recalculateProductQuantity(productId) {
-    const total = await InventoryItem.sum('quantity', { where: { productId } });
-    await Product.update(
-        { quantityAvailable: Number.isFinite(total) ? total : 0 },
-        { where: { id: productId } }
-    );
+    const product = await Product.findByPk(productId, { attributes: ['id', 'isRent'] });
+    if (!product) return;
+
+    const physicalRaw = await InventoryItem.sum('quantity', { where: { productId } });
+    const physical = Number.isFinite(Number(physicalRaw))
+        ? Math.max(0, Math.floor(Number(physicalRaw)))
+        : 0;
+
+    if (product.isRent) {
+        const committed = await sumActiveRentalQuantityForProduct(productId);
+        const free = Math.max(0, physical - committed);
+        await Product.update({ quantityAvailable: free }, { where: { id: productId } });
+    } else {
+        await Product.update({ quantityAvailable: physical }, { where: { id: productId } });
+    }
+}
+
+/** Після змін у заявках або на старті — узгодити quantityAvailable у всіх орендних товарів. */
+async function syncAllRentProductQuantitiesFromApplications() {
+    const rentProducts = await Product.findAll({
+        where: { isRent: true },
+        attributes: ['id'],
+    });
+    for (const p of rentProducts) {
+        await recalculateProductQuantity(p.id);
+    }
 }
 
 async function bootstrapRentInventoryFromProducts() {
@@ -272,6 +313,7 @@ module.exports = {
     ensureMainWarehouse,
     ensureRepairWarehouse,
     recalculateProductQuantity,
+    syncAllRentProductQuantitiesFromApplications,
     bootstrapRentInventoryFromProducts,
     logWarehouseEvent,
     userDisplayName,

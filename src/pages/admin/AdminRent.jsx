@@ -1,163 +1,161 @@
-import { API_URL } from '../../apiConfig';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { productsApi } from '../../services/api';
+import { AdminPageHeader, AdminFilters, AdminTable, ConfirmDialog } from '../../components/admin';
 import './Admin.css';
-import { useAuth } from '../../context/AuthContext';
-
-const RENT_CATEGORY_NAME = 'Оренда інструменту';
 
 export default function AdminRent() {
-    const [products, setProducts] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('All');
     const navigate = useNavigate();
-    const { token } = useAuth();
+    const [products, setProducts]         = useState([]);
+    const [loading, setLoading]           = useState(true);
+    const [search, setSearch]             = useState('');
+    const [filterCategory, setCategory]   = useState('');
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
-    async function fetchProducts() {
+    useEffect(() => { loadProducts(); }, []);
+
+    async function loadProducts() {
+        setLoading(true);
         try {
-            // У цьому розділі показуємо тільки те, що реально видно на клієнтській оренді
-            const res = await fetch(`${API_URL}/api/products?isRent=true`);
-            if (res.ok) {
-                const data = await res.json();
-                const rows = Array.isArray(data) ? data : [];
-                // У "Оренді" лишаємо тільки позиції, які реально є на складах.
-                setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
-            } else {
-                console.error('Failed to fetch rent tools');
-                setProducts([]);
-            }
+            const data = await productsApi.list({ isRent: true });
+            const rows = Array.isArray(data) ? data : [];
+            setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
         } catch (err) {
-            console.error('Error fetching rent tools:', err);
+            console.error(err);
             setProducts([]);
+        } finally {
+            setLoading(false);
         }
     }
 
-    useEffect(() => {
-        const t = setTimeout(() => {
-            fetchProducts();
-        }, 0);
-        return () => clearTimeout(t);
-    }, []);
-
-    const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesType = filterType === 'All' || (p.category || '') === filterType;
-        return matchesSearch && matchesType;
-    });
-
-    const handleDelete = async (id) => {
-        if (!window.confirm('Ви впевнені, що хочете видалити цей інструмент з оренди?')) return;
+    async function handleDelete() {
+        if (!deleteTarget) return;
+        setDeleteLoading(true);
         try {
-            const headers = {};
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
-            await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE', headers });
-            fetchProducts();
+            await productsApi.remove(deleteTarget.id);
+            setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+            setDeleteTarget(null);
         } catch (err) {
-            console.error('Error deleting rent product:', err);
+            alert(err.message);
+        } finally {
+            setDeleteLoading(false);
         }
-    };
+    }
 
-    const toolTypes = Array.from(
-        new Set(
-            products
-                .map(p => p.category)
-                .filter(Boolean)
-        )
-    );
+    const categoryOptions = useMemo(() => {
+        const cats = new Set(products.map((p) => p.category).filter(Boolean));
+        return [...cats].sort().map((c) => ({ value: c, label: c }));
+    }, [products]);
 
-    return (
-        <div className="admin-products">
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>Оренда інструменту</h1>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <Link className="btn btn-secondary" to="/admin/rental-applications">
-                        Заявки (оренда)
-                    </Link>
-                    <Link className="btn btn-secondary" to="/admin/clients">
-                        Клієнти
-                    </Link>
-                    <button className="btn btn-primary" onClick={() => navigate('/admin/warehouses/positions')}>
-                        <Plus size={20} /> Додати інструмент зі складу
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return products.filter((p) => {
+            const matchSearch = !q
+                || p.name?.toLowerCase().includes(q)
+                || p.sku?.toLowerCase().includes(q);
+            const matchCat = !filterCategory || p.category === filterCategory;
+            return matchSearch && matchCat;
+        });
+    }, [products, search, filterCategory]);
+
+    const columns = useMemo(() => [
+        {
+            key: 'image',
+            label: 'Фото',
+            width: '64px',
+            render: (val, row) => (
+                val
+                    ? <img src={val} alt={row.name} className="admin-table-img" />
+                    : <span style={{ color: '#d1d5db' }}>—</span>
+            ),
+        },
+        {
+            key: 'sku',
+            label: 'SKU',
+            render: (v) => (v ? <code className="admin-code">{v}</code> : '—'),
+        },
+        { key: 'name', label: 'Назва', render: (v) => <span style={{ fontWeight: 600 }}>{v}</span> },
+        {
+            key: 'price',
+            label: 'Ціна/доба',
+            render: (v) => (v != null ? `${v} ₴` : '—'),
+        },
+        {
+            key: 'quantityAvailable',
+            label: 'На складі',
+            render: (v) => (
+                <span style={{ fontWeight: 700, color: v <= 2 ? '#dc2626' : '#16a34a' }}>
+                    {typeof v === 'number' ? `${v} шт` : '—'}
+                </span>
+            ),
+        },
+        { key: 'category', label: 'Категорія', render: (v) => v || '—' },
+        { key: 'brand', label: 'Бренд', render: (v) => v || '—' },
+        {
+            key: 'id',
+            label: 'Дії',
+            width: '90px',
+            render: (id, row) => (
+                <div className="table-actions" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="action-btn edit" title="Редагувати" onClick={() => navigate(`/admin/rent/${id}`)}>
+                        <Edit2 size={16} />
+                    </button>
+                    <button type="button" className="action-btn delete" title="Видалити" onClick={() => setDeleteTarget(row)}>
+                        <Trash2 size={16} />
                     </button>
                 </div>
-            </div>
+            ),
+        },
+    ], [navigate]);
 
-            <p style={{ marginBottom: '15px', color: '#555', fontSize: '0.9rem' }}>
-                Тут відображаються тільки товари з категорією <strong>{RENT_CATEGORY_NAME}</strong>, які опубліковані у клієнтській оренді.
-                Нові позиції додавайте/створюйте на складі, після чого керуйте показом через прапорець видимості в оренді.
+    return (
+        <div>
+            <AdminPageHeader
+                title="Каталог інструментів"
+                subtitle="Інструменти, опубліковані в клієнтській оренді"
+                actions={
+                    <Link to="/admin/warehouses/positions" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+                        <Plus size={16} /> Додати зі складу
+                    </Link>
+                }
+            />
+
+            <p className="admin-page-hint">
+                Тут лише позиції з наявністю на складі. Нові інструменти додаються на складі, видимість у каталозі — у картці товару.
             </p>
 
-            <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                <div className="search-box" style={{ flex: 1, position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-                    <input
-                        type="text"
-                        placeholder="Пошук за назвою або SKU..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
-                    />
-                </div>
-                <div className="filter-box" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Filter size={18} style={{ color: '#999' }} />
-                    <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
-                    >
-                        <option value="All">Всі типи</option>
-                        {toolTypes.map(t => (
-                            <option key={t} value={t}>{t}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
+            <AdminFilters
+                search={search}
+                onSearch={setSearch}
+                placeholder="Пошук за назвою або SKU..."
+                filters={categoryOptions.length > 0 ? [{
+                    key: 'category',
+                    label: 'Всі категорії',
+                    value: filterCategory,
+                    options: categoryOptions,
+                }] : []}
+                onFilter={(key, value) => { if (key === 'category') setCategory(value); }}
+            />
 
-            <div className="admin-table-container">
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Зображення</th>
-                            <th>SKU</th>
-                            <th>Назва</th>
-                            <th>Ціна оренди</th>
-                            <th>К-сть в наявності</th>
-                            <th>Тип інструменту</th>
-                            <th>Бренд</th>
-                            <th>Дії</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredProducts.map(product => (
-                            <tr key={product.id}>
-                                <td><img src={product.image} alt={product.name} className="admin-table-img" /></td>
-                                <td><code style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px' }}>{product.sku}</code></td>
-                                <td>{product.name}</td>
-                                <td>{product.price} ₴ / доба</td>
-                                <td>{typeof product.quantityAvailable === 'number' ? product.quantityAvailable : '—'}</td>
-                                <td>{product.category || '—'}</td>
-                                <td>{product.brand || '—'}</td>
-                                <td>
-                                    <div className="table-actions">
-                                        <button onClick={() => navigate(`/admin/rent/${product.id}`)} className="action-btn edit"><Edit2 size={18} /></button>
-                                        <button onClick={() => handleDelete(product.id)} className="action-btn delete"><Trash2 size={18} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {filteredProducts.length === 0 && (
-                            <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Інструментів в оренді поки немає</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <AdminTable
+                columns={columns}
+                rows={filtered}
+                loading={loading}
+                empty="Інструментів у каталозі поки немає"
+                onRowClick={(row) => navigate(`/admin/rent/${row.id}`)}
+            />
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити інструмент?"
+                message={deleteTarget ? `Видалити «${deleteTarget.name}» з каталогу оренди?` : ''}
+                confirmText="Видалити"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteTarget(null)}
+                loading={deleteLoading}
+            />
         </div>
     );
 }
-

@@ -3,6 +3,16 @@ const router = express.Router();
 const RentalApplication = require('../models/RentalApplication');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
+const { recalculateProductQuantity } = require('../services/inventoryService');
+
+async function recalcRentQuantitiesForItemsLists(itemsA, itemsB) {
+    const ids = new Set();
+    for (const line of [...(itemsA || []), ...(itemsB || [])]) {
+        const id = Number(line.productId);
+        if (Number.isFinite(id) && id > 0) ids.add(id);
+    }
+    await Promise.all([...ids].map((id) => recalculateProductQuantity(id)));
+}
 
 // Generate application number like RA-2024-001
 const generateAppNumber = async () => {
@@ -91,6 +101,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivde
             applicationNumber,
             createdBy: req.user?.id || null
         });
+        await recalcRentQuantitiesForItemsLists(application.items, []);
         res.status(201).json(application);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -102,6 +113,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
     try {
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });
+        const prevItems = Array.isArray(app.items) ? app.items : [];
         const next = { ...req.body };
         const nextStatus = next.status || app.status;
         const nextRentTo = next.rentTo || app.rentTo;
@@ -109,6 +121,9 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
             next.status = 'overdue';
         }
         await app.update(next);
+        await app.reload();
+        const newItems = Array.isArray(app.items) ? app.items : [];
+        await recalcRentQuantitiesForItemsLists(prevItems, newItems);
         res.json(app);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -120,7 +135,9 @@ router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', '
     try {
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });
+        const prevItems = Array.isArray(app.items) ? app.items : [];
         await app.destroy();
+        await recalcRentQuantitiesForItemsLists(prevItems, []);
         res.json({ message: 'Deleted' });
     } catch (err) {
         res.status(500).json({ message: err.message });

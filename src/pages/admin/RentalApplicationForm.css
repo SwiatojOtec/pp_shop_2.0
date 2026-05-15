@@ -2,6 +2,41 @@
     max-width: 1200px;
 }
 
+/* ── Tab navigation ── */
+.rental-tabs-nav {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.rental-tab-btn {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.rental-tab-btn:hover {
+    color: #111;
+    background: rgba(255,255,255,0.6);
+}
+
+.rental-tab-btn.is-active {
+    background: white;
+    color: var(--admin-dark);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
 .rental-form-header {
     display: flex;
     justify-content: space-between;

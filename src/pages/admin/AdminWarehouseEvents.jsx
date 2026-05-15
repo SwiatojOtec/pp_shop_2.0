@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { API_URL } from '../../apiConfig';
-import { useAuth } from '../../context/AuthContext';
+import { useEffect, useState } from 'react';
+import { warehouseApi, productsApi } from '../../services/api';
+import { AdminPageHeader } from '../../components/admin';
 import './Admin.css';
 
 const fmt = (d) => {
@@ -10,9 +10,6 @@ const fmt = (d) => {
 };
 
 export default function AdminWarehouseEvents() {
-    const { token } = useAuth();
-    const headers = useMemo(() => ({ ...(token ? { Authorization: `Bearer ${token}` } : {}) }), [token]);
-
     const [users, setUsers] = useState([]);
     const [userId, setUserId] = useState('');
     const [productQuery, setProductQuery] = useState('');
@@ -30,21 +27,22 @@ export default function AdminWarehouseEvents() {
 
     useEffect(() => {
         (async () => {
-            const res = await fetch(`${API_URL}/api/warehouse/events/users`, { headers });
-            const data = res.ok ? await res.json() : [];
-            setUsers(Array.isArray(data) ? data : []);
+            try {
+                const data = await warehouseApi.eventUsers();
+                setUsers(Array.isArray(data) ? data : []);
+            } catch {
+                setUsers([]);
+            }
         })();
-    }, [headers]);
+    }, []);
 
-    const buildQuery = (nextOffset = 0) => {
-        const q = new URLSearchParams();
-        q.set('limit', String(limit));
-        q.set('offset', String(nextOffset));
-        if (userId) q.set('userId', userId);
-        if (productId) q.set('productId', productId);
-        if (from) q.set('from', from);
-        if (to) q.set('to', to);
-        return q.toString();
+    const buildParams = (nextOffset = 0) => {
+        const params = { limit, offset: nextOffset };
+        if (userId) params.userId = userId;
+        if (productId) params.productId = productId;
+        if (from) params.from = from;
+        if (to) params.to = to;
+        return params;
     };
 
     const load = async ({ reset = false } = {}) => {
@@ -52,10 +50,8 @@ export default function AdminWarehouseEvents() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_URL}/api/warehouse/events?${buildQuery(nextOffset)}`, { headers });
-            if (!res.ok) throw new Error(await res.text());
-            const json = await res.json();
-            const rows = Array.isArray(json.events) ? json.events : [];
+            const json = await warehouseApi.events(buildParams(nextOffset));
+            const rows = Array.isArray(json?.events) ? json.events : [];
             setEvents((prev) => (reset ? rows : [...prev, ...rows]));
             setOffset(nextOffset + rows.length);
             setHasMore(rows.length >= limit);
@@ -80,26 +76,35 @@ export default function AdminWarehouseEvents() {
         }
         const t = setTimeout(async () => {
             try {
-                const res = await fetch(`${API_URL}/api/products?search=${encodeURIComponent(q)}&isRent=true&includeHiddenRent=true&limit=8`, { headers });
-                const data = res.ok ? await res.json() : [];
+                const data = await productsApi.list({
+                    search: q,
+                    isRent: true,
+                    includeHiddenRent: true,
+                    limit: 8,
+                });
                 if (!cancelled) setProductResults(Array.isArray(data) ? data : []);
             } catch {
                 if (!cancelled) setProductResults([]);
             }
         }, 250);
         return () => { cancelled = true; clearTimeout(t); };
-    }, [productQuery, headers]);
+    }, [productQuery]);
+
+    const resetFilters = () => {
+        setUserId('');
+        setProductId('');
+        setProductQuery('');
+        setProductResults([]);
+        setFrom('');
+        setTo('');
+    };
 
     return (
         <div className="admin-warehouse-events">
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '18px', flexWrap: 'wrap' }}>
-                <div>
-                    <h1 className="admin-title" style={{ margin: 0 }}>Події складу</h1>
-                    <p style={{ margin: '10px 0 0', color: '#555', fontSize: '0.92rem' }}>
-                        Всі зафіксовані зміни: переміщення, ремонт, правки кількості/резерву тощо.
-                    </p>
-                </div>
-            </div>
+            <AdminPageHeader
+                title="Події складу"
+                subtitle="Всі зафіксовані зміни: переміщення, ремонт, правки кількості/резерву тощо."
+            />
 
             <div className="admin-section" style={{ background: '#fff', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
                 <div className="admin-form">
@@ -155,18 +160,7 @@ export default function AdminWarehouseEvents() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                    <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                            setUserId('');
-                            setProductId('');
-                            setProductQuery('');
-                            setProductResults([]);
-                            setFrom('');
-                            setTo('');
-                        }}
-                    >
+                    <button type="button" className="btn btn-secondary" onClick={resetFilters}>
                         Скинути фільтри
                     </button>
                 </div>
@@ -176,7 +170,7 @@ export default function AdminWarehouseEvents() {
 
             <div className="admin-section" style={{ background: '#fff', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '12px 16px' }}>
                 {events.length === 0 && !loading ? (
-                    <p style={{ color: '#888', margin: 0, padding: '12px 0' }}>Подій не знайдено.</p>
+                    <p className="admin-page-muted" style={{ margin: 0, padding: '12px 0' }}>Подій не знайдено.</p>
                 ) : (
                     <ul className="admin-warehouse-home__feed" style={{ marginTop: 0 }}>
                         {events.map((ev) => (
@@ -196,4 +190,3 @@ export default function AdminWarehouseEvents() {
         </div>
     );
 }
-

@@ -6,6 +6,15 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node seeds/productSeed.js",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:undo": "sequelize-cli db:migrate:undo",
+    "migrate:status": "sequelize-cli db:migrate:status",
+    "migrate:baseline": "node scripts/markBaselineMigration.js",
+    "db:verify": "node scripts/dbVerify.js",
+    "db:backup": "node scripts/backup.js",
+    "db:safe-setup": "node scripts/dbSafeSetup.js",
+    "db:snapshot": "node scripts/dbSnapshotCounts.js",
+    "db:export-json": "node scripts/dbExportJson.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -27,6 +36,7 @@
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "sequelize-cli": "^6.6.5"
   }
 }

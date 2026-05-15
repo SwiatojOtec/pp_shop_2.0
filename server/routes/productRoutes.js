@@ -7,6 +7,7 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const InventoryItem = require('../models/InventoryItem');
 const { ensureMainWarehouse, recalculateProductQuantity } = require('../services/inventoryService');
+const { attachRentCatalogHintsToProducts } = require('../utils/rentCatalogEnrichment');
 
 // Convert empty strings to null for numeric fields to avoid DB type errors
 const sanitizeNumericFields = (data) => {
@@ -155,7 +156,23 @@ router.get('/', async (req, res) => {
         const queryOptions = { where, order };
         if (limit) queryOptions.limit = parseInt(limit);
         const products = await Product.findAll(queryOptions);
-        res.json(products);
+        if (isRent === 'true') {
+            const enriched = await attachRentCatalogHintsToProducts(products);
+            return res.json(enriched);
+        }
+        res.json(products.map((p) => (typeof p.toJSON === 'function' ? p.toJSON() : p)));
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get single product by ID (must be before /:slug so "by-id" is not captured as slug)
+router.get('/by-id/:id', async (req, res) => {
+    try {
+        const product = await Product.findByPk(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        const [enriched] = await attachRentCatalogHintsToProducts([product]);
+        res.json(enriched);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -166,18 +183,8 @@ router.get('/:slug', async (req, res) => {
     try {
         const product = await Product.findOne({ where: { slug: req.params.slug } });
         if (!product) return res.status(404).json({ message: 'Product not found' });
-        res.json(product);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// Get single product by ID
-router.get('/by-id/:id', async (req, res) => {
-    try {
-        const product = await Product.findByPk(req.params.id);
-        if (!product) return res.status(404).json({ message: 'Product not found' });
-        res.json(product);
+        const [enriched] = await attachRentCatalogHintsToProducts([product]);
+        res.json(enriched);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

@@ -1,523 +1,206 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { API_URL } from '../../apiConfig';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Users, Network, CheckCircle, XCircle, ShieldOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usersApi } from '../../services/api';
+import { AdminPageHeader } from '../../components/admin';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Select } from '../../components/ui/select';
 import './Admin.css';
 
-const MAX_MEMBERS = 2;
+const ROLE_OPTIONS = [
+    { value: 'rent',      label: 'Менеджер оренди' },
+    { value: 'manager',   label: 'Менеджер' },
+    { value: 'pivdenbud', label: 'ПАН ПІВДЕНЬБУД' },
+];
+
+const STATUS_BADGE = {
+    active:  <Badge variant="success">Активний</Badge>,
+    pending: <Badge variant="warning">Очікує</Badge>,
+    blocked: <Badge variant="danger">Заблокований</Badge>,
+};
 
 export default function AdminUsers() {
-    const { token, user } = useAuth();
-    const isOwner = user?.role === 'owner';
-    const [users, setUsers] = useState([]);
-    const [subdivisions, setSubdivisions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingSubs, setLoadingSubs] = useState(false);
-    const [error, setError] = useState('');
-    const [subError, setSubError] = useState('');
-
-    const [subName, setSubName] = useState('');
-    const [subHeadId, setSubHeadId] = useState('');
-    const [subMember1, setSubMember1] = useState('');
-    const [subMember2, setSubMember2] = useState('');
-    const [savingSub, setSavingSub] = useState(false);
-    const [showSubForm, setShowSubForm] = useState(false);
+    const { token } = useAuth();
+    const [users,      setUsers]      = useState([]);
+    const [loading,    setLoading]    = useState(true);
+    const [error,      setError]      = useState('');
     const [roleDrafts, setRoleDrafts] = useState({});
+    const [busy,       setBusy]       = useState(null);
 
-    const fetchUsers = async () => {
+    useEffect(() => {
         if (!token) return;
+        loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
+
+    async function loadUsers() {
         setLoading(true);
-        setError('');
         try {
-            const res = await fetch(`${API_URL}/api/users`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Помилка завантаження користувачів');
-            }
-            setUsers(Array.isArray(data) ? data : []);
-            const nextDrafts = {};
-            (Array.isArray(data) ? data : []).forEach((u) => {
-                nextDrafts[u.id] = u.role || 'rent';
-            });
-            setRoleDrafts(nextDrafts);
+            const data = await usersApi.list();
+            const list = Array.isArray(data) ? data : [];
+            setUsers(list);
+            const drafts = {};
+            list.forEach((u) => { drafts[u.id] = u.role || 'rent'; });
+            setRoleDrafts(drafts);
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    };
-
-    const fetchSubdivisions = async () => {
-        if (!token || !isOwner) return;
-        setLoadingSubs(true);
-        setSubError('');
-        try {
-            const res = await fetch(`${API_URL}/api/subdivisions`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Не вдалося завантажити підрозділи');
-            }
-            setSubdivisions(Array.isArray(data) ? data : []);
-        } catch (err) {
-            setSubError(err.message);
-        } finally {
-            setLoadingSubs(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token]);
-
-    useEffect(() => {
-        if (isOwner && token) {
-            fetchSubdivisions();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token, isOwner]);
-
-    const busyUserIds = useMemo(() => {
-        const s = new Set();
-        subdivisions.forEach(sub => {
-            if (sub.head?.id) s.add(sub.head.id);
-            (sub.members || []).forEach(m => s.add(m.id));
-        });
-        return s;
-    }, [subdivisions]);
-
-    const eligibleUsers = useMemo(
-        () =>
-            users.filter(
-                u => u.status === 'active' && u.role !== 'owner'
-            ),
-        [users]
-    );
-
-    const headOptions = useMemo(
-        () => eligibleUsers.filter(u => !busyUserIds.has(u.id)),
-        [eligibleUsers, busyUserIds]
-    );
-
-    const memberPool = useMemo(() => {
-        const hid = parseInt(subHeadId, 10);
-        return eligibleUsers.filter(u => !busyUserIds.has(u.id) && u.id !== hid);
-    }, [eligibleUsers, busyUserIds, subHeadId]);
-
-    const deleteUser = async (id, name) => {
-        if (!window.confirm(`Видалити користувача "${name}"? Цю дію неможливо скасувати.`)) return;
-        try {
-            const res = await fetch(`${API_URL}/api/users/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Помилка видалення');
-            setUsers(prev => prev.filter(u => u.id !== id));
-        } catch (err) {
-            alert(err.message);
-        }
-    };
-
-    const updateUser = async (id, payload) => {
-        if (!token) return;
-        try {
-            const res = await fetch(`${API_URL}/api/users/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Помилка оновлення користувача');
-            }
-            setUsers(prev => prev.map(u => (u.id === data.id ? data : u)));
-        } catch (err) {
-            alert(err.message);
-        }
-    };
-
-    const formatUserOption = u =>
-        `${u.name || ''}${u.lastName ? ' ' + u.lastName : ''} (${u.email})`.trim();
-
-    const submitSubdivision = async e => {
-        e.preventDefault();
-        if (!token) return;
-        const headUserId = parseInt(subHeadId, 10);
-        if (!headUserId) {
-            alert('Оберіть голову підрозділу');
-            return;
-        }
-        const m1 = subMember1 ? parseInt(subMember1, 10) : null;
-        const m2 = subMember2 ? parseInt(subMember2, 10) : null;
-        const memberIds = [...new Set([m1, m2].filter(n => Number.isInteger(n) && n > 0))];
-        if (memberIds.includes(headUserId)) {
-            alert('Співробітники не можуть збігатися з головою');
-            return;
-        }
-        if (memberIds.length > MAX_MEMBERS) {
-            alert(`Не більше ${MAX_MEMBERS} співробітників`);
-            return;
-        }
-
-        setSavingSub(true);
-        setSubError('');
-        try {
-            const res = await fetch(`${API_URL}/api/subdivisions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    name: subName.trim() || null,
-                    headUserId,
-                    memberIds
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Помилка створення підрозділу');
-            }
-            setSubName('');
-            setSubHeadId('');
-            setSubMember1('');
-            setSubMember2('');
-            setShowSubForm(false);
-            await fetchSubdivisions();
-            await fetchUsers();
-        } catch (err) {
-            setSubError(err.message);
-        } finally {
-            setSavingSub(false);
-        }
-    };
-
-    const deleteSubdivision = async (id, title) => {
-        if (!window.confirm(`Видалити підрозділ «${title}»? У голови буде знято роль «pivdenbud» (стане rent), якщо вона була лише через цей підрозділ.`)) return;
-        if (!token) return;
-        try {
-            const res = await fetch(`${API_URL}/api/subdivisions/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Помилка видалення');
-            }
-            await fetchSubdivisions();
-            await fetchUsers();
-        } catch (err) {
-            alert(err.message);
-        }
-    };
-
-    if (loading) {
-        return <div className="admin-content">Завантаження користувачів...</div>;
     }
 
+    async function updateUser(id, payload) {
+        setBusy(id);
+        try {
+            const updated = await usersApi.update(id, payload);
+            setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+            setRoleDrafts((prev) => ({ ...prev, [updated.id]: updated.role }));
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setBusy(null);
+        }
+    }
+
+    async function deleteUser(id, name) {
+        if (!window.confirm(`Видалити користувача "${name}"? Цю дію неможливо скасувати.`)) return;
+        setBusy(id);
+        try {
+            await usersApi.remove(id);
+            setUsers((prev) => prev.filter((u) => u.id !== id));
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setBusy(null);
+        }
+    }
+
+    const pendingCount = users.filter((u) => u.status === 'pending').length;
+
     return (
-        <div className="admin-users">
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>Користувачі</h1>
-            </div>
+        <div>
+            <AdminPageHeader
+                title="Користувачі"
+                subtitle={pendingCount > 0 ? `${pendingCount} очікують підтвердження` : `${users.length} користувачів`}
+                actions={
+                    <Button variant="secondary" as={Link} asChild>
+                        <Link to="/admin/subdivisions" className="no-underline flex items-center gap-2">
+                            <Network size={16} /> Підрозділи
+                        </Link>
+                    </Button>
+                }
+            />
 
-            {error && <div className="admin-alert error" style={{ marginBottom: '20px' }}>{error}</div>}
+            {error && <div className="admin-alert error" style={{ marginBottom: '16px' }}>{error}</div>}
 
-            {isOwner && (
-                <div className="admin-section" style={{ marginBottom: '24px', padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fafafa' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: showSubForm ? '12px' : '8px' }}>
-                        <h2 className="admin-title" style={{ fontSize: '1.05rem', margin: 0 }}>
-                            Підрозділи компанії
-                        </h2>
-                        {!showSubForm && (
-                            <button type="button" className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '8px 14px' }} onClick={() => setShowSubForm(true)}>
-                                Створити підрозділ
-                            </button>
-                        )}
-                    </div>
-
-                    {subError && <div className="admin-alert error" style={{ marginBottom: '10px' }}>{subError}</div>}
-
-                    {!showSubForm && (
-                        <p style={{ margin: 0, color: '#666', fontSize: '0.82rem', lineHeight: 1.45 }}>
-                            Голова отримує роль <code style={{ fontSize: '0.78rem' }}>pivdenbud</code> і до двох співробітників для табелю. Зайняті в іншому підрозділі не показуються у списках.
-                        </p>
-                    )}
-
-                    {showSubForm && (
-                        <>
-                            <p style={{ marginBottom: '12px', color: '#555', fontSize: '0.86rem', maxWidth: '640px' }}>
-                                Оберіть голову та за потреби до двох співробітників. Користувачі вже в іншому підрозділі недоступні.
-                            </p>
-                            <form onSubmit={submitSubdivision} style={{ marginBottom: '12px' }}>
-                                <div style={{ display: 'grid', gap: '10px', maxWidth: '520px' }}>
-                                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem' }}>
-                                        Назва (необовʼязково)
-                                        <input
-                                            type="text"
-                                            className="admin-input"
-                                            value={subName}
-                                            onChange={e => setSubName(e.target.value)}
-                                            placeholder="Наприклад: Бригада №1"
-                                            style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                        />
-                                    </label>
-                                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem' }}>
-                                        Голова підрозділу *
-                                        <select
-                                            required
-                                            value={subHeadId}
-                                            onChange={e => {
-                                                setSubHeadId(e.target.value);
-                                                setSubMember1('');
-                                                setSubMember2('');
-                                            }}
-                                            style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                        >
-                                            <option value="">— оберіть —</option>
-                                            {headOptions.map(u => (
-                                                <option key={u.id} value={u.id}>
-                                                    {formatUserOption(u)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem' }}>
-                                        Співробітник 1 (табель)
-                                        <select
-                                            value={subMember1}
-                                            onChange={e => setSubMember1(e.target.value)}
-                                            style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                        >
-                                            <option value="">— немає —</option>
-                                            {memberPool
-                                                .filter(u => u.id !== parseInt(subMember2, 10))
-                                                .map(u => (
-                                                    <option key={u.id} value={u.id}>
-                                                        {formatUserOption(u)}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                    </label>
-                                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem' }}>
-                                        Співробітник 2 (табель)
-                                        <select
-                                            value={subMember2}
-                                            onChange={e => setSubMember2(e.target.value)}
-                                            style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                        >
-                                            <option value="">— немає —</option>
-                                            {memberPool
-                                                .filter(u => u.id !== parseInt(subMember1, 10))
-                                                .map(u => (
-                                                    <option key={u.id} value={u.id}>
-                                                        {formatUserOption(u)}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                    </label>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-                                        <button type="submit" className="btn btn-primary" disabled={savingSub || loadingSubs} style={{ fontSize: '0.8rem', padding: '8px 16px' }}>
-                                            {savingSub ? 'Збереження...' : 'Зберегти підрозділ'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn btn-secondary"
-                                            style={{ fontSize: '0.8rem', padding: '8px 16px' }}
-                                            onClick={() => {
-                                                setShowSubForm(false);
-                                                setSubError('');
-                                            }}
-                                        >
-                                            Скасувати
-                                        </button>
-                                    </div>
+            {/* Pending approvals — highlighted section */}
+            {pendingCount > 0 && (
+                <div style={{ marginBottom: '24px', border: '2px solid #fbbf24', borderRadius: '12px', background: '#fffbeb', padding: '16px 20px' }}>
+                    <p className="font-bold text-sm text-amber-700 mb-3">
+                        {pendingCount} {pendingCount === 1 ? 'новий користувач чекає' : 'нових користувачів чекають'} підтвердження
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {users.filter((u) => u.status === 'pending').map((u) => (
+                            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                                <div style={{ flex: 1 }}>
+                                    <div className="font-semibold text-sm">{u.name} {u.lastName}</div>
+                                    <div className="text-xs text-gray-500">{u.email}</div>
                                 </div>
-                            </form>
-                        </>
-                    )}
-
-                    <h3 style={{ fontSize: '0.88rem', marginBottom: '8px', marginTop: showSubForm ? '8px' : '14px', color: '#444' }}>Існуючі підрозділи</h3>
-                    {loadingSubs ? (
-                        <p style={{ color: '#888', fontSize: '0.9rem' }}>Завантаження...</p>
-                    ) : subdivisions.length === 0 ? (
-                        <p style={{ color: '#888', fontSize: '0.9rem' }}>Підрозділів ще немає</p>
-                    ) : (
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                            {subdivisions.map(sub => (
-                                <li
-                                    key={sub.id}
-                                    style={{
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        alignItems: 'baseline',
-                                        justifyContent: 'space-between',
-                                        gap: '8px',
-                                        padding: '12px 0',
-                                        borderBottom: '1px solid #eee'
-                                    }}
-                                >
-                                    <div>
-                                        <strong>{sub.name || `Підрозділ #${sub.id}`}</strong>
-                                        <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '4px' }}>
-                                            Голова:{' '}
-                                            {sub.head
-                                                ? `${sub.head.name || ''} ${sub.head.lastName || ''} (${sub.head.email})`.trim()
-                                                : '—'}
-                                            {sub.members?.length > 0 && (
-                                                <>
-                                                    <br />
-                                                    Співробітники:{' '}
-                                                    {sub.members.map(m => `${m.name || ''} ${m.lastName || ''}`.trim() || m.email).join(', ')}
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        style={{ fontSize: '0.75rem', color: '#c53030', borderColor: '#feb2b2' }}
-                                        onClick={() => deleteSubdivision(sub.id, sub.name || `Підрозділ #${sub.id}`)}
-                                    >
-                                        Видалити
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    <Button size="sm" onClick={() => updateUser(u.id, { status: 'active', role: 'rent' })} disabled={busy === u.id}>
+                                        <CheckCircle size={14} /> Оренда
+                                    </Button>
+                                    <Button size="sm" variant="secondary" onClick={() => updateUser(u.id, { status: 'active', role: 'manager' })} disabled={busy === u.id}>
+                                        <CheckCircle size={14} /> Менеджер
+                                    </Button>
+                                    <Button size="sm" variant="secondary" onClick={() => updateUser(u.id, { status: 'active', role: 'pivdenbud' })} disabled={busy === u.id}>
+                                        <CheckCircle size={14} /> Пан Південьбуд
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteUser(u.id, `${u.name} ${u.lastName}`)} disabled={busy === u.id}>
+                                        <XCircle size={14} /> Відхилити
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
-            <p style={{ marginBottom: '15px', color: '#555', fontSize: '0.9rem' }}>
-                Тут можна переглядати всіх користувачів адмінки, змінювати ролі та підтверджувати доступ для нових реєстрацій.
-            </p>
-
+            {/* All users table */}
             <div className="admin-table-container">
                 <table className="admin-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Імʼя</th>
-                            <th>Прізвище</th>
+                            <th>Користувач</th>
                             <th>Email</th>
                             <th>Роль</th>
                             <th>Статус</th>
-                            <th>Дії</th>
+                            <th style={{ textAlign: 'right' }}>Дії</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map(userRow => (
-                            <tr key={userRow.id}>
-                                <td>{userRow.id}</td>
-                                <td>{userRow.name}</td>
-                                <td>{userRow.lastName}</td>
-                                <td>{userRow.email}</td>
+                        {loading ? (
+                            <tr><td colSpan={5} className="admin-table-empty">Завантаження...</td></tr>
+                        ) : users.filter((u) => u.status !== 'pending').map((u) => (
+                            <tr key={u.id}>
                                 <td>
-                                    {userRow.role === 'owner' ? (
-                                        <span>{userRow.role}</span>
+                                    <div className="font-semibold">{u.name} {u.lastName}</div>
+                                </td>
+                                <td className="text-sm text-gray-500">{u.email}</td>
+                                <td>
+                                    {u.role === 'owner' ? (
+                                        <Badge>Власник</Badge>
                                     ) : (
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <select
-                                                value={roleDrafts[userRow.id] || userRow.role || 'rent'}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setRoleDrafts((prev) => ({ ...prev, [userRow.id]: val }));
-                                                }}
-                                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                            <Select
+                                                value={roleDrafts[u.id] || u.role}
+                                                onChange={(e) => setRoleDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                                                style={{ width: 'auto', minWidth: '150px' }}
                                             >
-                                                <option value="rent">rent</option>
-                                                <option value="manager">manager</option>
-                                                <option value="pivdenbud">pivdenbud</option>
-                                            </select>
-                                            <button
-                                                className="btn btn-secondary"
-                                                style={{ fontSize: '0.72rem', padding: '4px 8px' }}
-                                                disabled={(roleDrafts[userRow.id] || userRow.role) === userRow.role}
-                                                onClick={() => updateUser(userRow.id, { role: roleDrafts[userRow.id] || userRow.role })}
+                                                {ROLE_OPTIONS.map((opt) => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </Select>
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                disabled={(roleDrafts[u.id] || u.role) === u.role || busy === u.id}
+                                                onClick={() => updateUser(u.id, { role: roleDrafts[u.id] })}
                                             >
                                                 Зберегти
-                                            </button>
+                                            </Button>
                                         </div>
                                     )}
                                 </td>
-                                <td>{userRow.status}</td>
+                                <td>{STATUS_BADGE[u.status] || u.status}</td>
                                 <td>
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        {userRow.status === 'pending' && (
-                                            <>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                                                    onClick={() => updateUser(userRow.id, { status: 'active', role: 'rent' })}
-                                                >
-                                                    Підтвердити (оренда)
-                                                </button>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                                                    onClick={() => updateUser(userRow.id, { status: 'active', role: 'manager' })}
-                                                >
-                                                    Підтвердити (менеджер)
-                                                </button>
-                                                <button
-                                                    className="btn btn-secondary"
-                                                    style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                                                    onClick={() => updateUser(userRow.id, { status: 'active', role: 'pivdenbud' })}
-                                                >
-                                                    Підтвердити (Пан Південьбуд)
-                                                </button>
-                                            </>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        {u.status === 'active' && u.role !== 'owner' && (
+                                            <Button size="sm" variant="ghost" className="text-orange-500"
+                                                onClick={() => updateUser(u.id, { status: 'blocked' })} disabled={busy === u.id}>
+                                                <ShieldOff size={14} /> Заблокувати
+                                            </Button>
                                         )}
-                                        {userRow.status === 'active' && (
-                                            <>
-                                                {userRow.role !== 'owner' && (
-                                                    <button
-                                                        className="btn btn-secondary"
-                                                        style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                                                        onClick={() => updateUser(userRow.id, { status: 'blocked' })}
-                                                    >
-                                                        Заблокувати
-                                                    </button>
-                                                )}
-                                            </>
+                                        {u.status === 'blocked' && (
+                                            <Button size="sm" variant="secondary"
+                                                onClick={() => updateUser(u.id, { status: 'active' })} disabled={busy === u.id}>
+                                                <CheckCircle size={14} /> Розблокувати
+                                            </Button>
                                         )}
-                                        {userRow.status === 'blocked' && (
-                                            <button
-                                                className="btn btn-secondary"
-                                                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                                                onClick={() => updateUser(userRow.id, { status: 'active' })}
-                                            >
-                                                Розблокувати
-                                            </button>
-                                        )}
-                                        {userRow.role !== 'owner' && (
-                                            <button
-                                                className="btn btn-secondary"
-                                                style={{ fontSize: '0.75rem', padding: '4px 8px', color: '#e53e3e', borderColor: '#e53e3e' }}
-                                                onClick={() => deleteUser(userRow.id, `${userRow.name} ${userRow.lastName}`)}
-                                            >
+                                        {u.role !== 'owner' && (
+                                            <Button size="sm" variant="ghost" className="text-red-500"
+                                                onClick={() => deleteUser(u.id, `${u.name} ${u.lastName}`)} disabled={busy === u.id}>
                                                 Видалити
-                                            </button>
+                                            </Button>
                                         )}
                                     </div>
                                 </td>
                             </tr>
                         ))}
-                        {users.length === 0 && (
-                            <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                                    Користувачів поки немає
-                                </td>
-                            </tr>
+                        {!loading && users.filter((u) => u.status !== 'pending').length === 0 && (
+                            <tr><td colSpan={5} className="admin-table-empty">Користувачів немає</td></tr>
                         )}
                     </tbody>
                 </table>
