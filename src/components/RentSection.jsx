@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { productsApi } from '../services/api';
+import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import './RentSection.css';
 
 const isRentUnavailableNow = (product) => {
@@ -135,7 +136,7 @@ export default function RentSection() {
                                             <h3 className="product-name">{product.name}</h3>
                                         </Link>
                                         <div className="price-block">
-                                            <span className="product-price">{product.price} ₴ / доба</span>
+                                            <span className="product-price">{formatRentCatalogPriceCaption(product)}</span>
                                         </div>
                                         <div className={`stock-status ${unavailableNow ? 'out-of-stock' : 'in-stock'}`}>
                                             {unavailableNow ? rentStatusLabel(product) : 'В наявності'}

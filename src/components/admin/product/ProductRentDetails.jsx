@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Trash2, Plus, X } from 'lucide-react';
+import { TECHNICAL_CONDITION_OPTIONS } from '../../../constants/technicalConditions';
 
 /**
  * Rent-specific product details: serial number, condition, costs,
@@ -92,11 +93,9 @@ export default function ProductRentDetails({ formData, onChange }) {
                             onChange={(e) => onChange('technicalCondition', e.target.value)}
                         >
                             <option value="">Оберіть стан</option>
-                            <option value="Новий">Новий</option>
-                            <option value="Відмінний">Відмінний</option>
-                            <option value="Добрий">Добрий</option>
-                            <option value="Задовільний">Задовільний</option>
-                            <option value="Потребує ремонту">Потребує ремонту</option>
+                            {TECHNICAL_CONDITION_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
                         </select>
                     </div>
                     <div className="form-group">

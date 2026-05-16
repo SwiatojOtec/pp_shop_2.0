@@ -5,8 +5,15 @@ import { ArrowLeft, Plus, Trash2, Save, Printer, Download, Search, X, Sparkles }
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
 import { clientsApi, rentalApplicationsApi, productsApi } from '../../services/api';
 import RentalApplicationPrint from './RentalApplicationPrint';
+import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../constants/rentalDefaults';
+import {
+    TECHNICAL_CONDITION_OPTIONS,
+    normalizeTechnicalCondition,
+    isCanonicalTechnicalCondition,
+} from '../../constants/technicalConditions';
 import './Admin.css';
 import './RentalApplicationForm.css';
+import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers, formatRentCatalogPriceCaption } from '../../utils/rentPricing';
 
 const LESSOR = {
     name: 'Панкрат єв Олександр Миколайович',
@@ -23,14 +30,14 @@ const emptyItem = () => ({
     name: '',
     serialNumber: '',
     inventoryNumber: '',
-    technicalCondition: 'справний',
+    technicalCondition: '',
     unit: 'шт',
     quantity: 1,
     weightPerUnit: '',
     weightTotal: '',
     replacementCostPerUnit: '',
     replacementCostTotal: '',
-    depositPercent: 30,
+    depositPercent: DEFAULT_RENTAL_DEPOSIT_PERCENT,
     depositAmount: '',
     rentFrom: '',
     rentTo: '',
@@ -38,6 +45,8 @@ const emptyItem = () => ({
     pricePerDay: '',
     totalRental: '',
     kitItems: [],
+    catalogPrice: '',
+    rentPriceTiers: null,
 });
 
 const calcDays = (from, to) => {
@@ -45,6 +54,27 @@ const calcDays = (from, to) => {
     const d = Math.ceil((new Date(to) - new Date(from)) / 86400000);
     return d > 0 ? d : 0;
 };
+
+function recalcLineTotals(item) {
+    const qty = parseFloat(item.quantity || 1);
+    const rawDays = calcDays(item.rentFrom, item.rentTo);
+    const daysForTier = rawDays > 0 ? rawDays : 1;
+    const catRaw =
+        item.catalogPrice === '' || item.catalogPrice === null || item.catalogPrice === undefined
+            ? NaN
+            : parseFloat(item.catalogPrice);
+    const fallback = Number.isFinite(catRaw) ? catRaw : (parseFloat(item.pricePerDay) || 0);
+    const tiers = coerceDbRentPriceTiers(item.rentPriceTiers);
+    const rate = getRentPricePerDayFromTiers(tiers, fallback, daysForTier);
+    const totalRental =
+        rawDays > 0 ? (rawDays * rate * qty).toFixed(2) : (0).toFixed(2);
+    return {
+        ...item,
+        days: rawDays,
+        pricePerDay: rate,
+        totalRental,
+    };
+}
 
 export default function AdminRentalApplicationForm() {
     const { id } = useParams();
@@ -139,7 +169,15 @@ export default function AdminRentalApplicationForm() {
                         setResponsible(data.responsible);
                     }
                     setItems(data.items && data.items.length > 0
-                        ? data.items.map(i => ({ ...emptyItem(), ...i, _key: Date.now() + Math.random() }))
+                        ? data.items.map((i) => {
+                            const row = { ...emptyItem(), ...i, _key: Date.now() + Math.random() };
+                            row.technicalCondition = normalizeTechnicalCondition(i.technicalCondition);
+                            if (row.catalogPrice === '' || row.catalogPrice === null || row.catalogPrice === undefined) {
+                                const pd = parseFloat(i.pricePerDay);
+                                row.catalogPrice = Number.isFinite(pd) ? pd : '';
+                            }
+                            return recalcLineTotals(row);
+                        })
                         : [emptyItem()]
                     );
                 })
@@ -169,8 +207,11 @@ export default function AdminRentalApplicationForm() {
 
     const buildItemFromProduct = (product) => {
         const replacementCostPerUnit = parseFloat(product.replacementCost || 0);
-        const depositPercent = 30;
+        const depositPercent = DEFAULT_RENTAL_DEPOSIT_PERCENT;
         const depositAmount = (replacementCostPerUnit * depositPercent / 100).toFixed(2);
+        const catalogPrice = parseFloat(product.price || 0) || 0;
+        const rentPriceTiers = coerceDbRentPriceTiers(product.rentPriceTiers);
+        const pricePerDay = getRentPricePerDayFromTiers(rentPriceTiers, catalogPrice, 1);
         return {
             ...emptyItem(),
             _key: Date.now() + Math.random(),
@@ -178,7 +219,7 @@ export default function AdminRentalApplicationForm() {
             name: product.name,
             serialNumber: product.serialNumber || '',
             inventoryNumber: product.inventoryNumber || '',
-            technicalCondition: product.technicalCondition || 'справний',
+            technicalCondition: normalizeTechnicalCondition(product.technicalCondition),
             unit: product.unit || 'шт',
             quantity: 1,
             weightPerUnit: product.weightPerUnit || '',
@@ -187,7 +228,9 @@ export default function AdminRentalApplicationForm() {
             replacementCostTotal: replacementCostPerUnit || '',
             depositPercent,
             depositAmount,
-            pricePerDay: parseFloat(product.price || 0),
+            catalogPrice,
+            rentPriceTiers,
+            pricePerDay,
             kitItems: product.kitItems || [],
         };
     };
@@ -224,37 +267,36 @@ export default function AdminRentalApplicationForm() {
 
     const updateItem = (key, field, value) => {
         setItems(prev => prev.map(item => {
-            // If date field changed — propagate to all items
             if ((field === 'rentFrom' || field === 'rentTo') && item._key !== key) {
-                const updated = { ...item, [field]: value };
-                updated.days = calcDays(updated.rentFrom, updated.rentTo);
-                updated.totalRental = (updated.days * parseFloat(updated.pricePerDay || 0) * parseFloat(updated.quantity || 1)).toFixed(2);
-                return updated;
+                const merged = { ...item, [field]: value };
+                return recalcLineTotals(merged);
             }
 
             if (item._key !== key) return item;
+
             const updated = { ...item, [field]: value };
 
-            // Recalculate on date or quantity change
             if (field === 'rentFrom' || field === 'rentTo') {
-                updated.days = calcDays(updated.rentFrom, updated.rentTo);
-                updated.totalRental = (updated.days * parseFloat(updated.pricePerDay || 0) * parseFloat(updated.quantity || 1)).toFixed(2);
+                return recalcLineTotals(updated);
             }
             if (field === 'quantity') {
                 updated.weightTotal = (parseFloat(updated.weightPerUnit || 0) * parseFloat(value || 1)).toFixed(2);
                 updated.replacementCostTotal = (parseFloat(updated.replacementCostPerUnit || 0) * parseFloat(value || 1)).toFixed(2);
                 updated.depositAmount = (parseFloat(updated.replacementCostTotal || 0) * parseFloat(updated.depositPercent || 0) / 100).toFixed(2);
-                updated.totalRental = (updated.days * parseFloat(updated.pricePerDay || 0) * parseFloat(value || 1)).toFixed(2);
+                return recalcLineTotals(updated);
             }
             if (field === 'replacementCostPerUnit') {
                 updated.replacementCostTotal = (parseFloat(value || 0) * parseFloat(updated.quantity || 1)).toFixed(2);
                 updated.depositAmount = (parseFloat(updated.replacementCostTotal) * parseFloat(updated.depositPercent || 0) / 100).toFixed(2);
+                return updated;
             }
             if (field === 'depositPercent') {
                 updated.depositAmount = (parseFloat(updated.replacementCostTotal || 0) * parseFloat(value || 0) / 100).toFixed(2);
+                return updated;
             }
             if (field === 'pricePerDay') {
                 updated.totalRental = (updated.days * parseFloat(value || 0) * parseFloat(updated.quantity || 1)).toFixed(2);
+                return updated;
             }
             return updated;
         }));
@@ -500,7 +542,7 @@ export default function AdminRentalApplicationForm() {
                                             <img src={p.image} alt="" />
                                             <div>
                                                 <div className="sdi-name">{p.name}</div>
-                                                <div className="sdi-sub">{p.category} · {p.price} ₴/доба</div>
+                                                <div className="sdi-sub">{p.category} · {formatRentCatalogPriceCaption(p)}</div>
                                             </div>
                                         </div>
                                     ))}
@@ -538,10 +580,13 @@ export default function AdminRentalApplicationForm() {
                                     <div className="item-field">
                                         <label>Технічний стан</label>
                                         <select value={item.technicalCondition} onChange={e => updateItem(item._key, 'technicalCondition', e.target.value)}>
-                                            <option value="новий">Новий</option>
-                                            <option value="відмінний">Відмінний</option>
-                                            <option value="справний">Справний</option>
-                                            <option value="задовільний">Задовільний</option>
+                                            <option value="">— оберіть —</option>
+                                            {TECHNICAL_CONDITION_OPTIONS.map((o) => (
+                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                            ))}
+                                            {item.technicalCondition && !isCanonicalTechnicalCondition(item.technicalCondition) && (
+                                                <option value={item.technicalCondition}>{item.technicalCondition} (нестандарт)</option>
+                                            )}
                                         </select>
                                     </div>
                                     <div className="item-field">
@@ -767,7 +812,7 @@ export default function AdminRentalApplicationForm() {
                                 <img src={p.image} alt={p.name} className="upsell-item-img" />
                                 <div className="upsell-item-info">
                                     <span className="upsell-item-name">{p.name}</span>
-                                    <span className="upsell-item-price">{p.price} ₴ / доба</span>
+                                    <span className="upsell-item-price">{formatRentCatalogPriceCaption(p)}</span>
                                 </div>
                                 <button className={`upsell-add-btn ${alreadyAdded ? 'added' : ''}`}>
                                     {alreadyAdded ? '✓' : <Plus size={16} />}

@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { productsApi } from '../services/api';
 import { getCategorySlug } from '../utils/categoryMapping';
+import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import './Header.css';
 
 export default function Header({ onCartClick }) {
@@ -144,7 +145,7 @@ export default function Header({ onCartClick }) {
                       <span className="search-dropdown__name">{p.name}</span>
                       <span className="search-dropdown__meta">
                         {p.isRent ? 'Оренда' : (p.category || '')}
-                        {p.price && <> · <strong>{parseFloat(p.price).toLocaleString()} ₴{p.isRent ? '/доба' : ''}</strong></>}
+                        {p.price && <> · <strong>{p.isRent ? formatRentCatalogPriceCaption(p) : `${parseFloat(p.price).toLocaleString()} ₴`}</strong></>}
                       </span>
                     </div>
                   </Link>

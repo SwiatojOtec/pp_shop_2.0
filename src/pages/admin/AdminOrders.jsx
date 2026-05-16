@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { AdminPageHeader, ConfirmDialog } from '../../components/admin';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../constants/rentalDefaults';
+import { normalizeTechnicalCondition } from '../../constants/technicalConditions';
 import './Admin.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,14 +140,18 @@ export default function AdminOrders() {
                         name: i.name,
                         serialNumber: full.serialNumber || '',
                         inventoryNumber: full.inventoryNumber || '',
-                        technicalCondition: full.technicalCondition || 'справний',
+                        technicalCondition: normalizeTechnicalCondition(full.technicalCondition),
                         unit: i.unit || 'шт',
                         quantity: i.quantity || 1,
                         weightTotal: full.weightTotal || '',
                         replacementCostPerUnit: parseFloat(full.replacementCost || 0),
                         replacementCostTotal: parseFloat(full.replacementCost || 0) * (i.quantity || 1),
-                        depositPercent: 30,
-                        depositAmount: (parseFloat(full.replacementCost || 0) * (i.quantity || 1) * 0.3).toFixed(2),
+                        depositPercent: DEFAULT_RENTAL_DEPOSIT_PERCENT,
+                        depositAmount: (
+                            parseFloat(full.replacementCost || 0) *
+                            (i.quantity || 1) *
+                            (DEFAULT_RENTAL_DEPOSIT_PERCENT / 100)
+                        ).toFixed(2),
                         pricePerDay: parseFloat(i.price || 0),
                         rentFrom: '', rentTo: '', days: 0, totalRental: '',
                         kitItems: full.kitItems || [],

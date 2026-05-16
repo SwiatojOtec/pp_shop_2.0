@@ -13,6 +13,11 @@ import ProductGallery       from '../../components/admin/product/ProductGallery'
 import ProductRentDetails   from '../../components/admin/product/ProductRentDetails';
 import ProductIdentifiers   from '../../components/admin/product/ProductIdentifiers';
 import ProductPriceSidebar  from '../../components/admin/product/ProductPriceSidebar';
+import {
+    ensureRentTiersFormShape,
+    normalizeRentTiersForApi,
+    minRentTierPrice,
+} from '../../utils/rentPricing';
 
 import './Admin.css';
 import '../../components/admin/product/ProductEdit.css';
@@ -41,6 +46,7 @@ const INITIAL_FORM = {
     competitorLinks: [], adminImages: [],
     createWarehouseId: '', createWarehouseQuantity: '',
     editWarehouseId: '', editWarehouseQuantity: '',
+    rentPriceTiers: null,
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -75,6 +81,18 @@ export default function ProductEdit({ context = 'products' }) {
         if (!isNew) loadProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
+
+    useEffect(() => {
+        if (!isRentContext || !isNew) return;
+        setFormData((prev) => {
+            if (prev.rentPriceTiers && prev.rentPriceTiers.length === 4) return prev;
+            return {
+                ...prev,
+                rentPriceTiers: ensureRentTiersFormShape(null, prev.price ?? ''),
+            };
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isRentContext, isNew]);
 
     useEffect(() => {
         if (isRentContext && !isNew && id) loadInventoryRows(id);
@@ -168,6 +186,9 @@ export default function ProductEdit({ context = 'products' }) {
                 adminImages:       Array.isArray(data.adminImages) ? data.adminImages : [],
                 createWarehouseId: '', createWarehouseQuantity: '',
                 editWarehouseId:   '', editWarehouseQuantity: '',
+                rentPriceTiers: isRentContext
+                    ? ensureRentTiersFormShape(data.rentPriceTiers, data.price ?? '')
+                    : null,
             });
 
             await loadInventoryRows(data.id);
@@ -242,10 +263,22 @@ export default function ProductEdit({ context = 'products' }) {
 
         setSaving(true);
         try {
+            let priceForApi = formData.price === '' ? null : Number(formData.price);
+            let rentTiersForDb = null;
+            if (isRentContext && Array.isArray(formData.rentPriceTiers)) {
+                const { dbTiers } = normalizeRentTiersForApi(formData.rentPriceTiers, formData.price);
+                rentTiersForDb = dbTiers;
+                if (dbTiers) {
+                    const m = minRentTierPrice(dbTiers);
+                    if (m != null) priceForApi = m;
+                }
+            }
+
             const payload = {
                 ...formData,
                 isRent:    isRentContext,
-                price:     formData.price === '' ? null : Number(formData.price),
+                price:     priceForApi,
+                rentPriceTiers: isRentContext ? rentTiersForDb : null,
                 oldPrice:  (formData.oldPrice === '' || formData.badge !== 'SALE') ? null : Number(formData.oldPrice),
                 packSize:  formData.packSize === '' ? 1.0 : Number(formData.packSize),
                 availableFrom: formData.availableFrom || null,

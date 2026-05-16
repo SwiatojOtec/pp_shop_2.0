@@ -7,6 +7,11 @@ import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { productsApi } from '../services/api';
+import {
+    rentTierRowsForDisplay,
+    rentHasVariableTiers,
+    formatRentCatalogPriceCaption,
+} from '../utils/rentPricing';
 import './ProductDetail.css';
 
 function formatUkDateFromIso(dateIso) {
@@ -351,7 +356,7 @@ export default function ProductDetail() {
                                             <img src={item.image} alt={item.name} className="rent-related-img" />
                                             <div className="rent-related-info">
                                                 <span className="rent-related-name">{item.name}</span>
-                                                <span className="rent-related-price">{item.price} ₴ / доба</span>
+                                                <span className="rent-related-price">{formatRentCatalogPriceCaption(item)}</span>
                                             </div>
                                         </Link>
                                     ))}
@@ -394,11 +399,45 @@ export default function ProductDetail() {
                         <div className="rent-sidebar">
                             <div className="rent-price-box">
                                 <div className="rent-price">
-                                    {product.price} ₴ <span className="rent-price-unit">/ доба</span>
+                                    {(() => {
+                                        const rows = rentTierRowsForDisplay(product);
+                                        const minP = Math.min(...rows.map((r) => r.pricePerDay));
+                                        const from = rentHasVariableTiers(product);
+                                        const formatted = minP.toLocaleString('uk-UA', {
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 2,
+                                        });
+                                        return (
+                                            <>
+                                                {from && (
+                                                    <span style={{ fontSize: '1.15rem', fontWeight: 700 }}>від </span>
+                                                )}
+                                                {formatted}{' '}
+                                                <span className="rent-price-unit">₴ / доба</span>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                                 {product.oldPrice && (
                                     <div className="price-old" style={{ fontSize: '1.1rem' }}>{product.oldPrice} ₴</div>
                                 )}
+                                <div className="rent-tier-pricing">
+                                    <div className="rent-tier-pricing-title">Тарифи за тривалістю</div>
+                                    <ul className="rent-tier-list">
+                                        {rentTierRowsForDisplay(product).map((row) => (
+                                            <li key={row.labelUa} className="rent-tier-row">
+                                                <span className="rent-tier-label">{row.labelUa}</span>
+                                                <span className="rent-tier-price">
+                                                    {row.pricePerDay.toLocaleString('uk-UA', {
+                                                        minimumFractionDigits: 0,
+                                                        maximumFractionDigits: 2,
+                                                    })}{' '}
+                                                    ₴
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                                 {product.securityDeposit != null && (
                                     <div style={{ marginTop: '6px', fontSize: '0.9rem', color: '#374151' }}>
                                         Гарантійний платіж:&nbsp;
@@ -617,7 +656,13 @@ export default function ProductDetail() {
 
                         <div className="price-section">
                             <div className="price-current">
-                                {product.price} ₴ <span className="unit">/ {product.isRent ? 'доба' : (product.unit || 'м²')}</span>
+                                {product.isRent ? (
+                                    formatRentCatalogPriceCaption(product)
+                                ) : (
+                                    <>
+                                        {product.price} ₴ <span className="unit">/ {product.unit || 'м²'}</span>
+                                    </>
+                                )}
                             </div>
                             {product.oldPrice && (
                                 <div className="price-old">{product.oldPrice} ₴</div>

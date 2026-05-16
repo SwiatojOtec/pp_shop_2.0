@@ -2,6 +2,7 @@ import React from 'react';
 import { X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import './Cart.css';
 
 export default function Cart({ isOpen, onClose }) {
@@ -38,11 +39,17 @@ export default function Cart({ isOpen, onClose }) {
                                     <div className="item-info">
                                         <h3>{item.name}</h3>
                                         <div className="item-price">
-                                            {item.price} ₴ / {item.unit || 'м²'}
-                                            {item.packSize > 0 && item.unit === 'м²' && (
-                                                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
-                                                    {item.quantity} уп. = {(item.quantity * item.packSize).toFixed(2)} м²
-                                                </div>
+                                            {item.isRent ? (
+                                                <span>{formatRentCatalogPriceCaption(item)}</span>
+                                            ) : (
+                                                <>
+                                                    {item.price} ₴ / {item.unit || 'м²'}
+                                                    {item.packSize > 0 && item.unit === 'м²' && (
+                                                        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
+                                                            {item.quantity} уп. = {(item.quantity * item.packSize).toFixed(2)} м²
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                         <div className="item-controls">

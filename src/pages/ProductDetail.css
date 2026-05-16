@@ -199,6 +199,48 @@
     color: #666;
 }
 
+.rent-tier-pricing {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.rent-tier-pricing-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.rent-tier-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rent-tier-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.95rem;
+    gap: 12px;
+}
+
+.rent-tier-label {
+    color: #374151;
+}
+
+.rent-tier-price {
+    font-weight: 700;
+    color: #111;
+    white-space: nowrap;
+}
+
 .rent-qty-available {
     margin-top: 10px;
     font-size: 0.85rem;

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X } from 'lucide-react';
 import { productsApi } from '../../../services/api';
+import { formatRentCatalogPriceCaption } from '../../../utils/rentPricing';
 
 /**
  * Rent product "also rented with" picker.
@@ -91,7 +92,7 @@ export default function ProductRelatedSearch({ productId, selected = [], onChang
                                 <img src={p.image} alt="" className="related-dropdown-img" />
                                 <div>
                                     <div className="related-dropdown-name">{p.name}</div>
-                                    <div className="related-dropdown-meta">{p.category} · {p.price} ₴/доба</div>
+                                    <div className="related-dropdown-meta">{p.category} · {formatRentCatalogPriceCaption(p)}</div>
                                 </div>
                             </div>
                         ))}

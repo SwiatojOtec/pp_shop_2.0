@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronRight, X, Warehouse, Plus, ListTree, Boxes, ArrowRightLeft } from 'lucide-react';
+import {
+    ChevronDown, ChevronLeft, ChevronRight, X, Warehouse, Plus, ListTree, Boxes, ArrowRightLeft,
+} from 'lucide-react';
 import { warehousesApi, inventoryApi } from '../../services/api';
 import WarehouseProductWorkModal from './WarehouseProductWorkModal';
 import { ConfirmDialog } from '../../components/admin';
@@ -64,6 +66,8 @@ export default function AdminWarehousePositions() {
     const [bulkBusy, setBulkBusy] = useState(false);
     const [bulkQtyById, setBulkQtyById] = useState({});
     const [qtyConfirm, setQtyConfirm] = useState(null); // { id, newVal, oldVal, inputEl, productName }
+    /** Швидкий перегляд адмін-фото з рядка складу: { urls, index } */
+    const [adminImageGallery, setAdminImageGallery] = useState(null);
 
     const fetchWarehouses = useCallback(async () => {
         try {
@@ -112,6 +116,34 @@ export default function AdminWarehousePositions() {
     useEffect(() => {
         fetchInventory(selectedWarehouseId);
     }, [selectedWarehouseId, fetchInventory]);
+
+    useEffect(() => {
+        if (!adminImageGallery?.urls?.length) return undefined;
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setAdminImageGallery(null);
+                return;
+            }
+            const { urls, index } = adminImageGallery;
+            if (urls.length < 2) return;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setAdminImageGallery({
+                    urls,
+                    index: (index - 1 + urls.length) % urls.length,
+                });
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setAdminImageGallery({
+                    urls,
+                    index: (index + 1) % urls.length,
+                });
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [adminImageGallery]);
 
     const selectedWarehouse = useMemo(
         () => warehouses.find((w) => w.id === selectedWarehouseId) || null,
@@ -640,9 +672,15 @@ export default function AdminWarehousePositions() {
                                                             <strong>Адмінські фото</strong>
                                                             <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '8px' }}>
                                                                 {p.adminImages.map((url, i) => (
-                                                                    <a key={`${url}-${i}`} href={url} target="_blank" rel="noopener noreferrer" title="Відкрити фото" style={{ display: 'block' }}>
-                                                                        <img src={url} alt="" style={{ width: '100%', height: '86px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }} />
-                                                                    </a>
+                                                                    <button
+                                                                        key={`${url}-${i}`}
+                                                                        type="button"
+                                                                        className="warehouse-admin-photo-thumb"
+                                                                        onClick={() => setAdminImageGallery({ urls: p.adminImages, index: i })}
+                                                                        title="Переглянути фото"
+                                                                    >
+                                                                        <img src={url} alt="" loading="lazy" />
+                                                                    </button>
                                                                 ))}
                                                             </div>
                                                         </div>
@@ -840,6 +878,62 @@ export default function AdminWarehousePositions() {
                                 {bulkBusy ? 'Переміщення…' : 'Перемістити'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {adminImageGallery && adminImageGallery.urls[adminImageGallery.index] && (
+                <div className="admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Адмінські фото" onClick={() => setAdminImageGallery(null)}>
+                    <div
+                        className="admin-modal-card"
+                        style={{ width: 'min(92vw, 980px)', padding: '12px' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                            <button type="button" className="action-btn" onClick={() => setAdminImageGallery(null)} aria-label="Закрити">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <img
+                            src={adminImageGallery.urls[adminImageGallery.index]}
+                            alt="Адмінське фото"
+                            style={{ width: '100%', maxHeight: '78vh', objectFit: 'contain', borderRadius: '8px', background: '#111' }}
+                        />
+                        {adminImageGallery.urls.length > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', gap: '10px', flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() =>
+                                        setAdminImageGallery((prev) => {
+                                            if (!prev) return prev;
+                                            const n = prev.urls.length;
+                                            return { ...prev, index: (prev.index - 1 + n) % n };
+                                        })
+                                    }
+                                >
+                                    <ChevronLeft size={18} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                    Попереднє
+                                </button>
+                                <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                                    {adminImageGallery.index + 1} / {adminImageGallery.urls.length}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() =>
+                                        setAdminImageGallery((prev) => {
+                                            if (!prev) return prev;
+                                            const n = prev.urls.length;
+                                            return { ...prev, index: (prev.index + 1) % n };
+                                        })
+                                    }
+                                >
+                                    Наступне
+                                    <ChevronRight size={18} style={{ verticalAlign: 'middle', marginLeft: '4px' }} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

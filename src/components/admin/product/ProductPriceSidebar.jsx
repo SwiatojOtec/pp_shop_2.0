@@ -1,3 +1,5 @@
+import ProductRentPriceTiers from './ProductRentPriceTiers';
+
 /**
  * Right sidebar for ProductEdit: price, badge, category, brand, unit,
  * stock status, warehouse management (rent), and rent catalog toggle.
@@ -33,7 +35,20 @@ export default function ProductPriceSidebar({
                         onChange={(e) => onChange('price', e.target.value)}
                         placeholder="Поточна ціна"
                     />
+                    {isRentContext && (
+                        <p className="field-hint">
+                            Базова ціна для каталогу та сортування; при різних тарифах нижче автоматично
+                            зберігається як мінімальна з діапазонів.
+                        </p>
+                    )}
                 </div>
+
+                {isRentContext && (
+                    <ProductRentPriceTiers
+                        value={formData.rentPriceTiers}
+                        onChange={(tiers) => onChange('rentPriceTiers', tiers)}
+                    />
+                )}
 
                 {/* Old price (SALE badge only) */}
                 {formData.badge === 'SALE' && (

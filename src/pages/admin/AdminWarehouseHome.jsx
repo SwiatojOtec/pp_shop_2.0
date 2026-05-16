@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ClipboardList, Warehouse, ArrowRight } from 'lucide-react';
+import { ClipboardList, Warehouse, ArrowRight, Wrench, CheckCircle, ShieldAlert, Truck } from 'lucide-react';
 import { warehouseApi } from '../../services/api';
 import { AdminPageHeader } from '../../components/admin';
+import { Card } from '../../components/ui/card';
 import './Admin.css';
 
 const STATUS_RENT_LABEL = {
@@ -13,9 +14,33 @@ const STATUS_RENT_LABEL = {
     draft: 'Чернетка',
 };
 
+function RentStatCard({ icon, label, value, valueColor }) {
+    return (
+        <Card className="admin-dash-stat flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div
+                className={`p-2.5 rounded-lg bg-gray-100 ${valueColor ? '' : 'text-[#e63946]'}`}
+                style={valueColor ? { color: valueColor } : {}}
+            >
+                {icon}
+            </div>
+            <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-gray-500 font-medium">{label}</span>
+                <span className="text-xl font-bold" style={valueColor ? { color: valueColor } : {}}>
+                    {value}
+                </span>
+            </div>
+        </Card>
+    );
+}
+
 export default function AdminWarehouseHome() {
     const navigate = useNavigate();
-    const [data, setData] = useState({ events: [], productLocations: [], warehouseSummary: [] });
+    const [data, setData] = useState({
+        events: [],
+        productLocations: [],
+        warehouseSummary: [],
+        rentSummary: null,
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -31,6 +56,7 @@ export default function AdminWarehouseHome() {
                         events: Array.isArray(json?.events) ? json.events : [],
                         productLocations: Array.isArray(json?.productLocations) ? json.productLocations : [],
                         warehouseSummary: Array.isArray(json?.warehouseSummary) ? json.warehouseSummary : [],
+                        rentSummary: json?.rentSummary && typeof json.rentSummary === 'object' ? json.rentSummary : null,
                     });
                 }
             } catch (e) {
@@ -57,6 +83,35 @@ export default function AdminWarehouseHome() {
         })),
         [data.warehouseSummary]
     );
+
+    const rentSummaryDisplay = useMemo(() => {
+        const rs = data.rentSummary;
+        if (rs && typeof rs.totalProducts === 'number') {
+            return {
+                needsRepair: Number(rs.needsRepair || 0),
+                total: Number(rs.totalProducts || 0),
+                availableNow: Number(rs.availableNow || 0),
+                unitsInRent: Number(rs.unitsInRent || 0),
+            };
+        }
+        const pl = data.productLocations;
+        if (!pl.length) {
+            return { needsRepair: 0, total: 0, availableNow: 0, unitsInRent: 0 };
+        }
+        const isAvail = (p) => p.stockStatus === 'available' || p.stockStatus === 'in_stock';
+        let units = 0;
+        for (const p of pl) {
+            for (const r of p.activeRentals || []) {
+                units += 1;
+            }
+        }
+        return {
+            needsRepair: pl.filter((p) => p.stockStatus === 'needs_repair').length,
+            total: pl.length,
+            availableNow: pl.filter(isAvail).length,
+            unitsInRent: units,
+        };
+    }, [data.rentSummary, data.productLocations]);
 
     const fmt = (d) => {
         if (!d) return '';
@@ -93,6 +148,33 @@ export default function AdminWarehouseHome() {
                     </Link>
                 }
             />
+
+            <p className="admin-dash-section-title" style={{ marginBottom: '12px' }}>Оренда інструменту</p>
+            <div className="stats-grid admin-dash-stats-grid" style={{ marginBottom: '28px' }}>
+                <RentStatCard
+                    icon={<ShieldAlert size={22} />}
+                    label="Потребує ремонту"
+                    value={rentSummaryDisplay.needsRepair}
+                    valueColor="#b45309"
+                />
+                <RentStatCard
+                    icon={<Wrench size={22} />}
+                    label="Всього інструменту"
+                    value={rentSummaryDisplay.total}
+                />
+                <RentStatCard
+                    icon={<CheckCircle size={22} />}
+                    label="Доступно зараз"
+                    value={rentSummaryDisplay.availableNow}
+                    valueColor="#16a34a"
+                />
+                <RentStatCard
+                    icon={<Truck size={22} />}
+                    label="Знаходяться в оренді"
+                    value={rentSummaryDisplay.unitsInRent}
+                    valueColor="#2563eb"
+                />
+            </div>
 
             <section className="admin-section admin-warehouse-home__section" style={{ marginBottom: '24px' }}>
                 <h2 className="admin-warehouse-home__h2">

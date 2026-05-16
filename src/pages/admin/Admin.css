@@ -1062,6 +1062,31 @@
     vertical-align: top;
 }
 
+.admin-warehouses .warehouse-admin-photo-thumb {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.admin-warehouses .warehouse-admin-photo-thumb:hover {
+    border-color: var(--admin-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.admin-warehouses .warehouse-admin-photo-thumb img {
+    width: 100%;
+    height: 86px;
+    object-fit: cover;
+    display: block;
+}
+
 /* Склад: шапка з кнопками справа */
 .admin-warehouses-top {
     display: flex;

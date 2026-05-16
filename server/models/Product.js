@@ -107,6 +107,12 @@ const Product = sequelize.define('Product', {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
+    /** Тарифи ₴/доба за діапазонами днів (оренда); null = одна ціна з поля price */
+    rentPriceTiers: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null
+    },
     showInRentCatalog: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

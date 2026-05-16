@@ -103,8 +103,24 @@ router.get('/dashboard', ...GUARD, async (req, res) => {
             activeRentals: rentalsByProduct.get(p.id) || []
         }));
 
+        const rentPlain = rentProducts.map((p) => p.get({ plain: true }));
+        const isAvailStatus = (p) => p.stockStatus === 'available' || p.stockStatus === 'in_stock';
+        let unitsInActiveRent = 0;
+        for (const app of apps) {
+            for (const line of app.items || []) {
+                const q = Number(line.quantity);
+                unitsInActiveRent += Number.isFinite(q) && q > 0 ? q : 1;
+            }
+        }
+        const rentSummary = {
+            totalProducts: rentPlain.length,
+            needsRepair: rentPlain.filter((p) => p.stockStatus === 'needs_repair').length,
+            availableNow: rentPlain.filter(isAvailStatus).length,
+            unitsInRent: unitsInActiveRent,
+        };
+
         const warehouseSummary = Array.from(warehouseSummaryMap.values());
-        res.json({ events, productLocations, warehouseSummary });
+        res.json({ events, productLocations, warehouseSummary, rentSummary });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

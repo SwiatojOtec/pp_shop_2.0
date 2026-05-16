@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { productsApi, brandsApi, rentCategoriesApi } from '../services/api';
+import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import './Shop.css';
 
 const RENT_CATEGORY_NAME = 'Оренда інструменту';
@@ -393,7 +394,7 @@ export default function Rent() {
                                                 </span>
                                             )}
                                             <span className={`product-price ${product.oldPrice ? 'sale-price' : ''}`} style={{ fontWeight: 700 }}>
-                                                {product.price} ₴ / доба
+                                                {formatRentCatalogPriceCaption(product)}
                                             </span>
                                             {typeof product.quantityAvailable === 'number' && (
                                                 <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#4b5563' }}>
@@ -440,7 +441,7 @@ export default function Rent() {
                                         </span>
                                     )}
                                     <span className={`modal-price ${quickViewProduct.oldPrice ? 'sale-price' : ''}`} style={{ fontSize: '1.8rem', fontWeight: 800 }}>
-                                        {quickViewProduct.price} ₴ / доба
+                                        {formatRentCatalogPriceCaption(quickViewProduct)}
                                     </span>
                                 </div>
                                 {quickViewProduct.specs && Object.keys(quickViewProduct.specs).length > 0 ? (
