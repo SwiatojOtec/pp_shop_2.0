@@ -3,9 +3,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ChevronDown, ChevronLeft, ChevronRight, X, Warehouse, Plus, ListTree, Boxes, ArrowRightLeft,
 } from 'lucide-react';
-import { warehousesApi, inventoryApi } from '../../services/api';
+import { warehousesApi, inventoryApi, productsApi } from '../../services/api';
 import WarehouseProductWorkModal from './WarehouseProductWorkModal';
 import { ConfirmDialog } from '../../components/admin';
+import { formatRentCatalogPriceCaption } from '../../utils/rentPricing';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Admin.css';
@@ -23,15 +24,51 @@ const formatDate = (d) => {
     return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
 };
 
-const stockStatusLabel = (p) => {
+/**
+ * Статус для складу оренди: враховує quantityAvailable (вільні од.) vs активні заявки
+ * та ручний stockStatus картки.
+ * @param {object|null} item — ряд InventoryItem (для к-сті на цьому складі); у PDF передайте null.
+ */
+const stockStatusLabel = (p, item = null) => {
     if (!p) return '—';
-    if (p.stockStatus === 'available' || p.stockStatus === 'in_stock') return 'Доступний';
-    if (p.stockStatus === 'available_later') return `З ${formatDate(p.availableFrom)}`;
-    if (p.stockStatus === 'in_procurement') return 'У закупівлі (на папері)';
     if (p.stockStatus === 'needs_repair') return 'Потребує ремонту';
     if (p.stockStatus === 'in_repair') return 'На ремонті';
     if (p.stockStatus === 'out_of_stock') return 'Немає в наявності';
+
+    const free = typeof p.quantityAvailable === 'number' ? p.quantityAvailable : null;
+    const rowQty = item != null ? Math.max(0, Math.floor(Number(item.quantity) || 0)) : null;
+
+    if (free != null && free <= 0) {
+        if (rowQty == null || rowQty > 0) return 'В оренді';
+        return 'Немає вільних';
+    }
+
+    if (p.stockStatus === 'available' || p.stockStatus === 'in_stock') return 'Доступний';
+    if (p.stockStatus === 'available_later') return `З ${formatDate(p.availableFrom)}`;
+    if (p.stockStatus === 'in_procurement') return 'У закупівлі (на папері)';
     return p.stockStatus || '—';
+};
+
+/** Клас кольорової мітки статусу (узгоджено зі stockStatusLabel). */
+const stockStatusPillClass = (p, item = null) => {
+    if (!p) return 'warehouse-stock-pill--muted';
+    const free = typeof p.quantityAvailable === 'number' ? p.quantityAvailable : null;
+    const rowQty = item != null ? Math.max(0, Math.floor(Number(item.quantity) || 0)) : null;
+    if (
+        free != null &&
+        free <= 0 &&
+        !['needs_repair', 'in_repair', 'out_of_stock'].includes(p.stockStatus)
+    ) {
+        if (rowQty == null || rowQty > 0) return 'warehouse-stock-pill--rented';
+    }
+    const s = p.stockStatus;
+    if (s === 'available' || s === 'in_stock') return 'warehouse-stock-pill--ok';
+    if (s === 'available_later') return 'warehouse-stock-pill--soon';
+    if (s === 'needs_repair') return 'warehouse-stock-pill--repair';
+    if (s === 'in_repair') return 'warehouse-stock-pill--inrepair';
+    if (s === 'out_of_stock') return 'warehouse-stock-pill--danger';
+    if (s === 'in_procurement') return 'warehouse-stock-pill--procurement';
+    return 'warehouse-stock-pill--muted';
 };
 
 const loadFontAsBase64 = async (url) => {
@@ -68,6 +105,13 @@ export default function AdminWarehousePositions() {
     const [qtyConfirm, setQtyConfirm] = useState(null); // { id, newVal, oldVal, inputEl, productName }
     /** Швидкий перегляд адмін-фото з рядка складу: { urls, index } */
     const [adminImageGallery, setAdminImageGallery] = useState(null);
+    /** Фільтри по колонках (додатково до текстового пошуку) */
+    const [filterStatus, setFilterStatus] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterBrand, setFilterBrand] = useState('');
+    const [filterInCatalog, setFilterInCatalog] = useState('');
+    /** Під час PATCH showInRentCatalog — щоб не даблклікали */
+    const [catalogToggleProductId, setCatalogToggleProductId] = useState(null);
 
     const fetchWarehouses = useCallback(async () => {
         try {
@@ -182,6 +226,28 @@ export default function AdminWarehousePositions() {
         }
     };
 
+    const toggleRentCatalog = async (productId, currentlyInCatalog) => {
+        if (!productId) return;
+        setCatalogToggleProductId(productId);
+        try {
+            await productsApi.update(productId, { showInRentCatalog: !currentlyInCatalog });
+            setInventory((prev) =>
+                prev.map((row) => {
+                    if (Number(row.productId) !== Number(productId)) return row;
+                    if (!row.Product) return row;
+                    return {
+                        ...row,
+                        Product: { ...row.Product, showInRentCatalog: !currentlyInCatalog },
+                    };
+                })
+            );
+        } catch (e) {
+            alert(e.message || 'Не вдалося змінити відображення в каталозі оренди');
+        } finally {
+            setCatalogToggleProductId(null);
+        }
+    };
+
     const handleQtyBlur = (e, item) => {
         const newVal = Number(e.target.value) || 0;
         const oldVal = item.quantity ?? 0;
@@ -204,15 +270,62 @@ export default function AdminWarehousePositions() {
     }, [bulkOpen, bulkToId, targetWarehouses]);
 
     const q = search.trim().toLowerCase();
+
+    const columnFilterOptions = useMemo(() => {
+        const categories = new Set();
+        const brands = new Set();
+        for (const row of inventory) {
+            const p = row.Product;
+            if (!p) continue;
+            if (p.category) categories.add(p.category);
+            if (p.brand) brands.add(p.brand);
+        }
+        return {
+            categories: [...categories].sort((a, b) => a.localeCompare(b, 'uk')),
+            brands: [...brands].sort((a, b) => a.localeCompare(b, 'uk')),
+        };
+    }, [inventory]);
+
     const filteredInventory = useMemo(() => {
-        if (!q) return inventory;
-        return inventory.filter((row) => {
+        let rows = inventory;
+
+        if (filterStatus) {
+            rows = rows.filter((row) => {
+                const s = row.Product?.stockStatus;
+                if (filterStatus === 'in_stock') return s === 'in_stock' || s === 'available';
+                return s === filterStatus;
+            });
+        }
+        if (filterCategory) {
+            rows = rows.filter((row) => (row.Product?.category || '') === filterCategory);
+        }
+        if (filterBrand) {
+            rows = rows.filter((row) => (row.Product?.brand || '') === filterBrand);
+        }
+        if (filterInCatalog === 'yes') {
+            rows = rows.filter((row) => row.Product?.showInRentCatalog !== false);
+        }
+        if (filterInCatalog === 'no') {
+            rows = rows.filter((row) => row.Product?.showInRentCatalog === false);
+        }
+
+        if (!q) return rows;
+        return rows.filter((row) => {
             const p = row.Product;
             if (!p) return false;
             const hay = `${p.name || ''} ${p.sku || ''} ${p.category || ''} ${p.brand || ''}`.toLowerCase();
             return hay.includes(q);
         });
-    }, [inventory, q]);
+    }, [inventory, q, filterStatus, filterCategory, filterBrand, filterInCatalog]);
+
+    const clearColumnFilters = () => {
+        setFilterStatus('');
+        setFilterCategory('');
+        setFilterBrand('');
+        setFilterInCatalog('');
+    };
+
+    const hasActiveColumnFilters = !!(filterStatus || filterCategory || filterBrand || filterInCatalog);
 
     useEffect(() => {
         let cancelled = false;
@@ -343,7 +456,7 @@ export default function AdminWarehousePositions() {
                 p.sku || '—',
                 p.category || '—',
                 p.brand || '—',
-                stockStatusLabel(p),
+                stockStatusLabel(p, null),
                 row.quantity ?? 0,
                 row.reserved ?? 0,
                 row.minStock ?? 0,
@@ -481,6 +594,72 @@ export default function AdminWarehousePositions() {
                 </div>
             </div>
 
+            <div className="admin-warehouse-filters">
+                <div className="form-group">
+                    <label htmlFor="wh-filter-status">Статус</label>
+                    <select
+                        id="wh-filter-status"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                    >
+                        <option value="">Усі</option>
+                        <option value="in_stock">Доступний</option>
+                        <option value="available_later">Буде доступно з дати</option>
+                        <option value="in_procurement">У закупівлі</option>
+                        <option value="needs_repair">Потребує ремонту</option>
+                        <option value="in_repair">На ремонті</option>
+                        <option value="out_of_stock">Немає в наявності</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="wh-filter-category">Категорія</label>
+                    <select
+                        id="wh-filter-category"
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                    >
+                        <option value="">Усі</option>
+                        {columnFilterOptions.categories.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="wh-filter-brand">Бренд</label>
+                    <select
+                        id="wh-filter-brand"
+                        value={filterBrand}
+                        onChange={(e) => setFilterBrand(e.target.value)}
+                    >
+                        <option value="">Усі</option>
+                        {columnFilterOptions.brands.map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="wh-filter-catalog">У каталозі</label>
+                    <select
+                        id="wh-filter-catalog"
+                        value={filterInCatalog}
+                        onChange={(e) => setFilterInCatalog(e.target.value)}
+                    >
+                        <option value="">Усі</option>
+                        <option value="yes">Так</option>
+                        <option value="no">Ні</option>
+                    </select>
+                </div>
+                {hasActiveColumnFilters && (
+                    <button
+                        type="button"
+                        className="btn btn-secondary admin-warehouse-filters__reset"
+                        onClick={clearColumnFilters}
+                    >
+                        Скинути фільтри
+                    </button>
+                )}
+            </div>
+
             <div className="admin-table-container" style={{ overflowX: 'auto' }}>
                 <table className="admin-table admin-table--warehouses">
                     <thead>
@@ -509,7 +688,7 @@ export default function AdminWarehousePositions() {
                             <th>К-сть</th>
                             <th>Резерв</th>
                             <th>Мін.</th>
-                            <th style={{ minWidth: '160px' }}>Дії</th>
+                            <th>Дії</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -518,7 +697,16 @@ export default function AdminWarehousePositions() {
                             const open = expandedId === item.id;
                             return (
                                 <React.Fragment key={item.id}>
-                                    <tr>
+                                    <tr
+                                        className={[
+                                            p?.stockStatus === 'needs_repair' ? 'warehouse-row-needs-repair' : '',
+                                            (() => {
+                                                const free = typeof p?.quantityAvailable === 'number' ? p.quantityAvailable : null;
+                                                const rowQty = Math.max(0, Math.floor(Number(item.quantity) || 0));
+                                                return free != null && free <= 0 && rowQty > 0 ? 'warehouse-row-rented-out' : '';
+                                            })(),
+                                        ].filter(Boolean).join(' ') || undefined}
+                                    >
                                         <td>
                                             <input
                                                 type="checkbox"
@@ -549,17 +737,37 @@ export default function AdminWarehousePositions() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td>{p?.price != null ? `${p.price} ₴` : '—'}</td>
+                                        <td>{p ? formatRentCatalogPriceCaption(p) : '—'}</td>
                                         <td>
                                             <div style={{ fontSize: '0.9rem' }}>{p?.category || '—'}</div>
                                             <div style={{ color: '#666', fontSize: '0.85rem' }}>{p?.brand || '—'}</div>
                                         </td>
-                                        <td style={{ fontSize: '0.88rem', maxWidth: '160px' }}>{stockStatusLabel(p)}</td>
-                                        <td>
-                                            {p?.showInRentCatalog !== false ? (
-                                                <span className="status-badge completed" style={{ textTransform: 'none' }}>Так</span>
+                                        <td className="warehouse-status-cell">
+                                            <span className={`warehouse-stock-pill ${stockStatusPillClass(p, item)}`}>
+                                                {stockStatusLabel(p, item)}
+                                            </span>
+                                        </td>
+                                        <td className="warehouse-catalog-cell">
+                                            {p?.id ? (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary warehouse-catalog-toggle"
+                                                    disabled={catalogToggleProductId === p.id}
+                                                    title={
+                                                        p.showInRentCatalog !== false
+                                                            ? 'Прибрати з публічного каталогу оренди на сайті'
+                                                            : 'Показати в каталозі оренди на сайті'
+                                                    }
+                                                    onClick={() =>
+                                                        toggleRentCatalog(p.id, p.showInRentCatalog !== false)
+                                                    }
+                                                >
+                                                    {p.showInRentCatalog !== false
+                                                        ? 'Прибрати з каталогу'
+                                                        : 'Перевести в каталог'}
+                                                </button>
                                             ) : (
-                                                <span className="status-badge cancelled" style={{ textTransform: 'none' }}>Ні</span>
+                                                '—'
                                             )}
                                         </td>
                                         <td style={{ fontWeight: 700, textAlign: 'center' }}>{p?.quantityAvailable ?? '—'}</td>
@@ -596,11 +804,11 @@ export default function AdminWarehousePositions() {
                                         <td>
                                             <button
                                                 type="button"
-                                                className="btn btn-primary"
-                                                style={{ padding: '8px 12px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+                                                className="btn btn-primary warehouse-work-btn"
+                                                title="Робота з товаром"
                                                 onClick={() => setWorkModalRow(item)}
                                             >
-                                                <Boxes size={14} style={{ marginRight: '6px' }} />
+                                                <Boxes size={14} style={{ flexShrink: 0 }} />
                                                 Робота з товаром
                                             </button>
                                         </td>

@@ -75,7 +75,7 @@ router.get('/', ...GUARD, async (req, res) => {
             { quantity: { [Op.gt]: 0 } },
             { reserved: { [Op.gt]: 0 } }
         ];
-        const rows = await InventoryItem.findAll({
+        const findOpts = {
             where,
             include: [
                 {
@@ -87,8 +87,19 @@ router.get('/', ...GUARD, async (req, res) => {
                 { model: Warehouse, attributes: ['id', 'name', 'isActive'] }
             ],
             order: [['createdAt', 'DESC']]
-        });
-        res.json(rows);
+        };
+
+        const rows = await InventoryItem.findAll(findOpts);
+        const productIds = [
+            ...new Set(
+                rows
+                    .map((r) => Number(r.productId))
+                    .filter((id) => Number.isFinite(id) && id > 0)
+            )
+        ];
+        await Promise.all(productIds.map((id) => recalculateProductQuantity(id)));
+        const refreshed = await InventoryItem.findAll(findOpts);
+        res.json(refreshed);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

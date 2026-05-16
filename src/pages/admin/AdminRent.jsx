@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2 } from 'lucide-react';
 import { productsApi } from '../../services/api';
-import { AdminPageHeader, AdminFilters, AdminTable, ConfirmDialog } from '../../components/admin';
+import { AdminPageHeader, AdminFilters, AdminTable } from '../../components/admin';
 import './Admin.css';
 
 export default function AdminRent() {
@@ -11,8 +11,6 @@ export default function AdminRent() {
     const [loading, setLoading]           = useState(true);
     const [search, setSearch]             = useState('');
     const [filterCategory, setCategory]   = useState('');
-    const [deleteTarget, setDeleteTarget] = useState(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
 
     useEffect(() => { loadProducts(); }, []);
 
@@ -27,20 +25,6 @@ export default function AdminRent() {
             setProducts([]);
         } finally {
             setLoading(false);
-        }
-    }
-
-    async function handleDelete() {
-        if (!deleteTarget) return;
-        setDeleteLoading(true);
-        try {
-            await productsApi.remove(deleteTarget.id);
-            setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-            setDeleteTarget(null);
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setDeleteLoading(false);
         }
     }
 
@@ -96,14 +80,11 @@ export default function AdminRent() {
         {
             key: 'id',
             label: 'Дії',
-            width: '90px',
-            render: (id, row) => (
+            width: '52px',
+            render: (id) => (
                 <div className="table-actions" onClick={(e) => e.stopPropagation()}>
                     <button type="button" className="action-btn edit" title="Редагувати" onClick={() => navigate(`/admin/rent/${id}`)}>
                         <Edit2 size={16} />
-                    </button>
-                    <button type="button" className="action-btn delete" title="Видалити" onClick={() => setDeleteTarget(row)}>
-                        <Trash2 size={16} />
                     </button>
                 </div>
             ),
@@ -123,7 +104,7 @@ export default function AdminRent() {
             />
 
             <p className="admin-page-hint">
-                Тут лише позиції з наявністю на складі. Нові інструменти додаються на складі, видимість у каталозі — у картці товару.
+                Тут лише позиції з наявністю на складі. Нові інструменти додаються на складі; видимість у каталозі — на сторінці «Склад — позиції» або в картці товару. Видалення картки — через розділ товарів/складу, не з цього списку.
             </p>
 
             <AdminFilters
@@ -145,16 +126,6 @@ export default function AdminRent() {
                 loading={loading}
                 empty="Інструментів у каталозі поки немає"
                 onRowClick={(row) => navigate(`/admin/rent/${row.id}`)}
-            />
-
-            <ConfirmDialog
-                open={!!deleteTarget}
-                title="Видалити інструмент?"
-                message={deleteTarget ? `Видалити «${deleteTarget.name}» з каталогу оренди?` : ''}
-                confirmText="Видалити"
-                onConfirm={handleDelete}
-                onCancel={() => setDeleteTarget(null)}
-                loading={deleteLoading}
             />
         </div>
     );

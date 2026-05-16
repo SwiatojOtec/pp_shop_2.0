@@ -12,6 +12,8 @@ import {
     rentHasVariableTiers,
     formatRentCatalogPriceCaption,
 } from '../utils/rentPricing';
+import { recordProductView, getRecentProductViews } from '../utils/recentlyViewedProducts';
+import ProductDetailRecoRails from '../components/ProductDetailRecoRails';
 import './ProductDetail.css';
 
 function formatUkDateFromIso(dateIso) {
@@ -21,6 +23,42 @@ function formatUkDateFromIso(dateIso) {
     if (parts.length !== 3) return s;
     const [y, m, d] = parts;
     return `${d.padStart(2, '0')}.${m.padStart(2, '0')}.${y}`;
+}
+
+const DESC_PREVIEW_MAX_CHARS = 500;
+
+/** Обрізання по останньому пробілу, щоб не рвати слова посередині. */
+function sliceDescriptionPreview(full, maxChars) {
+    if (!full || full.length <= maxChars) return { preview: full, truncated: false };
+    let cut = full.slice(0, maxChars);
+    const lastSpace = cut.lastIndexOf(' ');
+    if (lastSpace > maxChars * 0.55) cut = cut.slice(0, lastSpace);
+    const preview = `${cut.trimEnd()}…`;
+    return { preview, truncated: true };
+}
+
+function CollapsibleProductDescription({ text, wrapperClassName, textClassName, maxChars = DESC_PREVIEW_MAX_CHARS }) {
+    const [expanded, setExpanded] = useState(false);
+    const full = String(text ?? '').trim();
+    if (!full) return null;
+    const { preview, truncated } = sliceDescriptionPreview(full, maxChars);
+    const display = expanded || !truncated ? full : preview;
+
+    return (
+        <div className={wrapperClassName}>
+            <p className={textClassName}>{display}</p>
+            {truncated && (
+                <button
+                    type="button"
+                    className="desc-read-more-btn"
+                    onClick={() => setExpanded((v) => !v)}
+                    aria-expanded={expanded}
+                >
+                    {expanded ? 'Згорнути' : 'Детальніше'}
+                </button>
+            )}
+        </div>
+    );
 }
 
 export default function ProductDetail() {
@@ -44,6 +82,8 @@ export default function ProductDetail() {
     const [calculatedSillPrice, setCalculatedSillPrice] = useState(0);
     const [sillError, setSillError] = useState('');
     const [imageZoomOpen, setImageZoomOpen] = useState(false);
+    const [sameCategoryProducts, setSameCategoryProducts] = useState([]);
+    const [recentViews, setRecentViews] = useState([]);
 
     useEffect(() => {
         setLoading(true);
@@ -83,6 +123,47 @@ export default function ProductDetail() {
                 setLoading(false);
             });
     }, [slug]);
+
+    useEffect(() => {
+        if (!product?.id) return;
+        recordProductView({
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            image: product.image,
+            isRent: !!product.isRent,
+            category: product.category || '',
+            price: product.price,
+            rentPriceTiers: product.rentPriceTiers,
+        });
+        setRecentViews(getRecentProductViews(product.id, !!product.isRent, 14));
+    }, [product?.id, product?.slug, product?.name, product?.image, product?.isRent, product?.category, product?.price, product?.rentPriceTiers]);
+
+    useEffect(() => {
+        if (!product?.id || !product?.category) {
+            setSameCategoryProducts([]);
+            return;
+        }
+        let cancelled = false;
+        productsApi
+            .list({
+                category: product.category,
+                isRent: product.isRent ? 'true' : 'false',
+                limit: 18,
+                sort: 'popular',
+            })
+            .then((data) => {
+                if (cancelled) return;
+                const rows = Array.isArray(data) ? data : [];
+                setSameCategoryProducts(rows.filter((p) => p.id !== product.id).slice(0, 10));
+            })
+            .catch(() => {
+                if (!cancelled) setSameCategoryProducts([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [product?.id, product?.category, product?.isRent]);
 
     // Calculate Sill Price
     useEffect(() => {
@@ -389,9 +470,12 @@ export default function ProductDetail() {
                             )}
 
                             {product.desc && (
-                                <div className="rent-desc-block">
-                                    <p className="rent-desc-text">{product.desc}</p>
-                                </div>
+                                <CollapsibleProductDescription
+                                    key={`rent-desc-${product.id}`}
+                                    text={product.desc}
+                                    wrapperClassName="rent-desc-block"
+                                    textClassName="rent-desc-text"
+                                />
                             )}
                         </div>
 
@@ -532,6 +616,12 @@ export default function ProductDetail() {
                             </a>
                         </div>
                     </div>
+
+                    <ProductDetailRecoRails
+                        isRent={!!product.isRent}
+                        sameCategory={sameCategoryProducts}
+                        recent={recentViews}
+                    />
                 </div>
                 {renderImageLightbox()}
             </div>
@@ -675,7 +765,14 @@ export default function ProductDetail() {
                             </div>
                         )}
 
-                        <p className="short-desc">{product.desc}</p>
+                        {product.desc && (
+                            <CollapsibleProductDescription
+                                key={`shop-desc-${product.id}`}
+                                text={product.desc}
+                                wrapperClassName="short-desc-wrap"
+                                textClassName="short-desc"
+                            />
+                        )}
 
                         {product.isRent && Array.isArray(product.kitItems) && product.kitItems.length > 0 && (
                             <div className="kit-block">
@@ -882,6 +979,12 @@ export default function ProductDetail() {
                         )}
                     </div>
                 </div>
+
+                <ProductDetailRecoRails
+                    isRent={!!product.isRent}
+                    sameCategory={sameCategoryProducts}
+                    recent={recentViews}
+                />
             </div>
             {renderImageLightbox()}
         </div>

@@ -92,6 +92,34 @@
     white-space: pre-line;
 }
 
+.rent-desc-block .desc-read-more-btn {
+    margin-top: 10px;
+}
+
+.desc-read-more-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.desc-read-more-btn:hover {
+    opacity: 0.88;
+}
+
+.desc-read-more-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
 /* Middle: specs column */
 .rent-specs-col {
     display: flex;
@@ -729,10 +757,14 @@
     color: #999;
 }
 
+.short-desc-wrap {
+    margin-bottom: 30px;
+}
+
 .short-desc {
     color: #666;
     line-height: 1.6;
-    margin-bottom: 30px;
+    margin-bottom: 0;
     white-space: pre-line;
 }
 
@@ -1063,4 +1095,106 @@
         top: 10px;
         right: 10px;
     }
+}
+
+/* ── Рекомендації внизу картки товару (категорія + історія переглядів) ───────── */
+.product-reco-rails {
+    margin-top: 40px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.product-reco-block + .product-reco-block {
+    margin-top: 32px;
+}
+
+.product-reco-title {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #1a1a1a;
+}
+
+.product-reco-scroll {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 4px 2px 12px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.product-reco-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.product-reco-scroll::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.product-reco-card {
+    flex: 0 0 min(200px, 78vw);
+    max-width: 220px;
+    scroll-snap-align: start;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.product-reco-card:hover {
+    border-color: #ccc;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+.product-reco-card-img-wrap {
+    aspect-ratio: 4 / 3;
+    background: #f4f4f4;
+    overflow: hidden;
+}
+
+.product-reco-card-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.product-reco-card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+    background: linear-gradient(135deg, #eee 0%, #f8f8f8 100%);
+}
+
+.product-reco-card-body {
+    padding: 10px 12px 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.product-reco-card-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-reco-card-price {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #333;
+    margin-top: auto;
 }
