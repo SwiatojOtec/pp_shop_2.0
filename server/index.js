@@ -38,13 +38,20 @@ async function ensureTimesheetIndexes() {
     );
 }
 
-// Middleware
-const allowedOrigins = [
+// Middleware — CORS: базовий список + ALLOWED_ORIGINS (через кому) з Railway / .env
+const defaultAllowedOrigins = [
     'https://pp-shop-2-0.vercel.app',
+    'https://www.pan-parket.com',
+    'https://pan-parket.com',
     'http://localhost:3000',
     'http://localhost:5173',
-    'http://localhost:5174'
+    'http://localhost:5174',
 ];
+const extraOrigins = String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...extraOrigins])];
 
 app.use(cors({
     origin: function (origin, callback) {

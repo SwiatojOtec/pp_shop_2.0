@@ -3,7 +3,10 @@ const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is not set. Set it in .env before starting the server.');
+    throw new Error(
+        'JWT_SECRET is not set. Add it to server/.env locally, or in Railway: Service → Variables → JWT_SECRET ' +
+        '(use a long random string; changing it invalidates existing login tokens).'
+    );
 }
 
 const authMiddleware = async (req, res, next) => {
