@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ClipboardList, Phone, Mail, MapPin,
     FileText, Tag, Edit2, User, Plus, Check, X as XIcon,
-    AlertTriangle,
+    AlertTriangle, ShoppingCart,
 } from 'lucide-react';
 import { clientsApi, rentalApplicationsApi } from '../../services/api';
 import { Badge } from '../../components/ui/badge';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 import './AdminClientDetails.css';
 
@@ -33,6 +34,8 @@ function fmtDate(d) {
 export default function AdminClientDetails() {
     const { id }    = useParams();
     const navigate  = useNavigate();
+    const { user } = useAuth();
+    const canCreateShopOrders = user?.role !== 'rent' && user?.role !== 'pivdenbud';
     const [client,       setClient]      = useState(null);
     const [applications, setApplications]= useState([]);
     const [loading,      setLoading]     = useState(true);
@@ -138,6 +141,11 @@ export default function AdminClientDetails() {
                     <button className="cd-btn cd-btn--ghost" onClick={() => navigate('/admin/clients')}>
                         <Edit2 size={14} /> Редагувати
                     </button>
+                    {canCreateShopOrders && (
+                        <Link to={`/admin/orders?newClientId=${client.id}`} className="cd-btn cd-btn--ghost" title="Нове замовлення магазину" style={{ color: '#0369a1', borderColor: '#bae6fd' }}>
+                            <ShoppingCart size={14} /> Замовлення
+                        </Link>
+                    )}
                     <Link to={`/admin/rental-applications/new?clientId=${client.id}`} className="cd-btn cd-btn--primary">
                         <Plus size={14} /> Нова заявка
                     </Link>

@@ -77,6 +77,8 @@ export const ordersApi = {
     list: (params) => apiGet('/api/orders', params),
     get: (id) => apiGet(`/api/orders/${id}`),
     create: (data) => apiPost('/api/orders', data),
+    /** Створення з адмінки (без Telegram-сповіщення). */
+    createAdmin: (data) => apiPost('/api/orders/admin', data),
     update: (id, data) => apiPut(`/api/orders/${id}`, data),
     remove: (id) => apiDelete(`/api/orders/${id}`),
 };

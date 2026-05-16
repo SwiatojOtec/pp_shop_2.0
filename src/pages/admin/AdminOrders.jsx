@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { ordersApi, productsApi, rentalApplicationsApi } from '../../services/api';
+import { useState, useEffect, useMemo } from 'react';
+import { ordersApi, productsApi, rentalApplicationsApi, clientsApi } from '../../services/api';
 import {
     Trash2, Search, Filter, Save, ClipboardList,
-    ChevronDown, ChevronUp, Plus, X,
+    ChevronDown, ChevronUp, X, ShoppingCart,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AdminPageHeader, ConfirmDialog } from '../../components/admin';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -36,10 +36,22 @@ function getLabel(status) {
     return STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
 }
 
+const EMPTY_SHOP_COMPOSER = {
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    address: '',
+    deliveryMethod: 'pickup',
+    paymentMethod: 'invoice',
+    items: [],
+    discount: 0,
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminOrders() {
     const navigate  = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [orders,    setOrders]    = useState([]);
     const [products,  setProducts]  = useState([]);
@@ -53,10 +65,59 @@ export default function AdminOrders() {
     const [converting, setConverting] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
 
+    const [composer, setComposer] = useState(null);
+    const [composerProductSearch, setComposerProductSearch] = useState('');
+    const [savingComposer, setSavingComposer] = useState(false);
+
+    const shopProductsOnly = useMemo(
+        () => products.filter((p) => !p.isRent),
+        [products]
+    );
+
     useEffect(() => {
         loadOrders();
         loadProducts();
     }, []);
+
+    useEffect(() => {
+        const raw = searchParams.get('newClientId');
+        if (!raw) return;
+        const cid = parseInt(raw, 10);
+        const clearQuery = () => setSearchParams({}, { replace: true });
+
+        if (Number.isNaN(cid) || cid <= 0) {
+            clearQuery();
+            return;
+        }
+
+        (async () => {
+            try {
+                const client = await clientsApi.get(cid);
+                const phone =
+                    String(client.phone || '')
+                        .split(/[,;\s]+/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)[0] || '';
+                setExpanded(null);
+                setDraft(null);
+                setComposer({
+                    customerName: client.fullName || '',
+                    customerPhone: phone,
+                    customerEmail: client.email || '',
+                    address: [client.address, client.siteAddress].filter(Boolean).join(', ') || '',
+                    deliveryMethod: 'pickup',
+                    paymentMethod: 'invoice',
+                    items: [],
+                    discount: Number(client.discountPercent || 0) || 0,
+                });
+                setComposerProductSearch('');
+            } catch (e) {
+                alert(e.message || 'Не вдалося завантажити клієнта');
+            } finally {
+                clearQuery();
+            }
+        })();
+    }, [searchParams, setSearchParams]);
 
     async function loadOrders() {
         setLoading(true);
@@ -210,6 +271,89 @@ export default function AdminOrders() {
         return items.reduce((s, i) => s + (i.price * i.quantity * (i.packSize || 1)), 0);
     }
 
+    function setComposerField(field, value) {
+        setComposer((prev) => (prev ? { ...prev, [field]: value } : prev));
+    }
+
+    function addItemComposer(product) {
+        setComposer((prev) => {
+            if (!prev) return prev;
+            const items = [
+                ...prev.items,
+                {
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    quantity: 1,
+                    unit: product.unit,
+                    packSize: product.packSize || 1,
+                },
+            ];
+            return { ...prev, items };
+        });
+        setComposerProductSearch('');
+    }
+
+    function removeItemComposer(idx) {
+        setComposer((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.filter((_, i) => i !== idx);
+            return { ...prev, items };
+        });
+    }
+
+    function updateQtyComposer(idx, qty) {
+        setComposer((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.map((item, i) =>
+                i === idx ? { ...item, quantity: parseFloat(qty) || 0 } : item
+            );
+            return { ...prev, items };
+        });
+    }
+
+    async function submitComposer() {
+        if (!composer) return;
+        if (!String(composer.customerName || '').trim() || !String(composer.customerPhone || '').trim()) {
+            alert('Вкажіть ім\'я та телефон клієнта');
+            return;
+        }
+        setSavingComposer(true);
+        try {
+            const total = calcTotal(composer.items);
+            const created = await ordersApi.createAdmin({
+                customerName: composer.customerName.trim(),
+                customerPhone: composer.customerPhone.trim(),
+                customerEmail: composer.customerEmail?.trim() || '',
+                address: composer.address || '',
+                deliveryMethod: composer.deliveryMethod,
+                paymentMethod: composer.paymentMethod,
+                items: composer.items,
+                totalAmount: total,
+                discount: composer.discount ?? 0,
+            });
+            setOrders((prev) => [created, ...prev]);
+            setComposer(null);
+            setComposerProductSearch('');
+            setExpanded(created.id);
+            setDraft({
+                ...created,
+                items: created.items ? [...created.items.map((i) => ({ ...i }))] : [],
+            });
+        } catch (e) {
+            alert(e.message || 'Помилка створення замовлення');
+        } finally {
+            setSavingComposer(false);
+        }
+    }
+
+    function openComposerBlank() {
+        setExpanded(null);
+        setDraft(null);
+        setComposer({ ...EMPTY_SHOP_COMPOSER, items: [] });
+        setComposerProductSearch('');
+    }
+
     const filteredOrders = orders.filter((o) => {
         const q = search.toLowerCase();
         const matchSearch = !q || (o.customerName || '').toLowerCase().includes(q) || (o.customerPhone || '').includes(q) || (o.orderNumber || '').toLowerCase().includes(q);
@@ -224,9 +368,208 @@ export default function AdminOrders() {
         ).slice(0, 8)
         : [];
 
+    const suggestedComposerProducts = composerProductSearch.length > 1
+        ? shopProductsOnly.filter((p) =>
+            p.name.toLowerCase().includes(composerProductSearch.toLowerCase()) ||
+            (p.sku && p.sku.toLowerCase().includes(composerProductSearch.toLowerCase()))
+        ).slice(0, 8)
+        : [];
+
     return (
         <div>
-            <AdminPageHeader title="Замовлення" subtitle={`${filteredOrders.length} з ${orders.length}`} />
+            <AdminPageHeader
+                title="Замовлення"
+                subtitle={`${filteredOrders.length} з ${orders.length}`}
+                actions={
+                    <Button type="button" variant="secondary" onClick={openComposerBlank}>
+                        <ShoppingCart size={16} /> Нове замовлення
+                    </Button>
+                }
+            />
+
+            {composer && (
+                <div
+                    className="order-composer-card"
+                    style={{
+                        marginBottom: '20px',
+                        background: 'white',
+                        border: '1px solid var(--admin-border)',
+                        borderRadius: '12px',
+                        padding: '18px 20px',
+                    }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '12px' }}>
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Нове замовлення (магазин)</h3>
+                        <button
+                            type="button"
+                            className="action-btn"
+                            onClick={() => { setComposer(null); setComposerProductSearch(''); }}
+                            title="Закрити"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    <div className="order-detail-section">
+                        <h4 className="order-detail-label">Клієнт</h4>
+                        <div className="order-detail-grid2">
+                            <div className="form-group">
+                                <label>Ім&apos;я</label>
+                                <input
+                                    type="text"
+                                    value={composer.customerName || ''}
+                                    onChange={(e) => setComposerField('customerName', e.target.value)}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Телефон</label>
+                                <input
+                                    type="text"
+                                    value={composer.customerPhone || ''}
+                                    onChange={(e) => setComposerField('customerPhone', e.target.value)}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Email</label>
+                                <input
+                                    type="email"
+                                    value={composer.customerEmail || ''}
+                                    onChange={(e) => setComposerField('customerEmail', e.target.value)}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Знижка, %</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.5"
+                                    value={composer.discount ?? 0}
+                                    onChange={(e) => setComposerField('discount', parseFloat(e.target.value) || 0)}
+                                />
+                            </div>
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label>Адреса доставки / самовивіз</label>
+                                <input
+                                    type="text"
+                                    value={composer.address || ''}
+                                    onChange={(e) => setComposerField('address', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="order-detail-section" style={{ marginTop: '12px' }}>
+                        <h4 className="order-detail-label">Товари (лише магазин, без оренди)</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                            {composer.items.map((item, idx) => (
+                                <div
+                                    key={`${item.id}-${idx}`}
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 110px 100px 36px',
+                                        gap: '10px',
+                                        alignItems: 'center',
+                                        padding: '8px 12px',
+                                        background: '#f9fafb',
+                                        borderRadius: '8px',
+                                        border: '1px solid #e5e7eb',
+                                    }}
+                                >
+                                    <span className="font-medium text-sm">{item.name}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={item.quantity}
+                                            onChange={(e) => updateQtyComposer(idx, e.target.value)}
+                                            style={{ width: '60px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem' }}
+                                        />
+                                        <span className="text-xs text-gray-500">{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
+                                    </div>
+                                    <span className="text-right font-bold text-sm">
+                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeItemComposer(idx)}
+                                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ position: 'relative', maxWidth: '420px' }}>
+                            <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                            <input
+                                type="text"
+                                placeholder="Додати товар: назва або артикул..."
+                                value={composerProductSearch}
+                                onChange={(e) => setComposerProductSearch(e.target.value)}
+                                style={{ width: '100%', padding: '8px 8px 8px 34px', border: '1px dashed #d1d5db', borderRadius: '8px', fontSize: '0.88rem', outline: 'none' }}
+                            />
+                            {suggestedComposerProducts.length > 0 && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        background: 'white',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        marginTop: '4px',
+                                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                                        zIndex: 20,
+                                        maxHeight: '260px',
+                                        overflowY: 'auto',
+                                    }}
+                                >
+                                    {suggestedComposerProducts.map((p) => (
+                                        <div
+                                            key={p.id}
+                                            onClick={() => addItemComposer(p)}
+                                            style={{
+                                                padding: '10px 14px',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid #f3f4f6',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                            }}
+                                            className="hover:bg-gray-50"
+                                        >
+                                            <div>
+                                                <div className="font-semibold text-sm">{p.name}</div>
+                                                {p.sku && <div className="text-xs text-gray-400">SKU: {p.sku}</div>}
+                                            </div>
+                                            <span className="font-bold text-[#e63946]">{p.price} ₴</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #e5e7eb', flexWrap: 'wrap', gap: '10px' }}>
+                        <div className="text-sm">
+                            Разом:{' '}
+                            <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>
+                                {calcTotal(composer.items).toLocaleString()} ₴
+                            </strong>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            <Button variant="secondary" size="sm" onClick={() => { setComposer(null); setComposerProductSearch(''); }}>
+                                Скасувати
+                            </Button>
+                            <Button size="sm" onClick={submitComposer} disabled={savingComposer}>
+                                {savingComposer ? 'Створення...' : 'Створити замовлення'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Filters */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', background: 'white', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>

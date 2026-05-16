@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Edit2, Plus, Trash2, X, Phone, Mail, MapPin, ClipboardList, Search, User, AlertTriangle } from 'lucide-react';
+import { Edit2, Plus, Trash2, X, Phone, Mail, MapPin, ClipboardList, Search, User, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AdminPageHeader, ConfirmDialog } from '../../components/admin';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { clientsApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
 // Split phone field into individual numbers
@@ -20,6 +21,8 @@ const EMPTY = {
 
 export default function AdminClients() {
     const navigate  = useNavigate();
+    const { user } = useAuth();
+    const canCreateShopOrders = user?.role !== 'rent' && user?.role !== 'pivdenbud';
 
     const [clients,    setClients]    = useState([]);
     const [loading,    setLoading]    = useState(true);
@@ -193,11 +196,21 @@ export default function AdminClients() {
                                             <Link
                                                 to={`/admin/rental-applications/new?clientId=${c.id}`}
                                                 className="action-btn"
-                                                title="Нова заявка"
+                                                title="Нова заявка оренди"
                                                 style={{ color: '#7c3aed' }}
                                             >
                                                 <ClipboardList size={15} />
                                             </Link>
+                                            {canCreateShopOrders && (
+                                                <Link
+                                                    to={`/admin/orders?newClientId=${c.id}`}
+                                                    className="action-btn"
+                                                    title="Нове замовлення магазину"
+                                                    style={{ color: '#0369a1' }}
+                                                >
+                                                    <ShoppingCart size={15} />
+                                                </Link>
+                                            )}
                                             <button className="action-btn" onClick={() => startEdit(c)} title="Редагувати"><Edit2 size={15} /></button>
                                             <button className="action-btn delete" onClick={() => setDeleteTarget(c)} title="Видалити"><Trash2 size={15} /></button>
                                         </div>
