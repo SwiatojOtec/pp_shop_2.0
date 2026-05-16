@@ -379,6 +379,78 @@
     gap: 12px;
 }
 
+/* Нове замовлення з адмінки: сітка + поля (не «ламається» як у розкритого рядка без admin-form) */
+.order-composer-card.admin-form {
+    position: relative;
+    z-index: 4;
+    margin-bottom: 28px;
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid var(--admin-border, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
+}
+
+.order-composer-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.order-composer-card__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.order-composer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    align-items: start;
+}
+
+.order-composer-card .order-composer-grid > .form-group {
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.order-composer-span2 {
+    grid-column: 1 / -1;
+}
+
+.order-composer-card .order-detail-section {
+    margin-bottom: 14px;
+}
+
+.order-composer-card__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.order-composer-card__actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.order-composer-card .order-composer-product-search {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding-left: 34px !important;
+    border-style: dashed !important;
+    border-color: #cbd5e1 !important;
+}
+
 /* Form Styles Fix */
 .admin-form input,
 .admin-form textarea,

@@ -36,6 +36,17 @@ function getLabel(status) {
     return STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
 }
 
+/** Номер з бекенду `n/DD/MM/YYYY` — показуємо як «№n · дд.мм.рррр», щоб не плутати з датою. */
+function formatOrderNumberDisplay(value) {
+    if (!value || typeof value !== 'string') return value || '—';
+    const p = value.trim().split('/');
+    if (p.length === 4 && p.every((x) => /^\d+$/.test(x))) {
+        const [n, dd, mm, yyyy] = p;
+        return `№${n} · ${dd}.${mm}.${yyyy}`;
+    }
+    return value;
+}
+
 const EMPTY_SHOP_COMPOSER = {
     customerName: '',
     customerPhone: '',
@@ -388,18 +399,9 @@ export default function AdminOrders() {
             />
 
             {composer && (
-                <div
-                    className="order-composer-card"
-                    style={{
-                        marginBottom: '20px',
-                        background: 'white',
-                        border: '1px solid var(--admin-border)',
-                        borderRadius: '12px',
-                        padding: '18px 20px',
-                    }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '12px' }}>
-                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Нове замовлення (магазин)</h3>
+                <div className="order-composer-card admin-form">
+                    <div className="order-composer-card__head">
+                        <h3 className="order-composer-card__title">Нове замовлення (магазин)</h3>
                         <button
                             type="button"
                             className="action-btn"
@@ -412,7 +414,7 @@ export default function AdminOrders() {
 
                     <div className="order-detail-section">
                         <h4 className="order-detail-label">Клієнт</h4>
-                        <div className="order-detail-grid2">
+                        <div className="order-composer-grid">
                             <div className="form-group">
                                 <label>Ім&apos;я</label>
                                 <input
@@ -432,7 +434,10 @@ export default function AdminOrders() {
                             <div className="form-group">
                                 <label>Email</label>
                                 <input
-                                    type="email"
+                                    type="text"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    placeholder="email@example.com"
                                     value={composer.customerEmail || ''}
                                     onChange={(e) => setComposerField('customerEmail', e.target.value)}
                                 />
@@ -448,7 +453,7 @@ export default function AdminOrders() {
                                     onChange={(e) => setComposerField('discount', parseFloat(e.target.value) || 0)}
                                 />
                             </div>
-                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <div className="form-group order-composer-span2">
                                 <label>Адреса доставки / самовивіз</label>
                                 <input
                                     type="text"
@@ -501,14 +506,14 @@ export default function AdminOrders() {
                             ))}
                         </div>
 
-                        <div style={{ position: 'relative', maxWidth: '420px' }}>
+                        <div style={{ position: 'relative', maxWidth: '480px' }}>
                             <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
                             <input
                                 type="text"
+                                className="order-composer-product-search"
                                 placeholder="Додати товар: назва або артикул..."
                                 value={composerProductSearch}
                                 onChange={(e) => setComposerProductSearch(e.target.value)}
-                                style={{ width: '100%', padding: '8px 8px 8px 34px', border: '1px dashed #d1d5db', borderRadius: '8px', fontSize: '0.88rem', outline: 'none' }}
                             />
                             {suggestedComposerProducts.length > 0 && (
                                 <div
@@ -552,14 +557,14 @@ export default function AdminOrders() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #e5e7eb', flexWrap: 'wrap', gap: '10px' }}>
+                    <div className="order-composer-card__footer">
                         <div className="text-sm">
                             Разом:{' '}
                             <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>
                                 {calcTotal(composer.items).toLocaleString()} ₴
                             </strong>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <div className="order-composer-card__actions">
                             <Button variant="secondary" size="sm" onClick={() => { setComposer(null); setComposerProductSearch(''); }}>
                                 Скасувати
                             </Button>
@@ -610,7 +615,9 @@ export default function AdminOrders() {
                                 className={`order-row-summary${expanded === order.id ? ' is-open' : ''}`}
                                 onClick={() => toggleExpand(order)}
                             >
-                                <div className="order-row-num">{order.orderNumber || `#${order.id}`}</div>
+                                <div className="order-row-num" title={order.orderNumber || ''}>
+                                    {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
+                                </div>
 
                                 <div className="order-row-client">
                                     <span className="font-semibold">{order.customerName}</span>
