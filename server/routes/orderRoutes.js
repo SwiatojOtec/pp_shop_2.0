@@ -1,9 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
+const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { sendTelegramMessage } = require('../utils/telegram');
 const { Op } = require('sequelize');
+
+function parsePhones(raw) {
+    if (!raw) return [];
+    return String(raw).split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
+}
+
+function digitsOnly(s) {
+    return String(s || '').replace(/\D/g, '');
+}
 
 async function generateOrderNumber() {
     const now = new Date();
@@ -38,8 +48,12 @@ async function persistOrder(payload, { sendTelegram = false } = {}) {
         paymentMethod,
         items,
         totalAmount,
-        discount
+        discount,
+        clientId: rawClientId
     } = payload;
+
+    const cid = Number(rawClientId);
+    const clientId = Number.isFinite(cid) && cid > 0 ? Math.floor(cid) : null;
 
     const orderNumber = await generateOrderNumber();
 
@@ -53,7 +67,8 @@ async function persistOrder(payload, { sendTelegram = false } = {}) {
         paymentMethod: paymentMethod || 'invoice',
         items: Array.isArray(items) ? items : [],
         totalAmount: totalAmount != null ? Number(totalAmount) : 0,
-        discount: discount != null ? Number(discount) : 0
+        discount: discount != null ? Number(discount) : 0,
+        clientId
     });
 
     if (sendTelegram) {
@@ -137,7 +152,8 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'manager']), async (
             paymentMethod,
             items,
             totalAmount,
-            discount
+            discount,
+            clientId
         } = req.body;
 
         if (!String(customerName || '').trim() || !String(customerPhone || '').trim()) {
@@ -154,7 +170,8 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'manager']), async (
                 paymentMethod,
                 items,
                 totalAmount,
-                discount
+                discount,
+                clientId
             },
             { sendTelegram: false }
         );
@@ -162,6 +179,59 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'manager']), async (
         res.status(201).json(order);
     } catch (err) {
         res.status(400).json({ message: err.message });
+    }
+});
+
+/** Замовлення для картки клієнта: за clientId + старі без clientId за збігом телефону. */
+router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+    try {
+        const clientId = parseInt(req.params.clientId, 10);
+        if (Number.isNaN(clientId) || clientId <= 0) {
+            return res.status(400).json({ message: 'Некоректний id клієнта' });
+        }
+
+        const client = await Client.findByPk(clientId);
+        if (!client) {
+            return res.json([]);
+        }
+
+        const byLink = await Order.findAll({
+            where: { clientId },
+            order: [['createdAt', 'DESC']]
+        });
+
+        const phoneNorms = [
+            ...new Set(
+                parsePhones(client.phone)
+                    .map(digitsOnly)
+                    .filter((d) => d.length >= 9)
+                    .map((d) => d.slice(-10))
+            )
+        ];
+
+        let byPhone = [];
+        if (phoneNorms.length) {
+            const candidates = await Order.findAll({
+                where: { clientId: { [Op.is]: null } },
+                order: [['createdAt', 'DESC']],
+                limit: 2500
+            });
+            byPhone = candidates.filter((o) => {
+                const od = digitsOnly(o.customerPhone);
+                if (od.length < 9) return false;
+                const tail = od.slice(-10);
+                return phoneNorms.some((p) => tail === p || od.endsWith(p) || p.endsWith(tail));
+            });
+        }
+
+        const map = new Map();
+        for (const o of [...byLink, ...byPhone]) {
+            if (!map.has(o.id)) map.set(o.id, o);
+        }
+        const merged = [...map.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        res.json(merged);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 

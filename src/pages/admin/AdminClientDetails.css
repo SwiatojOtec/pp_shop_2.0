@@ -390,6 +390,12 @@
     font-size: 0.92rem;
 }
 
+.cd-order-items-preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ── Responsive ── */
 @media (max-width: 840px) {
     .cd-body {

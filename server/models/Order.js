@@ -47,6 +47,10 @@ const Order = sequelize.define('Order', {
         type: DataTypes.DECIMAL(5, 2),
         defaultValue: 0
     },
+    clientId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     status: {
         type: DataTypes.STRING,
         defaultValue: 'pending' // pending, processing, shipped, delivered, cancelled

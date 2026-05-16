@@ -5,7 +5,7 @@ import {
     FileText, Tag, Edit2, User, Plus, Check, X as XIcon,
     AlertTriangle, ShoppingCart,
 } from 'lucide-react';
-import { clientsApi, rentalApplicationsApi } from '../../services/api';
+import { clientsApi, rentalApplicationsApi, ordersApi } from '../../services/api';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
@@ -20,12 +20,29 @@ const STATUS_META = {
     cancelled:{ label: 'Скасована',          variant: 'danger'    },
 };
 
+const SHOP_ORDER_STATUS_META = {
+    pending:      { label: 'Новий',               variant: 'warning'   },
+    invoice_sent: { label: 'Рахунок виставлено', variant: 'secondary' },
+    paid:         { label: 'Оплачено',            variant: 'success'   },
+    processing:   { label: 'В роботі',            variant: 'default'   },
+    completed:    { label: 'Виконано',            variant: 'success'   },
+    cancelled:    { label: 'Скасовано',           variant: 'danger'    },
+};
+
+function formatShopOrderNumber(value) {
+    if (!value || typeof value !== 'string') return value || '—';
+    const p = value.trim().split('/');
+    if (p.length === 4 && p.every((x) => /^\d+$/.test(x))) {
+        const [n, dd, mm, yyyy] = p;
+        return `№${n} · ${dd}.${mm}.${yyyy}`;
+    }
+    return value;
+}
+
 function parsePhones(raw) {
     if (!raw) return [];
     return raw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
 }
-
-function fmtDate(d) {
     if (!d) return '—';
     const dt = new Date(d);
     return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
@@ -38,6 +55,7 @@ export default function AdminClientDetails() {
     const canCreateShopOrders = user?.role !== 'rent' && user?.role !== 'pivdenbud';
     const [client,       setClient]      = useState(null);
     const [applications, setApplications]= useState([]);
+    const [shopOrders, setShopOrders] = useState([]);
     const [loading,      setLoading]     = useState(true);
     const [editingNotes, setEditingNotes]= useState(false);
     const [notesDraft,   setNotesDraft]  = useState('');
@@ -53,20 +71,33 @@ export default function AdminClientDetails() {
         (async () => {
             setLoading(true);
             try {
-                const [clientData, appsData] = await Promise.all([
+                const parts = [
                     clientsApi.get(id),
                     rentalApplicationsApi.list({ clientId: id }),
-                ]);
+                ];
+                if (canCreateShopOrders) {
+                    parts.push(ordersApi.listByClient(id));
+                }
+                const results = await Promise.all(parts);
+                const clientData = results[0];
+                const appsData = results[1];
                 setClient(clientData || null);
                 setApplications(Array.isArray(appsData) ? appsData : []);
+                if (canCreateShopOrders && results.length > 2) {
+                    const ord = results[2];
+                    setShopOrders(Array.isArray(ord) ? ord : []);
+                } else {
+                    setShopOrders([]);
+                }
             } catch {
                 setClient(null);
                 setApplications([]);
+                setShopOrders([]);
             } finally {
                 setLoading(false);
             }
         })();
-    }, [id]);
+    }, [id, canCreateShopOrders]);
 
     async function saveClaims() {
         setClaimsSaving(true);
@@ -107,6 +138,7 @@ export default function AdminClientDetails() {
     const discount = Number(client.discountPercent || 0);
     const totalRevenue = applications.reduce((s,a) => s + Number(a.totalAmount || 0), 0);
     const activeCount  = applications.filter(a => ['active','booked'].includes(a.status)).length;
+    const shopTotal    = shopOrders.reduce((s, o) => s + Number(o.totalAmount || 0), 0);
 
     return (
         <div className="cd-page">
@@ -230,6 +262,20 @@ export default function AdminClientDetails() {
                                     {totalRevenue > 0 ? `${totalRevenue.toLocaleString('uk-UA')} ₴` : '—'}
                                 </span>
                             </div>
+                            {canCreateShopOrders && (
+                                <>
+                                    <div className="cd-stat">
+                                        <span className="cd-stat-label">Замовлень</span>
+                                        <span className="cd-stat-value">{shopOrders.length}</span>
+                                    </div>
+                                    <div className="cd-stat">
+                                        <span className="cd-stat-label">Сума магазину</span>
+                                        <span className="cd-stat-value" style={{ fontSize: '0.95rem' }}>
+                                            {shopTotal > 0 ? `${shopTotal.toLocaleString('uk-UA')} ₴` : '—'}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -302,6 +348,90 @@ export default function AdminClientDetails() {
                             </div>
                         )}
                     </div>
+
+                    {canCreateShopOrders && (
+                        <div className="cd-card cd-card--full" style={{ marginTop: '16px' }}>
+                            <div className="cd-card-title" style={{ justifyContent: 'space-between' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <ShoppingCart size={15} /> Замовлення магазину
+                                    {shopOrders.length > 0 && (
+                                        <span className="cd-badge-count">{shopOrders.length}</span>
+                                    )}
+                                </span>
+                                <Link to={`/admin/orders?newClientId=${client.id}`} className="cd-new-app-link">
+                                    <Plus size={13} /> Нове замовлення
+                                </Link>
+                            </div>
+
+                            {shopOrders.length === 0 ? (
+                                <div className="cd-apps-empty">
+                                    <ShoppingCart size={36} style={{ opacity: 0.2, marginBottom: '10px' }} />
+                                    <p>Замовлень ще немає</p>
+                                    <Link to={`/admin/orders?newClientId=${client.id}`} className="cd-btn cd-btn--primary" style={{ marginTop: '12px', display: 'inline-flex' }}>
+                                        <Plus size={14} /> Перше замовлення
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div className="admin-table-container" style={{ marginTop: '4px' }}>
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>№ замовлення</th>
+                                                <th>Дата</th>
+                                                <th>Товари</th>
+                                                <th>Сума</th>
+                                                <th>Статус</th>
+                                                <th style={{ textAlign: 'right' }}>Дії</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {shopOrders.map((o) => {
+                                                const sm = SHOP_ORDER_STATUS_META[o.status] || { label: o.status || '—', variant: 'secondary' };
+                                                const items = o.items || [];
+                                                const line = items.slice(0, 2).map((i) => `${i.name} ×${i.quantity}`).join(', ');
+                                                return (
+                                                    <tr
+                                                        key={o.id}
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={() => navigate(`/admin/orders?openOrder=${o.id}`)}
+                                                    >
+                                                        <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                                                            {formatShopOrderNumber(o.orderNumber || `#${o.id}`)}
+                                                        </td>
+                                                        <td style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+                                                            {fmtDate(o.createdAt)}
+                                                        </td>
+                                                        <td style={{ color: '#6b7280', fontSize: '0.82rem', maxWidth: '280px' }} className="cd-order-items-preview">
+                                                            {line || '—'}
+                                                            {items.length > 2 && <span style={{ color: '#9ca3af' }}> +{items.length - 2}</span>}
+                                                        </td>
+                                                        <td style={{ fontWeight: 700 }}>
+                                                            {Number(o.totalAmount || 0).toLocaleString('uk-UA')} ₴
+                                                        </td>
+                                                        <td><Badge variant={sm.variant}>{sm.label}</Badge></td>
+                                                        <td style={{ textAlign: 'right' }}>
+                                                            <button
+                                                                type="button"
+                                                                className="action-btn"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/admin/orders?openOrder=${o.id}`);
+                                                                }}
+                                                                title="Відкрити в замовленнях"
+                                                            >
+                                                                <ShoppingCart size={15} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                         </div>
 
                         <div className="cd-main-aside">

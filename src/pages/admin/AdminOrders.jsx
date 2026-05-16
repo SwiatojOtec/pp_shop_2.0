@@ -79,6 +79,7 @@ export default function AdminOrders() {
     const [composer, setComposer] = useState(null);
     const [composerProductSearch, setComposerProductSearch] = useState('');
     const [savingComposer, setSavingComposer] = useState(false);
+    const [composerClientId, setComposerClientId] = useState(null);
 
     const shopProductsOnly = useMemo(
         () => products.filter((p) => !p.isRent),
@@ -122,6 +123,7 @@ export default function AdminOrders() {
                     discount: Number(client.discountPercent || 0) || 0,
                 });
                 setComposerProductSearch('');
+                setComposerClientId(cid);
             } catch (e) {
                 alert(e.message || 'Не вдалося завантажити клієнта');
             } finally {
@@ -129,6 +131,31 @@ export default function AdminOrders() {
             }
         })();
     }, [searchParams, setSearchParams]);
+
+    useEffect(() => {
+        const raw = searchParams.get('openOrder');
+        if (!raw || orders.length === 0) return;
+        const oid = parseInt(raw, 10);
+        const stripOpen = () => {
+            setSearchParams((prev) => {
+                const n = new URLSearchParams(prev);
+                n.delete('openOrder');
+                return n;
+            }, { replace: true });
+        };
+        if (Number.isNaN(oid) || oid <= 0) {
+            stripOpen();
+            return;
+        }
+        const o = orders.find((x) => x.id === oid);
+        if (!o) {
+            stripOpen();
+            return;
+        }
+        setExpanded(oid);
+        setDraft({ ...o, items: o.items ? [...o.items.map((i) => ({ ...i }))] : [] });
+        stripOpen();
+    }, [orders, searchParams, setSearchParams]);
 
     async function loadOrders() {
         setLoading(true);
@@ -342,10 +369,12 @@ export default function AdminOrders() {
                 items: composer.items,
                 totalAmount: total,
                 discount: composer.discount ?? 0,
+                clientId: composerClientId || undefined,
             });
             setOrders((prev) => [created, ...prev]);
             setComposer(null);
             setComposerProductSearch('');
+            setComposerClientId(null);
             setExpanded(created.id);
             setDraft({
                 ...created,
@@ -363,6 +392,7 @@ export default function AdminOrders() {
         setDraft(null);
         setComposer({ ...EMPTY_SHOP_COMPOSER, items: [] });
         setComposerProductSearch('');
+        setComposerClientId(null);
     }
 
     const filteredOrders = orders.filter((o) => {
@@ -405,7 +435,7 @@ export default function AdminOrders() {
                         <button
                             type="button"
                             className="action-btn"
-                            onClick={() => { setComposer(null); setComposerProductSearch(''); }}
+                            onClick={() => { setComposer(null); setComposerProductSearch(''); setComposerClientId(null); }}
                             title="Закрити"
                         >
                             <X size={16} />
@@ -565,7 +595,7 @@ export default function AdminOrders() {
                             </strong>
                         </div>
                         <div className="order-composer-card__actions">
-                            <Button variant="secondary" size="sm" onClick={() => { setComposer(null); setComposerProductSearch(''); }}>
+                            <Button variant="secondary" size="sm" onClick={() => { setComposer(null); setComposerProductSearch(''); setComposerClientId(null); }}>
                                 Скасувати
                             </Button>
                             <Button size="sm" onClick={submitComposer} disabled={savingComposer}>
