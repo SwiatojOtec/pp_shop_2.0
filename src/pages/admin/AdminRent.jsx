@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit2 } from 'lucide-react';
+import { Plus, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { productsApi } from '../../services/api';
 import { AdminPageHeader, AdminFilters, AdminTable } from '../../components/admin';
 import './Admin.css';
@@ -11,6 +11,9 @@ export default function AdminRent() {
     const [loading, setLoading]           = useState(true);
     const [search, setSearch]             = useState('');
     const [filterCategory, setCategory]   = useState('');
+    const [zeroBlockOpen, setZeroBlockOpen] = useState(false);
+    const [zeroRows, setZeroRows]         = useState([]);
+    const [zeroLoading, setZeroLoading]   = useState(false);
 
     useEffect(() => { loadProducts(); }, []);
 
@@ -28,7 +31,27 @@ export default function AdminRent() {
         }
     }
 
-    const categoryOptions = useMemo(() => {
+    async function loadZeroQtyRows() {
+        setZeroLoading(true);
+        try {
+            const data = await productsApi.list({ isRent: true, includeHiddenRent: true });
+            const rows = Array.isArray(data) ? data : [];
+            setZeroRows(rows.filter((p) => Number(p.quantityAvailable || 0) <= 0));
+        } catch (err) {
+            console.error(err);
+            setZeroRows([]);
+        } finally {
+            setZeroLoading(false);
+        }
+    }
+
+    function toggleZeroBlock() {
+        setZeroBlockOpen((prev) => {
+            const next = !prev;
+            if (next) loadZeroQtyRows();
+            return next;
+        });
+    }
         const cats = new Set(products.map((p) => p.category).filter(Boolean));
         return [...cats].sort().map((c) => ({ value: c, label: c }));
     }, [products]);
@@ -104,8 +127,60 @@ export default function AdminRent() {
             />
 
             <p className="admin-page-hint">
-                Тут лише позиції з наявністю на складі. Нові інструменти додаються на складі; видимість у каталозі — на сторінці «Склад — позиції» або в картці товару. Видалення картки — через розділ товарів/складу, не з цього списку.
+                Тут лише позиції з наявністю на складі. Нові інструменти додаються на складі; видимість у каталозі — на сторінці «Склад — позиції» або в картці товару.
+                Повне видалення картки — кнопка «Видалити картку» на сторінці редагування інструмента; картки з 0 вільних (не на сайті) — у блоці нижче.
             </p>
+
+            <div style={{ marginBottom: '18px' }}>
+                <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={toggleZeroBlock}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}
+                >
+                    {zeroBlockOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                    Картки без вільної наявності (не в каталозі на сайті)
+                    {zeroRows.length > 0 && <span style={{ color: '#6b7280', fontWeight: 600 }}> — {zeroRows.length}</span>}
+                </button>
+                {zeroBlockOpen && (
+                    <div style={{ marginTop: '12px', border: '1px solid var(--admin-border)', borderRadius: '10px', overflow: 'hidden', background: '#fafafa' }}>
+                        {zeroLoading ? (
+                            <div style={{ padding: '20px', color: '#9ca3af' }}>Завантаження...</div>
+                        ) : zeroRows.length === 0 ? (
+                            <div style={{ padding: '20px', color: '#9ca3af' }}>Таких карток немає.</div>
+                        ) : (
+                            <div className="admin-table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Назва</th>
+                                            <th>SKU</th>
+                                            <th>Вільно</th>
+                                            <th>У каталозі</th>
+                                            <th style={{ textAlign: 'right' }}>Дії</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {zeroRows.map((p) => (
+                                            <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/rent/${p.id}`)}>
+                                                <td style={{ fontWeight: 600 }}>{p.name}</td>
+                                                <td>{p.sku ? <code className="admin-code">{p.sku}</code> : '—'}</td>
+                                                <td>{typeof p.quantityAvailable === 'number' ? `${p.quantityAvailable} шт` : '—'}</td>
+                                                <td>{p.showInRentCatalog !== false ? 'Так' : 'Ні'}</td>
+                                                <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                                                    <button type="button" className="action-btn edit" title="Редагувати / видалити" onClick={() => navigate(`/admin/rent/${p.id}`)}>
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
             <AdminFilters
                 search={search}

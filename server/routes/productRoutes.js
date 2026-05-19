@@ -3,9 +3,9 @@ const router = express.Router();
 const Product = require('../models/Product');
 const RentCategory = require('../models/RentCategory');
 const Warehouse = require('../models/Warehouse');
+const InventoryItem = require('../models/InventoryItem');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
-const InventoryItem = require('../models/InventoryItem');
 const { ensureMainWarehouse, recalculateProductQuantity } = require('../services/inventoryService');
 const { attachRentCatalogHintsToProducts } = require('../utils/rentCatalogEnrichment');
 
@@ -268,6 +268,7 @@ router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', '
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
+        await InventoryItem.destroy({ where: { productId: product.id } });
         await product.destroy();
         res.json({ message: 'Product deleted' });
     } catch (err) {

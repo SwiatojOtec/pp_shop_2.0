@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
-import { Save, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Save, ArrowLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { transliterate } from '../../utils/transliterate';
 import { categoriesApi, rentCategoriesApi, brandsApi, warehousesApi, productsApi, inventoryApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 import ProductBasicInfo     from '../../components/admin/product/ProductBasicInfo';
 import ProductSpecs         from '../../components/admin/product/ProductSpecs';
@@ -13,6 +14,7 @@ import ProductGallery       from '../../components/admin/product/ProductGallery'
 import ProductRentDetails   from '../../components/admin/product/ProductRentDetails';
 import ProductIdentifiers   from '../../components/admin/product/ProductIdentifiers';
 import ProductPriceSidebar  from '../../components/admin/product/ProductPriceSidebar';
+import { ConfirmDialog } from '../../components/admin';
 import {
     ensureRentTiersFormShape,
     normalizeRentTiersForApi,
@@ -54,6 +56,7 @@ const INITIAL_FORM = {
 export default function ProductEdit({ context = 'products' }) {
     const { id }           = useParams();
     const navigate         = useNavigate();
+    const { user }         = useAuth();
     const [searchParams]   = useSearchParams();
     const location         = useLocation();
     const isNew         = id === 'new';
@@ -67,6 +70,10 @@ export default function ProductEdit({ context = 'products' }) {
     const [inventoryRows, setInventoryRows] = useState([]);
     const [loading, setLoading]         = useState(!isNew);
     const [saving, setSaving]           = useState(false);
+    const [deleteOpen, setDeleteOpen]   = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const canDeleteProduct = user && ['owner', 'manager', 'rent', 'pivdenbud'].includes(user.role);
 
     // Merge a single field into formData
     const update = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
@@ -314,6 +321,20 @@ export default function ProductEdit({ context = 'products' }) {
         }
     }
 
+    async function handleDeleteProduct() {
+        if (isNew || !id) return;
+        setDeleteLoading(true);
+        try {
+            await productsApi.remove(id);
+            navigate(isRentContext ? '/admin/rent' : '/admin/products');
+        } catch (err) {
+            alert(err.message || 'Не вдалося видалити товар. Можливі зв’язані замовлення або заявки — спробуйте приховати картку з каталогу.');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteOpen(false);
+        }
+    }
+
     // ── Render ────────────────────────────────────────────────────────────────
 
     if (loading) return <div className="admin-content">Завантаження...</div>;
@@ -352,15 +373,41 @@ export default function ProductEdit({ context = 'products' }) {
                             : (isRentContext ? 'Редагувати інструмент' : 'Редагувати товар')}
                     </h1>
                 </div>
-                <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="btn-primary"
-                    disabled={saving}
-                >
-                    <Save size={18} /> {saving ? 'Збереження...' : 'Зберегти зміни'}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {!isNew && canDeleteProduct && (
+                        <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ color: '#b91c1c', borderColor: '#fecaca' }}
+                            onClick={() => setDeleteOpen(true)}
+                            disabled={deleteLoading || saving}
+                        >
+                            <Trash2 size={18} /> Видалити картку
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        className="btn-primary"
+                        disabled={saving}
+                    >
+                        <Save size={18} /> {saving ? 'Збереження...' : 'Зберегти зміни'}
+                    </button>
+                </div>
             </div>
+
+            <ConfirmDialog
+                open={deleteOpen}
+                title={isRentContext ? 'Видалити інструмент?' : 'Видалити товар?'}
+                message={
+                    formData.name
+                        ? `Безповоротно видалити «${formData.name}»? Рядки складу для цієї картки будуть прибрані.`
+                        : 'Безповоротно видалити цю картку?'
+                }
+                confirmText="Видалити"
+                onConfirm={handleDeleteProduct}
+                onCancel={() => setDeleteOpen(false)}
+            />
 
             {/* Two-column grid */}
             <div className="product-edit-grid">
