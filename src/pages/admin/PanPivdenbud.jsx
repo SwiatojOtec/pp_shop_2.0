@@ -44,12 +44,16 @@ function entriesToGetCell(entries) {
 
 function TimesheetCalendarTable({
     labels,
+    slots,
     getCell,
     dayMeta,
     readOnly,
     handleField,
     calendarWrapRef
 }) {
+    const slotList = slots?.length
+        ? slots
+        : Array.from({ length: Math.max(labels?.length || 0, 1) }, (_, i) => i + 1);
     return (
         <div ref={calendarWrapRef} className="timesheet-calendar-wrap">
             <table className="timesheet-cal-table">
@@ -68,7 +72,7 @@ function TimesheetCalendarTable({
                     </tr>
                 </thead>
                 <tbody>
-                    {[1, 2, 3].map(slot => (
+                    {slotList.map(slot => (
                         <React.Fragment key={`slot-${slot}`}>
                             {[0, 1].map(rowIdx => (
                                 <tr key={`${slot}-r${rowIdx}`}>
@@ -161,7 +165,7 @@ export default function PanPivdenbud() {
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
     const [month, setMonth] = useState(now.getMonth() + 1);
-    const [labels, setLabels] = useState(['', '', '']);
+    const [labels, setLabels] = useState(['']);
     const [grid, setGrid] = useState(() => ({}));
     const [overviewSheets, setOverviewSheets] = useState([]);
     const [selectedGroup, setSelectedGroup] = useState('all');
@@ -204,7 +208,7 @@ export default function PanPivdenbud() {
         timesheetApi.list({ year, month })
             .then(data => {
                 if (!data) return;
-                setLabels(data.labels || ['', '', '']);
+                setLabels(Array.isArray(data.labels) && data.labels.length ? data.labels : ['']);
                 const g = {};
                 (data.entries || []).forEach(e => {
                     const k = cellKey(e.day, e.slot);
@@ -275,8 +279,9 @@ export default function PanPivdenbud() {
         if (!token) return;
         setSaving(true);
         const cells = [];
+        const slotCount = Math.max(labels.length, 1);
         for (let d = 1; d <= lastDay; d++) {
-            for (let s = 1; s <= 3; s++) {
+            for (let s = 1; s <= slotCount; s++) {
                 const c = grid[cellKey(d, s)] || emptyCell();
                 const has =
                     String(c.ah).trim() !== '' ||

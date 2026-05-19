@@ -7,7 +7,8 @@ const User = require('../models/User');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-const MAX_MEMBERS = 2;
+/** Макс. співробітників у підрозділі (окрім голови); = рядків у табелі мінус голова */
+const MAX_MEMBERS = 30;
 
 function userPublic(u) {
     if (!u) return null;

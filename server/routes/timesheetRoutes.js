@@ -7,18 +7,9 @@ const Subdivision = require('../models/Subdivision');
 const User = require('../models/User');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const allowedRoles = ['owner', 'manager', 'pivdenbud'];
-
-function formatPersonLabel(usr) {
-    if (!usr) return '';
-    const s = [usr.name, usr.lastName].filter(Boolean).join(' ').trim();
-    return s || usr.email || '—';
-}
+const MAX_TIMESHEET_SLOTS = 30;
 
 async function teamLabelsForUser(user) {
-    const slot1 = formatPersonLabel(user) || 'Співробітник 1';
-    const fallback2 = process.env.PIVDENBUD_EMP2_NAME || 'Співробітник 2';
-    const fallback3 = process.env.PIVDENBUD_EMP3_NAME || 'Співробітник 3';
-
     if (user.role === 'pivdenbud') {
         const headRow = await SubdivisionMember.findOne({
             where: { userId: user.id, isHead: true }
@@ -33,12 +24,26 @@ async function teamLabelsForUser(user) {
                 if (r.User) return formatPersonLabel(r.User);
                 if (r.displayName) return r.displayName;
                 return '';
-            });
-            return [names[0] || slot1, names[1] || fallback2, names[2] || fallback3];
+            }).filter(Boolean);
+            if (names.length) return names.slice(0, MAX_TIMESHEET_SLOTS);
         }
     }
 
-    return [slot1, fallback2, fallback3];
+    const headLabel = formatPersonLabel(user) || 'Голова';
+    return [headLabel];
+}
+
+async function maxSlotsForHeadUserId(headUserId) {
+    const u = await User.findByPk(headUserId);
+    if (!u) return 1;
+    const labels = await teamLabelsForUser(u);
+    return Math.min(Math.max(labels.length, 1), MAX_TIMESHEET_SLOTS);
+}
+
+function formatPersonLabel(usr) {
+    if (!usr) return '';
+    const s = [usr.name, usr.lastName].filter(Boolean).join(' ').trim();
+    return s || usr.email || '—';
 }
 
 async function teamLabels(req) {
@@ -48,9 +53,7 @@ async function teamLabels(req) {
 /** Підписи колонок для табелю голови за userId (для overview). */
 async function teamLabelsForHeadUserId(headUserId) {
     const u = await User.findByPk(headUserId);
-    if (!u) {
-        return ['—', '—', '—'];
-    }
+    if (!u) return ['—'];
     return teamLabelsForUser(u);
 }
 
@@ -213,6 +216,7 @@ router.put('/month', authMiddleware, requireRole(['pivdenbud']), async (req, res
         const lastDay = new Date(y, m, 0).getDate();
 
         const headId = req.user.id;
+        const maxSlot = await maxSlotsForHeadUserId(headId);
 
         await TimesheetEntry.destroy({
             where: {
@@ -228,7 +232,7 @@ router.put('/month', authMiddleware, requireRole(['pivdenbud']), async (req, res
             for (const c of cells) {
                 const day = parseInt(c.day, 10);
                 const slot = parseInt(c.slot, 10);
-                if (day < 1 || day > lastDay || slot < 1 || slot > 3) continue;
+                if (day < 1 || day > lastDay || slot < 1 || slot > maxSlot) continue;
 
                 const ah = parsePart(c.arrivalHour, 23);
                 const am = parsePart(c.arrivalMinute, 59);

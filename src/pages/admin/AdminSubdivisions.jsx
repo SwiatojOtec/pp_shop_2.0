@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Network, Plus, Trash2, Pencil } from 'lucide-react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Network, Plus, Trash2, Pencil, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { subdivisionsApi, usersApi } from '../../services/api';
 import { AdminPageHeader } from '../../components/admin';
@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/badge';
 import { ConfirmDialog } from '../../components/admin';
 import './Admin.css';
 
-const MAX_MEMBERS = 2;
+const MAX_MEMBERS = 30;
 const GUEST_OPTION = 'guest';
 
 const ROLE_LABELS = {
@@ -30,27 +30,93 @@ function formatMember(m) {
     return formatUser(m);
 }
 
-function slotFromMember(m) {
-    if (!m) return { select: '', name: '' };
-    if (m.isGuest || m.displayName) return { select: GUEST_OPTION, name: m.displayName || '' };
-    return { select: String(m.id), name: '' };
+function newMemberRow(partial = {}) {
+    return {
+        key: partial.key || `m-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        select: partial.select ?? '',
+        name: partial.name ?? '',
+    };
 }
 
-function buildMembersPayload(select1, name1, select2, name2) {
-    const out = [];
-    function add(selectVal, nameVal) {
-        if (!selectVal) return;
-        if (selectVal === GUEST_OPTION) {
-            const n = nameVal.trim();
-            if (n) out.push({ displayName: n });
-            return;
+function rowsFromMembers(members) {
+    const list = members || [];
+    if (!list.length) return [newMemberRow()];
+    return list.map((m) => {
+        if (m.isGuest || m.displayName) {
+            return newMemberRow({ select: GUEST_OPTION, name: m.displayName || '' });
         }
-        const id = parseInt(selectVal, 10);
+        return newMemberRow({ select: String(m.id) });
+    });
+}
+
+function buildMembersPayload(rows) {
+    const out = [];
+    for (const row of rows) {
+        if (!row.select) continue;
+        if (row.select === GUEST_OPTION) {
+            const n = row.name.trim();
+            if (n) out.push({ displayName: n });
+            continue;
+        }
+        const id = parseInt(row.select, 10);
         if (Number.isInteger(id)) out.push({ userId: id });
     }
-    add(select1, name1);
-    add(select2, name2);
     return out;
+}
+
+function validateMemberRows(rows) {
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i].select === GUEST_OPTION && !rows[i].name.trim()) {
+            return `Рядок ${i + 1}: вкажіть ім'я або приберіть співробітника`;
+        }
+    }
+    const userIds = rows
+        .filter((r) => r.select && r.select !== GUEST_OPTION)
+        .map((r) => parseInt(r.select, 10));
+    if (new Set(userIds).size !== userIds.length) {
+        return 'Один користувач не може бути обраний двічі';
+    }
+    return null;
+}
+
+function MemberRowEditor({ index, row, memberPool, otherSelectedIds, onChange, onRemove, canRemove }) {
+    const pool = memberPool.filter(
+        (u) => !otherSelectedIds.has(u.id) || String(u.id) === row.select
+    );
+    return (
+        <div className="subdiv-member-row">
+            <span className="subdiv-member-row__num">{index + 1}</span>
+            <div className="subdiv-member-row__fields">
+                <select
+                    value={row.select}
+                    onChange={(e) => onChange({
+                        ...row,
+                        select: e.target.value,
+                        name: e.target.value === GUEST_OPTION ? row.name : '',
+                    })}
+                >
+                    <option value="">— не додавати —</option>
+                    <option value={GUEST_OPTION}>Без акаунта (ім’я вручну)</option>
+                    {pool.map((u) => (
+                        <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
+                    ))}
+                </select>
+                {row.select === GUEST_OPTION && (
+                    <input
+                        type="text"
+                        value={row.name}
+                        onChange={(e) => onChange({ ...row, name: e.target.value })}
+                        placeholder="ПІБ для табеля"
+                    />
+                )}
+            </div>
+            {canRemove && (
+                <button type="button" className="subdiv-member-row__remove" onClick={onRemove} title="Прибрати рядок">
+                    <X size={16} />
+                </button>
+            )}
+        </div>
+    );
 }
 
 export default function AdminSubdivisions() {
@@ -69,10 +135,7 @@ export default function AdminSubdivisions() {
 
     const [subName,    setSubName]    = useState('');
     const [headId,     setHeadId]     = useState('');
-    const [member1Id,  setMember1Id]  = useState('');
-    const [member2Id,  setMember2Id]  = useState('');
-    const [member1Name, setMember1Name] = useState('');
-    const [member2Name, setMember2Name] = useState('');
+    const [memberRows, setMemberRows] = useState([newMemberRow()]);
 
     useEffect(() => {
         if (!token) return;
@@ -121,6 +184,29 @@ export default function AdminSubdivisions() {
         return list;
     }, [eligible, busyIds, headId, editingSub, users]);
 
+    const filledMemberCount = useMemo(
+        () => memberRows.filter((r) => r.select).length,
+        [memberRows]
+    );
+
+    const getOtherSelectedIds = useCallback((rowKey) => {
+        const setIds = new Set();
+        memberRows.forEach((r) => {
+            if (r.key === rowKey || !r.select || r.select === GUEST_OPTION) return;
+            const id = parseInt(r.select, 10);
+            if (Number.isInteger(id)) setIds.add(id);
+        });
+        return setIds;
+    }, [memberRows]);
+
+    function addMemberRow() {
+        if (filledMemberCount >= MAX_MEMBERS) {
+            setError(`Не більше ${MAX_MEMBERS} співробітників (окрім голови)`);
+            return;
+        }
+        setMemberRows((prev) => [...prev, newMemberRow()]);
+    }
+
     async function reload() {
         const [subs, usrs] = await Promise.all([subdivisionsApi.list(), usersApi.list()]);
         setSubdivisions(Array.isArray(subs) ? subs : []);
@@ -132,10 +218,7 @@ export default function AdminSubdivisions() {
         setEditingSub(null);
         setSubName('');
         setHeadId('');
-        setMember1Id('');
-        setMember2Id('');
-        setMember1Name('');
-        setMember2Name('');
+        setMemberRows([newMemberRow()]);
         setError('');
     }
 
@@ -143,10 +226,7 @@ export default function AdminSubdivisions() {
         setEditingSub(null);
         setSubName('');
         setHeadId('');
-        setMember1Id('');
-        setMember2Id('');
-        setMember1Name('');
-        setMember2Name('');
+        setMemberRows([newMemberRow()]);
         setError('');
         setShowForm(true);
     }
@@ -156,34 +236,30 @@ export default function AdminSubdivisions() {
         setError('');
         setSubName(sub.name || '');
         setHeadId(sub.head?.id ? String(sub.head.id) : '');
-        const m = sub.members || [];
-        const s1 = slotFromMember(m[0]);
-        const s2 = slotFromMember(m[1]);
-        setMember1Id(s1.select);
-        setMember1Name(s1.name);
-        setMember2Id(s2.select);
-        setMember2Name(s2.name);
+        setMemberRows(rowsFromMembers(sub.members));
         setEditingSub(sub);
     }
 
-    function validateMembers() {
-        if (member1Id === GUEST_OPTION && !member1Name.trim()) {
-            setError('Вкажіть ім\'я співробітника 1 або оберіть «немає»');
-            return false;
+    function prepareMembersPayload() {
+        const err = validateMemberRows(memberRows);
+        if (err) {
+            setError(err);
+            return null;
         }
-        if (member2Id === GUEST_OPTION && !member2Name.trim()) {
-            setError('Вкажіть ім\'я співробітника 2 або оберіть «немає»');
-            return false;
+        const members = buildMembersPayload(memberRows);
+        if (members.length > MAX_MEMBERS) {
+            setError(`Не більше ${MAX_MEMBERS} співробітників`);
+            return null;
         }
-        return true;
+        return members;
     }
 
     async function handleSubmit(e) {
         e.preventDefault();
         const hid = parseInt(headId, 10);
         if (!hid) { setError('Оберіть голову підрозділу'); return; }
-        if (!validateMembers()) return;
-        const members = buildMembersPayload(member1Id, member1Name, member2Id, member2Name);
+        const members = prepareMembersPayload();
+        if (!members) return;
         const memberUserIds = members.filter((m) => m.userId).map((m) => m.userId);
         if (memberUserIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
 
@@ -205,8 +281,8 @@ export default function AdminSubdivisions() {
         if (!editingSub) return;
         const hid = parseInt(headId, 10);
         if (!hid) { setError('Оберіть голову підрозділу'); return; }
-        if (!validateMembers()) return;
-        const members = buildMembersPayload(member1Id, member1Name, member2Id, member2Name);
+        const members = prepareMembersPayload();
+        if (!members) return;
         const memberUserIds = members.filter((m) => m.userId).map((m) => m.userId);
         if (memberUserIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
 
@@ -281,84 +357,71 @@ export default function AdminSubdivisions() {
                             <strong>Голова</strong> — лише з облікового запису (входить у табель). <strong>Співробітники</strong> — можна обрати користувача
                             або «без акаунта» і вписати ім’я вручну (лише підпис у колонках табеля).
                         </p>
-                        <form onSubmit={editingSub ? handleEditSubmit : handleSubmit}>
-                            <div style={{ display: 'grid', gap: '14px', maxWidth: '520px' }}>
-                                <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label>Назва підрозділу</label>
-                                    <input
-                                        type="text"
-                                        value={subName}
-                                        onChange={(e) => setSubName(e.target.value)}
-                                        placeholder="Наприклад: Бригада №1"
-                                    />
-                                </div>
-                                <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label>Голова підрозділу *</label>
-                                    <select required value={headId} onChange={(e) => { setHeadId(e.target.value); setMember1Id(''); setMember2Id(''); }}>
-                                        <option value="">— оберіть —</option>
-                                        {headOptions.map((u) => (
-                                            <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label>Співробітник 1 (табель)</label>
-                                    <select
-                                        value={member1Id}
-                                        onChange={(e) => {
-                                            setMember1Id(e.target.value);
-                                            if (e.target.value !== GUEST_OPTION) setMember1Name('');
-                                        }}
-                                    >
-                                        <option value="">— немає —</option>
-                                        <option value={GUEST_OPTION}>Без акаунта (ім’я вручну)</option>
-                                        {memberPool.filter((u) => member2Id !== String(u.id)).map((u) => (
-                                            <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
-                                        ))}
-                                    </select>
-                                    {member1Id === GUEST_OPTION && (
+                        <form onSubmit={editingSub ? handleEditSubmit : handleSubmit} className="subdiv-form">
+                            <div className="subdiv-form__grid">
+                                <div className="subdiv-form__main">
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label>Назва підрозділу</label>
                                         <input
                                             type="text"
-                                            className="mt-2"
-                                            value={member1Name}
-                                            onChange={(e) => setMember1Name(e.target.value)}
-                                            placeholder="ПІБ або як у табелі"
+                                            value={subName}
+                                            onChange={(e) => setSubName(e.target.value)}
+                                            placeholder="Наприклад: МАКС І АНТОН"
                                         />
-                                    )}
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                        <label>Голова підрозділу *</label>
+                                        <select required value={headId} onChange={(e) => setHeadId(e.target.value)}>
+                                            <option value="">— оберіть —</option>
+                                            {headOptions.map((u) => (
+                                                <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
+                                            ))}
+                                        </select>
+                                        <p className="subdiv-form__hint">Перший рядок у табелі; потрібен вхід у систему.</p>
+                                    </div>
                                 </div>
-                                <div className="form-group" style={{ marginBottom: 0 }}>
-                                    <label>Співробітник 2 (табель)</label>
-                                    <select
-                                        value={member2Id}
-                                        onChange={(e) => {
-                                            setMember2Id(e.target.value);
-                                            if (e.target.value !== GUEST_OPTION) setMember2Name('');
-                                        }}
-                                    >
-                                        <option value="">— немає —</option>
-                                        <option value={GUEST_OPTION}>Без акаунта (ім’я вручну)</option>
-                                        {memberPool.filter((u) => member1Id !== String(u.id)).map((u) => (
-                                            <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
+
+                                <div className="subdiv-form__members">
+                                    <div className="subdiv-form__members-head">
+                                        <label>Співробітники в табелі</label>
+                                        <span className="subdiv-form__counter">{filledMemberCount} / {MAX_MEMBERS}</span>
+                                    </div>
+                                    <p className="subdiv-form__hint subdiv-form__hint--block">
+                                        Кожен співробітник — окремий рядок у табелі. Можна без акаунта (лише ім’я).
+                                    </p>
+                                    <div className="subdiv-members-list">
+                                        {memberRows.map((row, idx) => (
+                                            <MemberRowEditor
+                                                key={row.key}
+                                                index={idx}
+                                                row={row}
+                                                memberPool={memberPool}
+                                                otherSelectedIds={getOtherSelectedIds(row.key)}
+                                                canRemove={memberRows.length > 1}
+                                                onChange={(next) => setMemberRows((prev) => prev.map((r) => (r.key === row.key ? next : r)))}
+                                                onRemove={() => setMemberRows((prev) => prev.filter((r) => r.key !== row.key))}
+                                            />
                                         ))}
-                                    </select>
-                                    {member2Id === GUEST_OPTION && (
-                                        <input
-                                            type="text"
-                                            className="mt-2"
-                                            value={member2Name}
-                                            onChange={(e) => setMember2Name(e.target.value)}
-                                            placeholder="ПІБ або як у табелі"
-                                        />
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <Button type="submit" disabled={saving}>
-                                        {saving ? 'Збереження...' : (editingSub ? 'Зберегти зміни' : 'Зберегти підрозділ')}
-                                    </Button>
-                                    <Button type="button" variant="secondary" onClick={cancelForm}>
-                                        Скасувати
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="subdiv-add-member-btn"
+                                        onClick={addMemberRow}
+                                        disabled={filledMemberCount >= MAX_MEMBERS}
+                                    >
+                                        <UserPlus size={15} /> Додати співробітника
                                     </Button>
                                 </div>
+                            </div>
+                            <div className="subdiv-form__actions">
+                                <Button type="submit" disabled={saving}>
+                                    {saving ? 'Збереження...' : (editingSub ? 'Зберегти зміни' : 'Зберегти підрозділ')}
+                                </Button>
+                                <Button type="button" variant="secondary" onClick={cancelForm}>
+                                    Скасувати
+                                </Button>
                             </div>
                         </form>
                     </CardContent>
@@ -403,9 +466,13 @@ export default function AdminSubdivisions() {
                                                 ) : '—'}
                                             </div>
                                             {sub.members?.length > 0 && (
-                                                <div>
-                                                    <span className="font-medium">Співробітники:</span>{' '}
-                                                    {sub.members.map((m) => formatMember(m)).join(', ')}
+                                                <div className="subdiv-list-members">
+                                                    <span className="font-medium">Співробітники ({sub.members.length}):</span>
+                                                    <div className="subdiv-chips">
+                                                        {sub.members.map((m, i) => (
+                                                            <span key={i} className="subdiv-chip">{formatMember(m)}</span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

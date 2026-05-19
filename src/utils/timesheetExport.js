@@ -89,8 +89,9 @@ export async function downloadTimesheetXlsx({ year, month, lastDay, dayMeta, lab
     }
     sheet.getCell(3, 1).value = '';
 
+    const slotCount = Math.max(labels?.length || 0, 1);
     let r = 4;
-    for (let slot = 1; slot <= 3; slot++) {
+    for (let slot = 1; slot <= slotCount; slot++) {
         const name = labels[slot - 1] || `Співробітник ${slot}`;
 
         const rowArr = sheet.getRow(r);
