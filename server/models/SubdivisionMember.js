@@ -13,7 +13,11 @@ const SubdivisionMember = sequelize.define('SubdivisionMember', {
     },
     userId: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
+    },
+    displayName: {
+        type: DataTypes.STRING(120),
+        allowNull: true
     },
     isHead: {
         type: DataTypes.BOOLEAN,

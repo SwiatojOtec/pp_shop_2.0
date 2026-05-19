@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../../components/admin';
 import './Admin.css';
 
 const MAX_MEMBERS = 2;
+const GUEST_OPTION = 'guest';
 
 const ROLE_LABELS = {
     owner:     'Власник',
@@ -21,6 +22,35 @@ const ROLE_LABELS = {
 function formatUser(u) {
     if (!u) return '—';
     return `${u.name || ''}${u.lastName ? ' ' + u.lastName : ''}`.trim() || u.email;
+}
+
+function formatMember(m) {
+    if (!m) return '—';
+    if (m.isGuest || m.displayName) return m.displayName;
+    return formatUser(m);
+}
+
+function slotFromMember(m) {
+    if (!m) return { select: '', name: '' };
+    if (m.isGuest || m.displayName) return { select: GUEST_OPTION, name: m.displayName || '' };
+    return { select: String(m.id), name: '' };
+}
+
+function buildMembersPayload(select1, name1, select2, name2) {
+    const out = [];
+    function add(selectVal, nameVal) {
+        if (!selectVal) return;
+        if (selectVal === GUEST_OPTION) {
+            const n = nameVal.trim();
+            if (n) out.push({ displayName: n });
+            return;
+        }
+        const id = parseInt(selectVal, 10);
+        if (Number.isInteger(id)) out.push({ userId: id });
+    }
+    add(select1, name1);
+    add(select2, name2);
+    return out;
 }
 
 export default function AdminSubdivisions() {
@@ -41,6 +71,8 @@ export default function AdminSubdivisions() {
     const [headId,     setHeadId]     = useState('');
     const [member1Id,  setMember1Id]  = useState('');
     const [member2Id,  setMember2Id]  = useState('');
+    const [member1Name, setMember1Name] = useState('');
+    const [member2Name, setMember2Name] = useState('');
 
     useEffect(() => {
         if (!token) return;
@@ -59,7 +91,7 @@ export default function AdminSubdivisions() {
         subdivisions.forEach((sub) => {
             if (editingSub && sub.id === editingSub.id) return;
             if (sub.head?.id) s.add(sub.head.id);
-            (sub.members || []).forEach((m) => s.add(m.id));
+            (sub.members || []).forEach((m) => { if (m.id) s.add(m.id); });
         });
         return s;
     }, [subdivisions, editingSub]);
@@ -80,7 +112,7 @@ export default function AdminSubdivisions() {
         const hid = parseInt(headId, 10);
         let list = eligible.filter((u) => !busyIds.has(u.id) && u.id !== hid);
         (editingSub?.members || []).forEach((m) => {
-            if (m.id === hid) return;
+            if (!m.id || m.id === hid) return;
             if (!list.some((u) => u.id === m.id)) {
                 const full = users.find((u) => u.id === m.id);
                 if (full) list = [full, ...list];
@@ -102,6 +134,8 @@ export default function AdminSubdivisions() {
         setHeadId('');
         setMember1Id('');
         setMember2Id('');
+        setMember1Name('');
+        setMember2Name('');
         setError('');
     }
 
@@ -111,6 +145,8 @@ export default function AdminSubdivisions() {
         setHeadId('');
         setMember1Id('');
         setMember2Id('');
+        setMember1Name('');
+        setMember2Name('');
         setError('');
         setShowForm(true);
     }
@@ -121,24 +157,40 @@ export default function AdminSubdivisions() {
         setSubName(sub.name || '');
         setHeadId(sub.head?.id ? String(sub.head.id) : '');
         const m = sub.members || [];
-        setMember1Id(m[0]?.id ? String(m[0].id) : '');
-        setMember2Id(m[1]?.id ? String(m[1].id) : '');
+        const s1 = slotFromMember(m[0]);
+        const s2 = slotFromMember(m[1]);
+        setMember1Id(s1.select);
+        setMember1Name(s1.name);
+        setMember2Id(s2.select);
+        setMember2Name(s2.name);
         setEditingSub(sub);
+    }
+
+    function validateMembers() {
+        if (member1Id === GUEST_OPTION && !member1Name.trim()) {
+            setError('Вкажіть ім\'я співробітника 1 або оберіть «немає»');
+            return false;
+        }
+        if (member2Id === GUEST_OPTION && !member2Name.trim()) {
+            setError('Вкажіть ім\'я співробітника 2 або оберіть «немає»');
+            return false;
+        }
+        return true;
     }
 
     async function handleSubmit(e) {
         e.preventDefault();
         const hid = parseInt(headId, 10);
         if (!hid) { setError('Оберіть голову підрозділу'); return; }
-        const m1  = member1Id ? parseInt(member1Id, 10) : null;
-        const m2  = member2Id ? parseInt(member2Id, 10) : null;
-        const memberIds = [...new Set([m1, m2].filter(Number.isInteger))];
-        if (memberIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
+        if (!validateMembers()) return;
+        const members = buildMembersPayload(member1Id, member1Name, member2Id, member2Name);
+        const memberUserIds = members.filter((m) => m.userId).map((m) => m.userId);
+        if (memberUserIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
 
         setSaving(true);
         setError('');
         try {
-            await subdivisionsApi.create({ name: subName.trim() || null, headUserId: hid, memberIds });
+            await subdivisionsApi.create({ name: subName.trim() || null, headUserId: hid, members });
             cancelForm();
             await reload();
         } catch (err) {
@@ -153,10 +205,10 @@ export default function AdminSubdivisions() {
         if (!editingSub) return;
         const hid = parseInt(headId, 10);
         if (!hid) { setError('Оберіть голову підрозділу'); return; }
-        const m1  = member1Id ? parseInt(member1Id, 10) : null;
-        const m2  = member2Id ? parseInt(member2Id, 10) : null;
-        const memberIds = [...new Set([m1, m2].filter(Number.isInteger))];
-        if (memberIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
+        if (!validateMembers()) return;
+        const members = buildMembersPayload(member1Id, member1Name, member2Id, member2Name);
+        const memberUserIds = members.filter((m) => m.userId).map((m) => m.userId);
+        if (memberUserIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
 
         setSaving(true);
         setError('');
@@ -164,7 +216,7 @@ export default function AdminSubdivisions() {
             await subdivisionsApi.update(editingSub.id, {
                 name: subName.trim() || null,
                 headUserId: hid,
-                memberIds,
+                members,
             });
             cancelForm();
             await reload();
@@ -226,8 +278,8 @@ export default function AdminSubdivisions() {
                             {editingSub ? 'Редагувати підрозділ' : 'Новий підрозділ'}
                         </h2>
                         <p className="text-sm text-gray-500 mb-4">
-                            Голова підрозділу отримує роль <code>pivdenbud</code> і бачить табель. До двох співробітників вказуються для відображення в табелі.
-                            Нові люди спочатку мають бути в «Користувачі» зі статусом «активний» (не власник).
+                            <strong>Голова</strong> — лише з облікового запису (входить у табель). <strong>Співробітники</strong> — можна обрати користувача
+                            або «без акаунта» і вписати ім’я вручну (лише підпис у колонках табеля).
                         </p>
                         <form onSubmit={editingSub ? handleEditSubmit : handleSubmit}>
                             <div style={{ display: 'grid', gap: '14px', maxWidth: '520px' }}>
@@ -251,21 +303,53 @@ export default function AdminSubdivisions() {
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label>Співробітник 1 (табель)</label>
-                                    <select value={member1Id} onChange={(e) => setMember1Id(e.target.value)}>
+                                    <select
+                                        value={member1Id}
+                                        onChange={(e) => {
+                                            setMember1Id(e.target.value);
+                                            if (e.target.value !== GUEST_OPTION) setMember1Name('');
+                                        }}
+                                    >
                                         <option value="">— немає —</option>
-                                        {memberPool.filter((u) => u.id !== parseInt(member2Id, 10)).map((u) => (
+                                        <option value={GUEST_OPTION}>Без акаунта (ім’я вручну)</option>
+                                        {memberPool.filter((u) => member2Id !== String(u.id)).map((u) => (
                                             <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
                                         ))}
                                     </select>
+                                    {member1Id === GUEST_OPTION && (
+                                        <input
+                                            type="text"
+                                            className="mt-2"
+                                            value={member1Name}
+                                            onChange={(e) => setMember1Name(e.target.value)}
+                                            placeholder="ПІБ або як у табелі"
+                                        />
+                                    )}
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label>Співробітник 2 (табель)</label>
-                                    <select value={member2Id} onChange={(e) => setMember2Id(e.target.value)}>
+                                    <select
+                                        value={member2Id}
+                                        onChange={(e) => {
+                                            setMember2Id(e.target.value);
+                                            if (e.target.value !== GUEST_OPTION) setMember2Name('');
+                                        }}
+                                    >
                                         <option value="">— немає —</option>
-                                        {memberPool.filter((u) => u.id !== parseInt(member1Id, 10)).map((u) => (
+                                        <option value={GUEST_OPTION}>Без акаунта (ім’я вручну)</option>
+                                        {memberPool.filter((u) => member1Id !== String(u.id)).map((u) => (
                                             <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
                                         ))}
                                     </select>
+                                    {member2Id === GUEST_OPTION && (
+                                        <input
+                                            type="text"
+                                            className="mt-2"
+                                            value={member2Name}
+                                            onChange={(e) => setMember2Name(e.target.value)}
+                                            placeholder="ПІБ або як у табелі"
+                                        />
+                                    )}
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <Button type="submit" disabled={saving}>
@@ -321,7 +405,7 @@ export default function AdminSubdivisions() {
                                             {sub.members?.length > 0 && (
                                                 <div>
                                                     <span className="font-medium">Співробітники:</span>{' '}
-                                                    {sub.members.map((m) => formatUser(m)).join(', ')}
+                                                    {sub.members.map((m) => formatMember(m)).join(', ')}
                                                 </div>
                                             )}
                                         </div>

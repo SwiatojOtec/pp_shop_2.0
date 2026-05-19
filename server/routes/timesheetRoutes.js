@@ -29,7 +29,11 @@ async function teamLabelsForUser(user) {
                 include: [{ model: User, attributes: ['id', 'name', 'lastName', 'email'] }],
                 order: [['isHead', 'DESC'], ['id', 'ASC']]
             });
-            const names = rows.map(r => formatPersonLabel(r.User));
+            const names = rows.map((r) => {
+                if (r.User) return formatPersonLabel(r.User);
+                if (r.displayName) return r.displayName;
+                return '';
+            });
             return [names[0] || slot1, names[1] || fallback2, names[2] || fallback3];
         }
     }
