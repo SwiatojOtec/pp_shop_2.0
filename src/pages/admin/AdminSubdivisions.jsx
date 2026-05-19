@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Network, Plus, Trash2 } from 'lucide-react';
+import { Network, Plus, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { subdivisionsApi, usersApi } from '../../services/api';
 import { AdminPageHeader } from '../../components/admin';
@@ -31,6 +31,7 @@ export default function AdminSubdivisions() {
     const [users, setUsers]               = useState([]);
     const [loading, setLoading]           = useState(true);
     const [showForm, setShowForm]         = useState(false);
+    const [editingSub, setEditingSub]     = useState(null);
     const [saving, setSaving]             = useState(false);
     const [error, setError]               = useState('');
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -56,23 +57,73 @@ export default function AdminSubdivisions() {
     const busyIds = useMemo(() => {
         const s = new Set();
         subdivisions.forEach((sub) => {
+            if (editingSub && sub.id === editingSub.id) return;
             if (sub.head?.id) s.add(sub.head.id);
             (sub.members || []).forEach((m) => s.add(m.id));
         });
         return s;
-    }, [subdivisions]);
+    }, [subdivisions, editingSub]);
 
     const eligible    = useMemo(() => users.filter((u) => u.status === 'active' && u.role !== 'owner'), [users]);
-    const headOptions = useMemo(() => eligible.filter((u) => !busyIds.has(u.id)), [eligible, busyIds]);
+    const headOptions = useMemo(() => {
+        let list = eligible.filter((u) => !busyIds.has(u.id));
+        if (editingSub?.head) {
+            const hid = editingSub.head.id;
+            if (!list.some((u) => u.id === hid)) {
+                const full = users.find((u) => u.id === hid);
+                if (full) list = [full, ...list];
+            }
+        }
+        return list;
+    }, [eligible, busyIds, editingSub, users]);
     const memberPool  = useMemo(() => {
         const hid = parseInt(headId, 10);
-        return eligible.filter((u) => !busyIds.has(u.id) && u.id !== hid);
-    }, [eligible, busyIds, headId]);
+        let list = eligible.filter((u) => !busyIds.has(u.id) && u.id !== hid);
+        (editingSub?.members || []).forEach((m) => {
+            if (m.id === hid) return;
+            if (!list.some((u) => u.id === m.id)) {
+                const full = users.find((u) => u.id === m.id);
+                if (full) list = [full, ...list];
+            }
+        });
+        return list;
+    }, [eligible, busyIds, headId, editingSub, users]);
 
     async function reload() {
         const [subs, usrs] = await Promise.all([subdivisionsApi.list(), usersApi.list()]);
         setSubdivisions(Array.isArray(subs) ? subs : []);
         setUsers(Array.isArray(usrs) ? usrs : []);
+    }
+
+    function cancelForm() {
+        setShowForm(false);
+        setEditingSub(null);
+        setSubName('');
+        setHeadId('');
+        setMember1Id('');
+        setMember2Id('');
+        setError('');
+    }
+
+    function openCreate() {
+        setEditingSub(null);
+        setSubName('');
+        setHeadId('');
+        setMember1Id('');
+        setMember2Id('');
+        setError('');
+        setShowForm(true);
+    }
+
+    function openEdit(sub) {
+        setShowForm(false);
+        setError('');
+        setSubName(sub.name || '');
+        setHeadId(sub.head?.id ? String(sub.head.id) : '');
+        const m = sub.members || [];
+        setMember1Id(m[0]?.id ? String(m[0].id) : '');
+        setMember2Id(m[1]?.id ? String(m[1].id) : '');
+        setEditingSub(sub);
     }
 
     async function handleSubmit(e) {
@@ -88,8 +139,34 @@ export default function AdminSubdivisions() {
         setError('');
         try {
             await subdivisionsApi.create({ name: subName.trim() || null, headUserId: hid, memberIds });
-            setSubName(''); setHeadId(''); setMember1Id(''); setMember2Id('');
-            setShowForm(false);
+            cancelForm();
+            await reload();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleEditSubmit(e) {
+        e.preventDefault();
+        if (!editingSub) return;
+        const hid = parseInt(headId, 10);
+        if (!hid) { setError('Оберіть голову підрозділу'); return; }
+        const m1  = member1Id ? parseInt(member1Id, 10) : null;
+        const m2  = member2Id ? parseInt(member2Id, 10) : null;
+        const memberIds = [...new Set([m1, m2].filter(Number.isInteger))];
+        if (memberIds.includes(hid)) { setError('Співробітники не можуть збігатися з головою'); return; }
+
+        setSaving(true);
+        setError('');
+        try {
+            await subdivisionsApi.update(editingSub.id, {
+                name: subName.trim() || null,
+                headUserId: hid,
+                memberIds,
+            });
+            cancelForm();
             await reload();
         } catch (err) {
             setError(err.message);
@@ -126,8 +203,8 @@ export default function AdminSubdivisions() {
                 title="Підрозділи"
                 subtitle="Структура компанії для табелю ПАН ПІВДЕНЬБУД"
                 actions={
-                    !showForm && (
-                        <Button onClick={() => setShowForm(true)}>
+                    !showForm && !editingSub && (
+                        <Button onClick={openCreate}>
                             <Plus size={16} /> Створити підрозділ
                         </Button>
                     )
@@ -141,15 +218,18 @@ export default function AdminSubdivisions() {
                 </div>
             )}
 
-            {/* Create form */}
-            {showForm && (
+            {/* Create / edit form */}
+            {(showForm || editingSub) && (
                 <Card className="mb-6">
                     <CardContent className="p-6">
-                        <h2 className="text-base font-bold mb-4">Новий підрозділ</h2>
+                        <h2 className="text-base font-bold mb-4">
+                            {editingSub ? 'Редагувати підрозділ' : 'Новий підрозділ'}
+                        </h2>
                         <p className="text-sm text-gray-500 mb-4">
                             Голова підрозділу отримує роль <code>pivdenbud</code> і бачить табель. До двох співробітників вказуються для відображення в табелі.
+                            Нові люди спочатку мають бути в «Користувачі» зі статусом «активний» (не власник).
                         </p>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={editingSub ? handleEditSubmit : handleSubmit}>
                             <div style={{ display: 'grid', gap: '14px', maxWidth: '520px' }}>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label>Назва підрозділу</label>
@@ -189,9 +269,9 @@ export default function AdminSubdivisions() {
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <Button type="submit" disabled={saving}>
-                                        {saving ? 'Збереження...' : 'Зберегти підрозділ'}
+                                        {saving ? 'Збереження...' : (editingSub ? 'Зберегти зміни' : 'Зберегти підрозділ')}
                                     </Button>
-                                    <Button type="button" variant="secondary" onClick={() => { setShowForm(false); setError(''); }}>
+                                    <Button type="button" variant="secondary" onClick={cancelForm}>
                                         Скасувати
                                     </Button>
                                 </div>
@@ -247,15 +327,26 @@ export default function AdminSubdivisions() {
                                         </div>
                                     </div>
 
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                                        onClick={() => setDeleteTarget(sub)}
-                                        title="Видалити підрозділ"
-                                    >
-                                        <Trash2 size={16} />
-                                    </Button>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                            onClick={() => openEdit(sub)}
+                                            title="Редагувати підрозділ"
+                                        >
+                                            <Pencil size={16} />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            onClick={() => setDeleteTarget(sub)}
+                                            title="Видалити підрозділ"
+                                        >
+                                            <Trash2 size={16} />
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

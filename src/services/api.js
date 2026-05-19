@@ -201,7 +201,7 @@ export const subdivisionsApi = {
     list: () => apiGet('/api/subdivisions'),
     get: (id) => apiGet(`/api/subdivisions/${id}`),
     create: (data) => apiPost('/api/subdivisions', data),
-    update: (id, data) => apiPut(`/api/subdivisions/${id}`, data),
+    update: (id, data) => apiPatch(`/api/subdivisions/${id}`, data),
     remove: (id) => apiDelete(`/api/subdivisions/${id}`),
     members: (id) => apiGet(`/api/subdivisions/${id}/members`),
 };
