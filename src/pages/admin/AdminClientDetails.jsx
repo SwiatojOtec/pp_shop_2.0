@@ -43,6 +43,8 @@ function parsePhones(raw) {
     if (!raw) return [];
     return raw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
 }
+
+function fmtDate(d) {
     if (!d) return '—';
     const dt = new Date(d);
     return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;

@@ -52,6 +52,8 @@ export default function AdminRent() {
             return next;
         });
     }
+
+    const categoryOptions = useMemo(() => {
         const cats = new Set(products.map((p) => p.category).filter(Boolean));
         return [...cats].sort().map((c) => ({ value: c, label: c }));
     }, [products]);
