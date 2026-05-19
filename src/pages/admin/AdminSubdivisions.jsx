@@ -327,25 +327,23 @@ export default function AdminSubdivisions() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1 shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
                                             onClick={() => openEdit(sub)}
-                                            title="Редагувати підрозділ"
                                         >
-                                            <Pencil size={16} />
+                                            <Pencil size={15} /> Редагувати
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        <button
+                                            type="button"
+                                            className="action-btn delete"
                                             onClick={() => setDeleteTarget(sub)}
                                             title="Видалити підрозділ"
                                         >
                                             <Trash2 size={16} />
-                                        </Button>
+                                        </button>
                                     </div>
                                 </div>
                             </CardContent>
