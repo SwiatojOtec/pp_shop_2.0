@@ -121,6 +121,8 @@ router.get('/', async (req, res) => {
             where.isRent = true;
             if (includeHiddenRent !== 'true') {
                 where.showInRentCatalog = true;
+                // Як у адмін «Каталог інструментів»: не показувати картки без вільних одиниць (нема на складі / усе в оренді).
+                where.quantityAvailable = { [Op.gt]: 0 };
             }
         } else if (isRent === 'false') {
             where.isRent = {
