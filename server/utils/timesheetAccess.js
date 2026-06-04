@@ -9,8 +9,11 @@ async function isSubdivisionHead(userId) {
     return !!row;
 }
 
+const TIMESHEET_EDITOR_ROLES = [ROLES.PIVDENBUD, ROLES.SHOP_MANAGER, ROLES.SHOP_RENT];
+
 async function canEditOwnTimesheet(user) {
-    if (user.role === ROLES.PIVDENBUD) return true;
+    if (TIMESHEET_EDITOR_ROLES.includes(user.role)) return true;
+    if (user.role === 'manager') return true;
     if (user.isSubdivisionHead) return true;
     return isSubdivisionHead(user.id);
 }

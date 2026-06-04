@@ -23,8 +23,10 @@ export function hasRentAccess(role) {
     return role === ROLES.OWNER || role === ROLES.RENT || role === ROLES.PIVDENBUD || role === ROLES.SHOP_RENT;
 }
 
+const TIMESHEET_ROLES = [ROLES.PIVDENBUD, ROLES.SHOP_MANAGER, ROLES.SHOP_RENT];
+
 export function canUseTimesheet(role, isSubdivisionHead) {
-    return role === ROLES.PIVDENBUD || !!isSubdivisionHead;
+    return TIMESHEET_ROLES.includes(role) || !!isSubdivisionHead;
 }
 
 export function isTimesheetViewer(role) {
