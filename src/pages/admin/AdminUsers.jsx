@@ -10,9 +10,10 @@ import { Select } from '../../components/ui/select';
 import './Admin.css';
 
 const ROLE_OPTIONS = [
-    { value: 'rent',      label: 'Менеджер оренди' },
-    { value: 'manager',   label: 'Менеджер' },
-    { value: 'pivdenbud', label: 'ПАН ПІВДЕНЬБУД' },
+    { value: 'rent',         label: 'Менеджер оренди' },
+    { value: 'shop_manager', label: 'Менеджер магазину' },
+    { value: 'shop_rent',    label: 'Менеджер магазину та оренди' },
+    { value: 'pivdenbud',    label: 'ПАН ПІВДЕНЬБУД' },
 ];
 
 const STATUS_BADGE = {
@@ -112,8 +113,11 @@ export default function AdminUsers() {
                                     <Button size="sm" onClick={() => updateUser(u.id, { status: 'active', role: 'rent' })} disabled={busy === u.id}>
                                         <CheckCircle size={14} /> Оренда
                                     </Button>
-                                    <Button size="sm" variant="secondary" onClick={() => updateUser(u.id, { status: 'active', role: 'manager' })} disabled={busy === u.id}>
-                                        <CheckCircle size={14} /> Менеджер
+                                    <Button size="sm" variant="secondary" onClick={() => updateUser(u.id, { status: 'active', role: 'shop_manager' })} disabled={busy === u.id}>
+                                        <CheckCircle size={14} /> Магазин
+                                    </Button>
+                                    <Button size="sm" variant="secondary" onClick={() => updateUser(u.id, { status: 'active', role: 'shop_rent' })} disabled={busy === u.id}>
+                                        <CheckCircle size={14} /> Магазин + оренда
                                     </Button>
                                     <Button size="sm" variant="secondary" onClick={() => updateUser(u.id, { status: 'active', role: 'pivdenbud' })} disabled={busy === u.id}>
                                         <CheckCircle size={14} /> Пан Південьбуд

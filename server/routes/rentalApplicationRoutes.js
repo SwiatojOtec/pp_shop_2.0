@@ -61,7 +61,7 @@ const applyAutoOverdueForAll = async () => {
 };
 
 // GET all applications
-router.get('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.get('/', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         await applyAutoOverdueForAll();
         const where = {};
@@ -77,7 +77,7 @@ router.get('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivden
 });
 
 // GET single application
-router.get('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.get('/:id', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });
@@ -89,7 +89,7 @@ router.get('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
 });
 
 // POST create application
-router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const applicationNumber = await generateAppNumber();
         const payload = { ...req.body };
@@ -109,7 +109,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivde
 });
 
 // PUT update application
-router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });
@@ -131,7 +131,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
 });
 
 // DELETE application
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });

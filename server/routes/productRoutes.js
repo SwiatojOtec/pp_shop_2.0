@@ -193,7 +193,7 @@ router.get('/:slug', async (req, res) => {
 });
 
 // Create product (admin only)
-router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const data = { ...req.body };
 
@@ -236,7 +236,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivde
 });
 
 // Update product (admin only)
-router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });
@@ -264,7 +264,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'piv
 });
 
 // Delete product (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ message: 'Product not found' });

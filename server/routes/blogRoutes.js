@@ -57,7 +57,7 @@ router.get('/:idOrSlug', async (req, res) => {
 });
 
 // Create post (admin only)
-router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const post = await BlogPost.create(req.body);
         res.status(201).json(post);
@@ -68,7 +68,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, 
 });
 
 // Update post (admin only)
-router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const post = await BlogPost.findByPk(req.params.id);
         if (!post) {
@@ -83,7 +83,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req
 });
 
 // Delete post (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const post = await BlogPost.findByPk(req.params.id);
         if (!post) {

@@ -5,6 +5,7 @@ require('../models/SubdivisionMember'); // associations
 const SubdivisionMember = require('../models/SubdivisionMember');
 const User = require('../models/User');
 const { authMiddleware, requireRole } = require('../middleware/auth');
+const { ROLES, roleWhenBecomingHead, roleWhenLeavingHead } = require('../utils/roles');
 
 const router = express.Router();
 /** Макс. співробітників у підрозділі (окрім голови); = рядків у табелі мінус голова */
@@ -166,8 +167,9 @@ router.post('/', authMiddleware, requireRole(['owner']), async (req, res) => {
                 { transaction: t }
             );
             await createNonHeadMembers(sub.id, members, null, t);
+            const headUser = await User.findByPk(headUserId, { transaction: t });
             await User.update(
-                { role: 'pivdenbud', status: 'active' },
+                { role: roleWhenBecomingHead(headUser.role), status: 'active' },
                 { where: { id: headUserId }, transaction: t }
             );
         });
@@ -242,13 +244,17 @@ router.patch('/:id', authMiddleware, requireRole(['owner']), async (req, res) =>
                 await createNonHeadMembers(subId, members, subId, t);
 
                 if (oldHead && oldHead.userId !== headUserId) {
-                    await User.update(
-                        { role: 'rent' },
-                        { where: { id: oldHead.userId, role: 'pivdenbud' }, transaction: t }
-                    );
+                    const prevHead = await User.findByPk(oldHead.userId, { transaction: t });
+                    if (prevHead) {
+                        await User.update(
+                            { role: roleWhenLeavingHead(prevHead.role) },
+                            { where: { id: oldHead.userId }, transaction: t }
+                        );
+                    }
                 }
+                const newHeadUser = await User.findByPk(headUserId, { transaction: t });
                 await User.update(
-                    { role: 'pivdenbud', status: 'active' },
+                    { role: roleWhenBecomingHead(newHeadUser.role), status: 'active' },
                     { where: { id: headUserId }, transaction: t }
                 );
             }
@@ -292,10 +298,13 @@ router.delete('/:id', authMiddleware, requireRole(['owner']), async (req, res) =
             await SubdivisionMember.destroy({ where: { subdivisionId: subId }, transaction: t });
             await sub.destroy({ transaction: t });
             if (headRow) {
-                await User.update(
-                    { role: 'rent' },
-                    { where: { id: headRow.userId, role: 'pivdenbud' }, transaction: t }
-                );
+                const headUser = await User.findByPk(headRow.userId, { transaction: t });
+                if (headUser) {
+                    await User.update(
+                        { role: roleWhenLeavingHead(headUser.role) },
+                        { where: { id: headRow.userId }, transaction: t }
+                    );
+                }
             }
         });
         res.json({ ok: true });

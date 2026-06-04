@@ -7,7 +7,7 @@ const Warehouse = require('../models/Warehouse');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName, bootstrapRentInventoryFromProducts, restoreAllRentInventoryOneEach } = require('../services/inventoryService');
 
-const GUARD = [authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud'])];
+const GUARD = [authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud'])];
 
 router.get('/suggest', ...GUARD, async (req, res) => {
     try {

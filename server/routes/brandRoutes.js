@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create brand (admin only)
-router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const { name, logo, isShop, isRent } = req.body;
         const slug = transliterate(name);
@@ -35,7 +35,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, 
 });
 
 // Update brand flags (admin only)
-router.patch('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.patch('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const brand = await Brand.findByPk(req.params.id);
         if (!brand) return res.status(404).json({ message: 'Brand not found' });
@@ -50,7 +50,7 @@ router.patch('/:id', authMiddleware, requireRole(['owner', 'manager']), async (r
 });
 
 // Delete brand (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const brand = await Brand.findByPk(req.params.id);
         if (!brand) return res.status(404).json({ message: 'Brand not found' });

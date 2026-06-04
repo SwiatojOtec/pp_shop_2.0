@@ -6,6 +6,12 @@ import {
     ContactRound, ChevronRight, Network,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import {
+    ROLE_LABELS,
+    hasShopAccess,
+    hasRentAccess,
+    canUseTimesheet,
+} from '../../utils/adminRoles';
 import './Admin.css';
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
@@ -30,13 +36,36 @@ const ENTERPRISE_SECTION = [
     { path: '/admin/settings',       icon: <Settings size={18} />,  label: 'Налаштування' },
 ];
 
-// Allowed paths for rent / pivdenbud roles
-const RENT_ALLOWED = [
-    '/admin', '/admin/profile',
+const BASE_PATHS = ['/admin', '/admin/profile'];
+const RENT_PATHS = [
+    ...BASE_PATHS,
     '/admin/rental-applications', '/admin/clients',
     '/admin/rent', '/admin/warehouses',
 ];
-const PIVDENBUD_EXTRA = ['/admin/pan-pivdenbud'];
+const SHOP_PATHS = [
+    ...BASE_PATHS,
+    '/admin/products', '/admin/orders', '/admin/blog',
+];
+const PIVDENBUD_PATHS = ['/admin/pan-pivdenbud'];
+
+function pathAllowed(pathname, prefixes) {
+    return prefixes.some((a) => pathname === a || pathname.startsWith(`${a}/`));
+}
+
+function allowedPrefixesForUser(role, isSubdivisionHead) {
+    if (role === 'owner') return null;
+    const prefixes = [...BASE_PATHS];
+    if (hasRentAccess(role)) prefixes.push(...RENT_PATHS.filter((p) => !BASE_PATHS.includes(p)));
+    if (hasShopAccess(role)) prefixes.push(...SHOP_PATHS.filter((p) => !BASE_PATHS.includes(p)));
+    if (canUseTimesheet(role, isSubdivisionHead)) prefixes.push(...PIVDENBUD_PATHS);
+    return [...new Set(prefixes)];
+}
+
+function defaultPathForRole(role) {
+    if (hasRentAccess(role) && !hasShopAccess(role)) return '/admin/rent';
+    if (hasShopAccess(role) && !hasRentAccess(role)) return '/admin/products';
+    return '/admin';
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -44,18 +73,21 @@ export default function AdminLayout({ children }) {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const role     = user?.role || 'rent';
+    const role = user?.role || 'rent';
+    const isSubdivisionHead = !!user?.isSubdivisionHead;
     const fullName = user ? `${user.name || ''}${user.lastName ? ' ' + user.lastName : ''}`.trim() : 'Адмін';
     const initials = user?.name ? user.name.charAt(0).toUpperCase() : 'A';
 
     // ── Route guard ───────────────────────────────────────────────────────────
     useEffect(() => {
-        if (role !== 'rent' && role !== 'pivdenbud') return;
+        if (role === 'owner') return;
+        const allowed = allowedPrefixesForUser(role, isSubdivisionHead);
+        if (!allowed) return;
         const p = location.pathname;
-        const allowed = RENT_ALLOWED.some(a => p === a || p.startsWith(a + '/'));
-        const extra   = role === 'pivdenbud' && PIVDENBUD_EXTRA.some(a => p === a || p.startsWith(a + '/'));
-        if (!allowed && !extra) navigate('/admin/rent', { replace: true });
-    }, [role, location.pathname, navigate]);
+        if (!pathAllowed(p, allowed)) {
+            navigate(defaultPathForRole(role), { replace: true });
+        }
+    }, [role, isSubdivisionHead, location.pathname, navigate]);
 
     // ── Active class ──────────────────────────────────────────────────────────
     const isActive = (itemPath) => {
@@ -65,17 +97,12 @@ export default function AdminLayout({ children }) {
     };
     const cls = (path) => `nav-link${isActive(path) ? ' active' : ''}`;
 
-    // ── Sections by role ──────────────────────────────────────────────────────
-    const showShop       = role !== 'rent' && role !== 'pivdenbud';
-    const showEnterprise = role !== 'rent' && role !== 'pivdenbud';
-    const showPivdenbud  = role === 'pivdenbud';
+    const showShop = hasShopAccess(role);
+    const showRent = hasRentAccess(role);
+    const showEnterprise = role === 'owner';
+    const showPivdenbud = canUseTimesheet(role, isSubdivisionHead);
 
-    const roleLabel = {
-        owner:     'Власник',
-        manager:   'Менеджер',
-        rent:      'Менеджер оренди',
-        pivdenbud: 'ПАН ПІВДЕНЬБУД',
-    }[role] || role;
+    const roleLabel = ROLE_LABELS[role] || role;
 
     return (
         <div className="admin-layout">
@@ -91,22 +118,23 @@ export default function AdminLayout({ children }) {
                 </div>
 
                 <nav className="sidebar-nav">
-                    {/* Dashboard — always visible */}
                     <Link to="/admin" className={cls('/admin')}>
                         <LayoutDashboard size={18} />
                         <span>Дашборд</span>
                     </Link>
 
-                    {/* ── ОРЕНДА ── */}
-                    <div className="sidebar-nav-section">Оренда</div>
-                    {RENT_SECTION.map(item => (
-                        <Link key={item.path} to={item.path} className={`${cls(item.path)} nav-link--sub`}>
-                            {item.icon}
-                            <span>{item.label}</span>
-                        </Link>
-                    ))}
+                    {showRent && (
+                        <>
+                            <div className="sidebar-nav-section">Оренда</div>
+                            {RENT_SECTION.map(item => (
+                                <Link key={item.path} to={item.path} className={`${cls(item.path)} nav-link--sub`}>
+                                    {item.icon}
+                                    <span>{item.label}</span>
+                                </Link>
+                            ))}
+                        </>
+                    )}
 
-                    {/* pivdenbud — only ПАН ПІВДЕНЬБУД extra */}
                     {showPivdenbud && (
                         <Link to="/admin/pan-pivdenbud" className={`${cls('/admin/pan-pivdenbud')} nav-link--sub`}>
                             <Building2 size={18} />
@@ -114,7 +142,6 @@ export default function AdminLayout({ children }) {
                         </Link>
                     )}
 
-                    {/* ── МАГАЗИН ── */}
                     {showShop && (
                         <>
                             <div className="sidebar-nav-section">Магазин</div>
@@ -127,7 +154,6 @@ export default function AdminLayout({ children }) {
                         </>
                     )}
 
-                    {/* ── ПІДПРИЄМСТВО ── */}
                     {showEnterprise && (
                         <>
                             <div className="sidebar-nav-section">Підприємство</div>
@@ -156,10 +182,8 @@ export default function AdminLayout({ children }) {
                 </div>
             </aside>
 
-            {/* ── Main ── */}
             <main className="admin-main">
                 <header className="admin-topbar">
-                    {/* Breadcrumb placeholder */}
                     <div className="topbar-breadcrumb">
                         <span className="topbar-breadcrumb-role">{roleLabel}</span>
                         <ChevronRight size={14} className="topbar-breadcrumb-sep" />
@@ -183,8 +207,6 @@ export default function AdminLayout({ children }) {
     );
 }
 
-// ─── Helper: page title from path ────────────────────────────────────────────
-
 function getPageTitle(pathname) {
     const map = {
         '/admin':                        'Дашборд',
@@ -203,9 +225,7 @@ function getPageTitle(pathname) {
         '/admin/settings':               'Налаштування',
         '/admin/profile':                'Мій кабінет',
     };
-    // Exact match first
     if (map[pathname]) return map[pathname];
-    // Prefix match
     const entry = Object.entries(map).find(([k]) => k !== '/admin' && pathname.startsWith(k + '/'));
     return entry ? entry[1] : '';
 }

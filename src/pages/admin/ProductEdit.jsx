@@ -73,7 +73,7 @@ export default function ProductEdit({ context = 'products' }) {
     const [deleteOpen, setDeleteOpen]   = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    const canDeleteProduct = user && ['owner', 'manager', 'rent', 'pivdenbud'].includes(user.role);
+    const canDeleteProduct = user && ['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud'].includes(user.role);
 
     // Merge a single field into formData
     const update = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));

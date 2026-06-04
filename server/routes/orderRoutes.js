@@ -141,7 +141,7 @@ router.post('/', async (req, res) => {
 });
 
 // Створення замовлення з адмінки (без Telegram — щоб не спамити при чернетках)
-router.post('/admin', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.post('/admin', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const {
             customerName,
@@ -183,7 +183,7 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'manager']), async (
 });
 
 /** Замовлення для картки клієнта: за clientId + старі без clientId за збігом телефону. */
-router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const clientId = parseInt(req.params.clientId, 10);
         if (Number.isNaN(clientId) || clientId <= 0) {
@@ -236,7 +236,7 @@ router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'manage
 });
 
 // Get all orders (admin only)
-router.get('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.get('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
         res.json(orders);
@@ -246,7 +246,7 @@ router.get('/', authMiddleware, requireRole(['owner', 'manager']), async (req, r
 });
 
 // Update order (admin only)
-router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -258,7 +258,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req
 });
 
 // Delete order (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });

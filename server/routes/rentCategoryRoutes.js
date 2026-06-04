@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create rent category (admin only)
-router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'rent', 'pivdenbud', 'shop_rent']), async (req, res) => {
     try {
         const { name, group } = req.body;
         const slug = transliterate(name);
@@ -28,7 +28,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, 
 });
 
 // Toggle isActive flag (admin only)
-router.patch('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.patch('/:id', authMiddleware, requireRole(['owner', 'rent', 'pivdenbud', 'shop_rent']), async (req, res) => {
     try {
         const category = await RentCategory.findByPk(req.params.id);
         if (!category) return res.status(404).json({ message: 'Category not found' });
@@ -54,7 +54,7 @@ router.patch('/:id', authMiddleware, requireRole(['owner', 'manager']), async (r
 });
 
 // Update rent category (admin only)
-router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'rent', 'pivdenbud', 'shop_rent']), async (req, res) => {
     try {
         const category = await RentCategory.findByPk(req.params.id);
         if (!category) return res.status(404).json({ message: 'Category not found' });
@@ -76,7 +76,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req
 });
 
 // Delete rent category (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'rent', 'pivdenbud', 'shop_rent']), async (req, res) => {
     try {
         const category = await RentCategory.findByPk(req.params.id);
         if (!category) return res.status(404).json({ message: 'Category not found' });

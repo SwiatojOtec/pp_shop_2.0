@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const SubdivisionMember = require('../models/SubdivisionMember');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -29,13 +30,18 @@ const authMiddleware = async (req, res, next) => {
         if (!user || user.status !== 'active') {
             return res.status(401).json({ message: 'Користувач неактивний або не знайдений' });
         }
+        const headRow = await SubdivisionMember.findOne({
+            where: { userId: user.id, isHead: true },
+            attributes: ['id']
+        });
         req.user = {
             id: user.id,
             name: user.name,
             lastName: user.lastName,
             email: user.email,
             role: user.role,
-            status: user.status
+            status: user.status,
+            isSubdivisionHead: !!headRow
         };
         next();
     } catch (err) {
@@ -48,7 +54,8 @@ const requireRole = (allowedRoles) => (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Необхідна авторизація' });
     }
-    if (!allowedRoles.includes(req.user.role)) {
+    const effectiveRole = req.user.role === 'manager' ? 'shop_manager' : req.user.role;
+    if (!allowedRoles.includes(effectiveRole)) {
         return res.status(403).json({ message: 'Недостатньо прав' });
     }
     next();

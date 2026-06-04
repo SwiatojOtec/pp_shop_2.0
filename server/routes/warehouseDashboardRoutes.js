@@ -8,7 +8,7 @@ const InventoryItem = require('../models/InventoryItem');
 const Warehouse = require('../models/Warehouse');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
-const GUARD = [authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud'])];
+const GUARD = [authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud'])];
 
 router.get('/dashboard', ...GUARD, async (req, res) => {
     try {

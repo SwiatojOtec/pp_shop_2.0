@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { timesheetApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { isTimesheetViewer } from '../../utils/adminRoles';
 import { downloadTimesheetXlsx } from '../../utils/timesheetExport';
 import './PanPivdenbud.css';
 
@@ -174,7 +175,7 @@ export default function PanPivdenbud() {
     const [exporting, setExporting] = useState(false);
     const calendarWrapRef = useRef(null);
 
-    const isViewer = user?.role === 'owner' || user?.role === 'manager';
+    const isViewer = isTimesheetViewer(user?.role);
 
     const lastDay = useMemo(() => daysInMonth(year, month), [year, month]);
 

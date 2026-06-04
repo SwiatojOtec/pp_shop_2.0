@@ -31,7 +31,7 @@ const User = sequelize.define('User', {
     role: {
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 'rent' // owner, manager, rent
+        defaultValue: 'rent' // owner, shop_manager, shop_rent, rent, pivdenbud
     },
     status: {
         type: DataTypes.STRING,

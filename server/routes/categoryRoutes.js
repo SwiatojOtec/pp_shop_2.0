@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create category (admin only)
-router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.post('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const { name } = req.body;
         // Proper transliteration for Cyrillic names
@@ -29,7 +29,7 @@ router.post('/', authMiddleware, requireRole(['owner', 'manager']), async (req, 
 });
 
 // Delete category (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
     try {
         const category = await Category.findByPk(req.params.id);
         if (!category) return res.status(404).json({ message: 'Category not found' });

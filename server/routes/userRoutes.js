@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const { authMiddleware, requireRole } = require('../middleware/auth');
+const { ASSIGNABLE_ROLES } = require('../utils/roles');
 
 const router = express.Router();
 
@@ -26,7 +27,12 @@ router.patch('/:id', authMiddleware, requireRole(['owner']), async (req, res) =>
             return res.status(404).json({ message: 'Користувача не знайдено' });
         }
 
-        if (role) user.role = role;
+        if (role) {
+            if (!ASSIGNABLE_ROLES.includes(role)) {
+                return res.status(400).json({ message: 'Недопустима роль' });
+            }
+            user.role = role;
+        }
         if (status) user.status = status;
 
         await user.save();

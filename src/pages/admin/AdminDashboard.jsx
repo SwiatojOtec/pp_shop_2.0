@@ -5,6 +5,7 @@ import {
     AlertTriangle, ClipboardList, FileClock, ShieldAlert, WrenchIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { hasShopAccess, hasRentAccess } from '../../utils/adminRoles';
 import { productsApi, ordersApi } from '../../services/api';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -77,7 +78,7 @@ const ORDER_COLUMNS = [
 
 // ─── Main dashboard for owner / manager ──────────────────────────────────────
 
-function AdminOwnerDashboard({ user }) {
+function AdminOwnerDashboard({ user, showShop = true, showRent = true }) {
     const [shopStats,    setShopStats]   = useState({ products: 0, orders: 0, revenue: 0 });
     const [recentOrders, setRecentOrders] = useState([]);
     const [rentStats,    setRentStats]   = useState({ total: 0, available: 0, availableLater: 0, inProcurement: 0, needsRepair: 0, inRepair: 0, lowStock: 0 });
@@ -86,11 +87,25 @@ function AdminOwnerDashboard({ user }) {
     useEffect(() => {
         async function loadAll() {
             try {
-                const [products, orders, rent] = await Promise.all([
-                    productsApi.list(),
-                    ordersApi.list(),
-                    productsApi.list({ isRent: true, includeHiddenRent: true }),
-                ]);
+                const tasks = [];
+                if (showShop) {
+                    tasks.push(productsApi.list(), ordersApi.list());
+                }
+                if (showRent) {
+                    tasks.push(productsApi.list({ isRent: true, includeHiddenRent: true }));
+                }
+                const results = await Promise.all(tasks);
+
+                let products = [];
+                let orders = [];
+                let rent = [];
+                if (showShop && showRent) {
+                    [products, orders, rent] = results;
+                } else if (showShop) {
+                    [products, orders] = results;
+                } else if (showRent) {
+                    [rent] = results;
+                }
 
                 const shopProducts = Array.isArray(products) ? products.filter((p) => !p.isRent) : [];
                 const safeOrders   = Array.isArray(orders)   ? orders   : [];
@@ -99,17 +114,21 @@ function AdminOwnerDashboard({ user }) {
                 const revenue = safeOrders.reduce((s, o) => s + parseFloat(o.totalAmount || 0), 0);
                 const isAvail = (p) => p.stockStatus === 'available' || p.stockStatus === 'in_stock';
 
-                setShopStats({ products: shopProducts.length, orders: safeOrders.length, revenue: revenue.toFixed(2) });
-                setRecentOrders(safeOrders.slice(0, 5));
-                setRentStats({
-                    total:          safeRent.length,
-                    available:      safeRent.filter(isAvail).length,
-                    availableLater: safeRent.filter((p) => p.stockStatus === 'available_later').length,
-                    inProcurement:  safeRent.filter((p) => p.stockStatus === 'in_procurement').length,
-                    needsRepair:    safeRent.filter((p) => p.stockStatus === 'needs_repair').length,
-                    inRepair:       safeRent.filter((p) => p.stockStatus === 'in_repair').length,
-                    lowStock:       safeRent.filter((p) => isAvail(p) && p.quantityAvailable != null && p.quantityAvailable <= 2).length,
-                });
+                if (showShop) {
+                    setShopStats({ products: shopProducts.length, orders: safeOrders.length, revenue: revenue.toFixed(2) });
+                    setRecentOrders(safeOrders.slice(0, 5));
+                }
+                if (showRent) {
+                    setRentStats({
+                        total:          safeRent.length,
+                        available:      safeRent.filter(isAvail).length,
+                        availableLater: safeRent.filter((p) => p.stockStatus === 'available_later').length,
+                        inProcurement:  safeRent.filter((p) => p.stockStatus === 'in_procurement').length,
+                        needsRepair:    safeRent.filter((p) => p.stockStatus === 'needs_repair').length,
+                        inRepair:       safeRent.filter((p) => p.stockStatus === 'in_repair').length,
+                        lowStock:       safeRent.filter((p) => isAvail(p) && p.quantityAvailable != null && p.quantityAvailable <= 2).length,
+                    });
+                }
             } catch (err) {
                 console.error('Dashboard load error:', err);
             } finally {
@@ -118,7 +137,7 @@ function AdminOwnerDashboard({ user }) {
         }
         loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [showShop, showRent]);
 
     return (
         <div className="admin-dashboard">
@@ -130,16 +149,20 @@ function AdminOwnerDashboard({ user }) {
                 </p>
             </div>
 
-            {/* ── Shop stats ── */}
-            <p className="admin-dash-section-title">Магазин</p>
-            <div className="stats-grid admin-dash-stats-grid">
-                <StatCard icon={<Package size={22} />}     label="Товарів у магазині" value={shopStats.products} />
-                <StatCard icon={<ShoppingBag size={22} />} label="Замовлень"           value={shopStats.orders}   />
-                <StatCard icon={<TrendingUp size={22} />}  label="Загальна виручка"    value={`${shopStats.revenue} ₴`} />
-            </div>
+            {showShop && (
+                <>
+                    <p className="admin-dash-section-title">Магазин</p>
+                    <div className="stats-grid admin-dash-stats-grid">
+                        <StatCard icon={<Package size={22} />}     label="Товарів у магазині" value={shopStats.products} />
+                        <StatCard icon={<ShoppingBag size={22} />} label="Замовлень"           value={shopStats.orders}   />
+                        <StatCard icon={<TrendingUp size={22} />}  label="Загальна виручка"    value={`${shopStats.revenue} ₴`} />
+                    </div>
+                </>
+            )}
 
-            {/* ── Rent stats ── */}
-            <p className="admin-dash-section-title admin-dash-section-title--spaced">Оренда інструменту</p>
+            {showRent && (
+                <>
+            <p className={`admin-dash-section-title ${showShop ? 'admin-dash-section-title--spaced' : ''}`}>Оренда інструменту</p>
             <div className="stats-grid admin-dash-stats-grid">
                 <StatCard icon={<Wrench size={22} />}      label="Всього інструментів" value={rentStats.total} />
                 <StatCard icon={<CheckCircle size={22} />} label="Доступні зараз"      value={rentStats.available}      valueColor="#16a34a" />
@@ -162,8 +185,10 @@ function AdminOwnerDashboard({ user }) {
                     />
                 )}
             </div>
+                </>
+            )}
 
-            {/* ── Recent orders ── */}
+            {showShop && (
             <Card className="admin-dash-orders-card">
                 <CardContent className="admin-dash-orders-body">
                     <div className="admin-dash-orders-head">
@@ -175,6 +200,7 @@ function AdminOwnerDashboard({ user }) {
                     <AdminTable columns={ORDER_COLUMNS} rows={recentOrders} loading={loading} empty="Замовлень поки немає" />
                 </CardContent>
             </Card>
+            )}
         </div>
     );
 }
@@ -184,9 +210,10 @@ function AdminOwnerDashboard({ user }) {
 export default function AdminDashboard() {
     const { user } = useAuth();
 
-    if (user?.role === 'rent' || user?.role === 'pivdenbud') {
+    const role = user?.role;
+    if (role && hasRentAccess(role) && !hasShopAccess(role)) {
         return <RentDashboard />;
     }
 
-    return <AdminOwnerDashboard user={user} />;
+    return <AdminOwnerDashboard user={user} showRent={hasRentAccess(role)} showShop={hasShopAccess(role)} />;
 }

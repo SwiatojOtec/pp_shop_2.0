@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { authMiddleware, JWT_SECRET } = require('../middleware/auth');
+const { isSubdivisionHead } = require('../utils/timesheetAccess');
 
 const router = express.Router();
 
@@ -98,6 +99,7 @@ router.post('/login', async (req, res) => {
         }
 
         const token = createToken(user);
+        const head = await isSubdivisionHead(user.id);
 
         res.json({
             token,
@@ -107,7 +109,8 @@ router.post('/login', async (req, res) => {
                 lastName: user.lastName,
                 email: user.email,
                 role: user.role,
-                status: user.status
+                status: user.status,
+                isSubdivisionHead: head
             }
         });
     } catch (err) {
@@ -142,6 +145,7 @@ router.patch('/me', authMiddleware, async (req, res) => {
 
         await user.save();
 
+        const head = await isSubdivisionHead(user.id);
         return res.json({
             user: {
                 id: user.id,
@@ -149,7 +153,8 @@ router.patch('/me', authMiddleware, async (req, res) => {
                 lastName: user.lastName,
                 email: user.email,
                 role: user.role,
-                status: user.status
+                status: user.status,
+                isSubdivisionHead: head
             }
         });
     } catch (err) {

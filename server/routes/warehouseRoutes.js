@@ -6,7 +6,7 @@ const InventoryItem = require('../models/InventoryItem');
 const { logWarehouseEvent } = require('../services/inventoryService');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
-const GUARD = [authMiddleware, requireRole(['owner', 'manager', 'rent', 'pivdenbud'])];
+const GUARD = [authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud'])];
 
 router.get('/', ...GUARD, async (_req, res) => {
     try {

@@ -4,7 +4,7 @@ const router = express.Router();
 const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
-const allowedRoles = ['owner', 'manager', 'rent', 'pivdenbud'];
+const allowedRoles = ['owner', 'shop_rent', 'rent', 'pivdenbud'];
 
 router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     try {

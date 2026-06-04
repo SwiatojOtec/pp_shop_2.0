@@ -6,27 +6,30 @@ const SubdivisionMember = require('../models/SubdivisionMember');
 const Subdivision = require('../models/Subdivision');
 const User = require('../models/User');
 const { authMiddleware, requireRole } = require('../middleware/auth');
-const allowedRoles = ['owner', 'manager', 'pivdenbud'];
+const { ROLES } = require('../utils/roles');
+const {
+    canEditOwnTimesheet,
+    isTimesheetOverviewRole
+} = require('../utils/timesheetAccess');
+
 const MAX_TIMESHEET_SLOTS = 30;
 
 async function teamLabelsForUser(user) {
-    if (user.role === 'pivdenbud') {
-        const headRow = await SubdivisionMember.findOne({
-            where: { userId: user.id, isHead: true }
+    const headRow = await SubdivisionMember.findOne({
+        where: { userId: user.id, isHead: true }
+    });
+    if (headRow) {
+        const rows = await SubdivisionMember.findAll({
+            where: { subdivisionId: headRow.subdivisionId },
+            include: [{ model: User, attributes: ['id', 'name', 'lastName', 'email'] }],
+            order: [['isHead', 'DESC'], ['id', 'ASC']]
         });
-        if (headRow) {
-            const rows = await SubdivisionMember.findAll({
-                where: { subdivisionId: headRow.subdivisionId },
-                include: [{ model: User, attributes: ['id', 'name', 'lastName', 'email'] }],
-                order: [['isHead', 'DESC'], ['id', 'ASC']]
-            });
-            const names = rows.map((r) => {
-                if (r.User) return formatPersonLabel(r.User);
-                if (r.displayName) return r.displayName;
-                return '';
-            }).filter(Boolean);
-            if (names.length) return names.slice(0, MAX_TIMESHEET_SLOTS);
-        }
+        const names = rows.map((r) => {
+            if (r.User) return formatPersonLabel(r.User);
+            if (r.displayName) return r.displayName;
+            return '';
+        }).filter(Boolean);
+        if (names.length) return names.slice(0, MAX_TIMESHEET_SLOTS);
     }
 
     const headLabel = formatPersonLabel(user) || 'Голова';
@@ -80,8 +83,15 @@ function mapEntryRow(r) {
     };
 }
 
-// GET /api/timesheet?year=2026&month=2 — власник/менеджер: порожньо (див. /overview); pivdenbud: свій табель
-router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
+const timesheetReadRoles = [
+    ROLES.OWNER,
+    ROLES.PIVDENBUD,
+    ROLES.SHOP_MANAGER,
+    ROLES.SHOP_RENT,
+];
+
+// GET /api/timesheet?year=2026&month=2 — власник: порожньо (див. /overview); голова/pivdenbud: свій табель
+router.get('/', authMiddleware, requireRole(timesheetReadRoles), async (req, res) => {
     try {
         const year = parseInt(req.query.year, 10);
         const month = parseInt(req.query.month, 10);
@@ -89,7 +99,7 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
             return res.status(400).json({ message: 'Потрібні коректні year та month' });
         }
 
-        if (req.user.role === 'owner' || req.user.role === 'manager') {
+        if (isTimesheetOverviewRole(req.user.role)) {
             return res.json({
                 year,
                 month,
@@ -97,6 +107,11 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
                 entries: [],
                 viewer: true
             });
+        }
+
+        const canEdit = await canEditOwnTimesheet(req.user);
+        if (!canEdit) {
+            return res.status(403).json({ message: 'Недостатньо прав для табелю' });
         }
 
         const uid = req.user.id;
@@ -122,8 +137,8 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     }
 });
 
-// GET /api/timesheet/overview?year=&month= — усі табелі підрозділів (owner / manager)
-router.get('/overview', authMiddleware, requireRole(['owner', 'manager']), async (req, res) => {
+// GET /api/timesheet/overview?year=&month= — усі табелі підрозділів (лише owner)
+router.get('/overview', authMiddleware, requireRole([ROLES.OWNER]), async (req, res) => {
     try {
         const year = parseInt(req.query.year, 10);
         const month = parseInt(req.query.month, 10);
@@ -204,9 +219,14 @@ router.get('/overview', authMiddleware, requireRole(['owner', 'manager']), async
     }
 });
 
-// PUT /api/timesheet/month — лише pivdenbud (голови підрозділів)
-router.put('/month', authMiddleware, requireRole(['pivdenbud']), async (req, res) => {
+// PUT /api/timesheet/month — голови підрозділів та pivdenbud
+router.put('/month', authMiddleware, requireRole([ROLES.PIVDENBUD, ROLES.SHOP_MANAGER, ROLES.SHOP_RENT]), async (req, res) => {
     try {
+        const canEdit = await canEditOwnTimesheet(req.user);
+        if (!canEdit) {
+            return res.status(403).json({ message: 'Недостатньо прав для збереження табелю' });
+        }
+
         const { year, month, cells } = req.body;
         const y = parseInt(year, 10);
         const m = parseInt(month, 10);

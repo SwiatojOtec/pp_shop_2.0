@@ -7,17 +7,11 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { ConfirmDialog } from '../../components/admin';
+import { ROLE_LABELS } from '../../utils/adminRoles';
 import './Admin.css';
 
 const MAX_MEMBERS = 30;
 const GUEST_OPTION = 'guest';
-
-const ROLE_LABELS = {
-    owner:     'Власник',
-    manager:   'Менеджер',
-    rent:      'Оренда',
-    pivdenbud: 'ПАН ПІВДЕНЬБУД',
-};
 
 function formatUser(u) {
     if (!u) return '—';
