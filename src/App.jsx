@@ -20,6 +20,7 @@ import ProductEdit from './pages/admin/ProductEdit';
 import AdminBlog from './pages/admin/AdminBlog';
 import AdminBlogEdit from './pages/admin/AdminBlogEdit';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminOrderDetails from './pages/admin/AdminOrderDetails';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminRent from './pages/admin/AdminRent';
 import AdminRentEdit from './pages/admin/AdminRentEdit';
@@ -196,6 +197,16 @@ function AppContent() {
               <RequireAdmin>
                 <AdminLayout>
                   <AdminOrders />
+                </AdminLayout>
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <RequireAdmin>
+                <AdminLayout>
+                  <AdminOrderDetails />
                 </AdminLayout>
               </RequireAdmin>
             }

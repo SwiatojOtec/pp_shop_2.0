@@ -6,13 +6,8 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { clientsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { parsePhones, normalizePhonesField } from '../../utils/phoneUtils';
 import './Admin.css';
-
-// Split phone field into individual numbers
-function parsePhones(raw) {
-    if (!raw) return [];
-    return raw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
-}
 
 const EMPTY = {
     fullName: '', phone: '', email: '', passport: '',
@@ -70,7 +65,11 @@ export default function AdminClients() {
         if (!form.fullName.trim() || !form.phone.trim()) { alert('Заповніть ПІБ і телефон'); return; }
         setSaving(true);
         try {
-            const payload = { ...form, discountPercent: form.discountPercent === '' ? 0 : Number(form.discountPercent) };
+            const payload = {
+                ...form,
+                phone: normalizePhonesField(form.phone),
+                discountPercent: form.discountPercent === '' ? 0 : Number(form.discountPercent),
+            };
             if (editingId) {
                 await clientsApi.update(editingId, payload);
             } else {
@@ -241,7 +240,12 @@ export default function AdminClients() {
                                 </div>
                                 <div className="form-group">
                                     <label>Телефон * <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '0.78rem' }}>(можна кілька через пробіл)</span></label>
-                                    <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+38 097... +38 050..." />
+                                    <input
+                                        value={form.phone}
+                                        onChange={e => setForm({ ...form, phone: e.target.value })}
+                                        onBlur={e => setForm({ ...form, phone: normalizePhonesField(e.target.value) })}
+                                        placeholder="380670064044, 380501234567"
+                                    />
                                 </div>
                             </div>
                             <div className="form-row">

@@ -54,7 +54,16 @@ const Order = sequelize.define('Order', {
     status: {
         type: DataTypes.STRING,
         defaultValue: 'pending' // pending, processing, shipped, delivered, cancelled
-    }
+    },
+    sellerId: {
+        type: DataTypes.STRING,
+        defaultValue: 'fop_pankratiev_mo',
+        allowNull: false,
+    },
+    rentalApplicationId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
 }, { timestamps: true });
 
 module.exports = Order;

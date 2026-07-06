@@ -5,15 +5,20 @@ const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { sendTelegramMessage } = require('../utils/telegram');
 const { Op } = require('sequelize');
-
-function parsePhones(raw) {
-    if (!raw) return [];
-    return String(raw).split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean);
-}
-
-function digitsOnly(s) {
-    return String(s || '').replace(/\D/g, '');
-}
+const { normalizeUaPhone, parsePhones, phoneTailsMatch } = require('../utils/phoneUtils');
+const { generateInvoice, generateDepositInvoice } = require('../services/invoiceService');
+const { resolveSellerId, getSellerOptions } = require('../constants/sellers');
+const {
+    saveInvoiceDocument,
+    saveDepositInvoiceDocument,
+    saveRentalApplicationDocument,
+    saveRentalReturnActDocument,
+    listOrderDocuments,
+    getOrderDocumentFile,
+    deleteOrderDocuments,
+    deleteOrderDocument,
+} = require('../services/orderDocumentService');
+const { createOrGetRentalApplicationFromOrder } = require('../services/orderRentalService');
 
 async function generateOrderNumber() {
     const now = new Date();
@@ -41,7 +46,7 @@ async function generateOrderNumber() {
 async function persistOrder(payload, { sendTelegram = false } = {}) {
     const {
         customerName,
-        customerPhone,
+        customerPhone: rawPhone,
         customerEmail,
         address,
         deliveryMethod,
@@ -49,8 +54,12 @@ async function persistOrder(payload, { sendTelegram = false } = {}) {
         items,
         totalAmount,
         discount,
-        clientId: rawClientId
+        clientId: rawClientId,
+        sellerId: rawSellerId,
     } = payload;
+
+    const customerPhone = normalizeUaPhone(rawPhone);
+    const sellerId = resolveSellerId(rawSellerId);
 
     const cid = Number(rawClientId);
     const clientId = Number.isFinite(cid) && cid > 0 ? Math.floor(cid) : null;
@@ -68,7 +77,8 @@ async function persistOrder(payload, { sendTelegram = false } = {}) {
         items: Array.isArray(items) ? items : [],
         totalAmount: totalAmount != null ? Number(totalAmount) : 0,
         discount: discount != null ? Number(discount) : 0,
-        clientId
+        clientId,
+        sellerId,
     });
 
     if (sendTelegram) {
@@ -141,7 +151,7 @@ router.post('/', async (req, res) => {
 });
 
 // Створення замовлення з адмінки (без Telegram — щоб не спамити при чернетках)
-router.post('/admin', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
+router.post('/admin', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const {
             customerName,
@@ -153,7 +163,8 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'shop_manager', 'sho
             items,
             totalAmount,
             discount,
-            clientId
+            clientId,
+            sellerId,
         } = req.body;
 
         if (!String(customerName || '').trim() || !String(customerPhone || '').trim()) {
@@ -171,7 +182,8 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'shop_manager', 'sho
                 items,
                 totalAmount,
                 discount,
-                clientId
+                clientId,
+                sellerId,
             },
             { sendTelegram: false }
         );
@@ -183,7 +195,7 @@ router.post('/admin', authMiddleware, requireRole(['owner', 'shop_manager', 'sho
 });
 
 /** Замовлення для картки клієнта: за clientId + старі без clientId за збігом телефону. */
-router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
+router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const clientId = parseInt(req.params.clientId, 10);
         if (Number.isNaN(clientId) || clientId <= 0) {
@@ -200,28 +212,16 @@ router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'shop_m
             order: [['createdAt', 'DESC']]
         });
 
-        const phoneNorms = [
-            ...new Set(
-                parsePhones(client.phone)
-                    .map(digitsOnly)
-                    .filter((d) => d.length >= 9)
-                    .map((d) => d.slice(-10))
-            )
-        ];
+        const phoneList = parsePhones(client.phone);
 
         let byPhone = [];
-        if (phoneNorms.length) {
+        if (phoneList.length) {
             const candidates = await Order.findAll({
                 where: { clientId: { [Op.is]: null } },
                 order: [['createdAt', 'DESC']],
                 limit: 2500
             });
-            byPhone = candidates.filter((o) => {
-                const od = digitsOnly(o.customerPhone);
-                if (od.length < 9) return false;
-                const tail = od.slice(-10);
-                return phoneNorms.some((p) => tail === p || od.endsWith(p) || p.endsWith(tail));
-            });
+            byPhone = candidates.filter((o) => phoneTailsMatch(client.phone, o.customerPhone));
         }
 
         const map = new Map();
@@ -236,7 +236,7 @@ router.get('/by-client/:clientId', authMiddleware, requireRole(['owner', 'shop_m
 });
 
 // Get all orders (admin only)
-router.get('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
+router.get('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
         res.json(orders);
@@ -245,12 +245,273 @@ router.get('/', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent
     }
 });
 
+// Список продавців для рахунків
+router.get('/sellers/list', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), (req, res) => {
+    res.json(getSellerOptions());
+});
+
+// Документи замовлення
+router.get('/:id/documents', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const order = await Order.findByPk(req.params.id);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+        const documents = await listOrderDocuments(order.id);
+        res.json(documents);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/invoice', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const order = await Order.findByPk(req.params.id);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+        if (!Array.isArray(order.items) || !order.items.length) {
+            return res.status(400).json({ message: 'У замовленні немає товарів для рахунку' });
+        }
+
+        const sellerId = resolveSellerId(req.body?.sellerId || order.sellerId);
+        const pdfBuffer = await generateInvoice(order, { sellerId });
+        const document = await saveInvoiceDocument({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            sellerId,
+            pdfBuffer,
+            createdBy: req.user?.id || null,
+        });
+
+        res.status(201).json(document);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/deposit-invoice', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const order = await Order.findByPk(orderId);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { application } = await createOrGetRentalApplicationFromOrder(
+            orderId,
+            req.user?.id || null
+        );
+
+        const freshOrder = await Order.findByPk(orderId);
+        const sellerId = resolveSellerId(req.body?.sellerId || freshOrder.sellerId);
+        const pdfBuffer = await generateDepositInvoice(freshOrder, {
+            sellerId,
+            rentalApplication: application,
+        });
+        const document = await saveDepositInvoiceDocument({
+            orderId: freshOrder.id,
+            orderNumber: freshOrder.orderNumber,
+            sellerId,
+            pdfBuffer,
+            createdBy: req.user?.id || null,
+        });
+
+        res.status(201).json({ application, document });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+router.get('/:id/documents/:docId', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        const docId = parseInt(req.params.docId, 10);
+        if (!Number.isFinite(orderId) || !Number.isFinite(docId)) {
+            return res.status(400).json({ message: 'Некоректний id' });
+        }
+
+        const result = await getOrderDocumentFile(orderId, docId);
+        if (!result) return res.status(404).json({ message: 'Документ не знайдено' });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${result.doc.fileName}"`);
+        res.send(result.buffer);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.delete('/:id/documents/:docId', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        const docId = parseInt(req.params.docId, 10);
+        if (!Number.isFinite(orderId) || !Number.isFinite(docId)) {
+            return res.status(400).json({ message: 'Некоректний id' });
+        }
+
+        const order = await Order.findByPk(orderId);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const deleted = await deleteOrderDocument(orderId, docId);
+        if (!deleted) return res.status(404).json({ message: 'Документ не знайдено' });
+
+        res.json({ message: 'Документ видалено' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/rental-application', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const order = await Order.findByPk(orderId);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { contentBase64, fileName, title } = req.body || {};
+        if (!contentBase64) {
+            return res.status(400).json({ message: 'Не передано PDF-файл' });
+        }
+
+        let pdfBuffer;
+        try {
+            pdfBuffer = Buffer.from(contentBase64, 'base64');
+        } catch {
+            return res.status(400).json({ message: 'Некоректний формат файлу' });
+        }
+
+        if (!pdfBuffer.length) {
+            return res.status(400).json({ message: 'Порожній файл' });
+        }
+
+        const { application } = await createOrGetRentalApplicationFromOrder(
+            orderId,
+            req.user?.id || null
+        );
+
+        const document = await saveRentalApplicationDocument({
+            orderId: order.id,
+            applicationNumber: application.applicationNumber,
+            pdfBuffer,
+            createdBy: req.user?.id || null,
+            fileName: fileName || undefined,
+            title: title || undefined,
+        });
+
+        res.status(201).json({ application, document });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/rental-return-act', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const order = await Order.findByPk(orderId);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { contentBase64, fileName, title } = req.body || {};
+        if (!contentBase64) {
+            return res.status(400).json({ message: 'Не передано PDF-файл' });
+        }
+
+        let pdfBuffer;
+        try {
+            pdfBuffer = Buffer.from(contentBase64, 'base64');
+        } catch {
+            return res.status(400).json({ message: 'Некоректний формат файлу' });
+        }
+
+        if (!pdfBuffer.length) {
+            return res.status(400).json({ message: 'Порожній файл' });
+        }
+
+        const { application } = await createOrGetRentalApplicationFromOrder(
+            orderId,
+            req.user?.id || null
+        );
+
+        const document = await saveRentalReturnActDocument({
+            orderId: order.id,
+            applicationNumber: application.applicationNumber,
+            pdfBuffer,
+            createdBy: req.user?.id || null,
+            fileName: fileName || undefined,
+            title: title || undefined,
+        });
+
+        res.status(201).json({ application, document });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/rental-application', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const { application, created } = await createOrGetRentalApplicationFromOrder(
+            orderId,
+            req.user?.id || null
+        );
+
+        res.status(created ? 201 : 200).json({ application, created });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+// Get single order (admin)
+router.get('/:id/invoice', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const order = await Order.findByPk(req.params.id);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const sellerId = resolveSellerId(req.query.sellerId || order.sellerId);
+        const pdfBuffer = await generateInvoice(order, { sellerId });
+        const fileName = `Invoice_${String(order.orderNumber || order.id).replace(/\//g, '_')}.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.send(pdfBuffer);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get single order (admin)
+router.get('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const order = await Order.findByPk(req.params.id);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+        res.json(order);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Update order (admin only)
-router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
+router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
-        await order.update(req.body);
+        const updates = { ...req.body };
+        if (updates.customerPhone != null) {
+            updates.customerPhone = normalizeUaPhone(updates.customerPhone);
+        }
+        if (updates.sellerId != null) {
+            updates.sellerId = resolveSellerId(updates.sellerId);
+        }
+        await order.update(updates);
         res.json(order);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -258,10 +519,11 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_r
 });
 
 // Delete order (admin only)
-router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent']), async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const order = await Order.findByPk(req.params.id);
         if (!order) return res.status(404).json({ message: 'Order not found' });
+        await deleteOrderDocuments(order.id);
         await order.destroy();
         res.json({ message: 'Order deleted' });
     } catch (err) {

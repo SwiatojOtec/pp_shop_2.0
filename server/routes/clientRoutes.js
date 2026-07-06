@@ -4,7 +4,9 @@ const router = express.Router();
 const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
-const allowedRoles = ['owner', 'shop_rent', 'rent', 'pivdenbud'];
+const { phoneTailsMatch, normalizePhonesField, normalizeUaPhone } = require('../utils/phoneUtils');
+
+const allowedRoles = ['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud'];
 
 router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     try {
@@ -24,6 +26,26 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     }
 });
 
+router.get('/lookup', authMiddleware, requireRole(allowedRoles), async (req, res) => {
+    try {
+        const raw = String(req.query.phone || '').trim();
+        const normalized = normalizeUaPhone(raw);
+        if (normalized.length < 12) {
+            return res.json({ found: false, client: null });
+        }
+        const tail = normalized.slice(-9);
+        const candidates = await Client.findAll({
+            where: { phone: { [Op.iLike]: `%${tail}%` } },
+            limit: 30,
+            order: [['updatedAt', 'DESC']]
+        });
+        const client = candidates.find((c) => phoneTailsMatch(c.phone, normalized)) || null;
+        res.json({ found: !!client, client });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     try {
         const client = await Client.findByPk(req.params.id);
@@ -38,7 +60,7 @@ router.post('/', authMiddleware, requireRole(allowedRoles), async (req, res) => 
     try {
         const payload = {
             fullName: req.body.fullName,
-            phone: req.body.phone,
+            phone: normalizePhonesField(req.body.phone),
             email: req.body.email || null,
             passport: req.body.passport || null,
             address: req.body.address || null,
@@ -60,7 +82,7 @@ router.put('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) =
         if (!client) return res.status(404).json({ message: 'Клієнта не знайдено' });
         const updates = {
             fullName: req.body.fullName,
-            phone: req.body.phone,
+            phone: normalizePhonesField(req.body.phone),
             email: req.body.email || null,
             passport: req.body.passport || null,
             address: req.body.address || null,

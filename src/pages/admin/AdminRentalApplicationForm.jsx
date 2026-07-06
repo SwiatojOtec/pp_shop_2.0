@@ -3,9 +3,11 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Plus, Trash2, Save, Printer, Download, Search, X, Sparkles } from 'lucide-react';
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
+import { buildRentalPdfPayload, RENTAL_LESSOR } from '../../utils/rentalPdfPayload';
 import { clientsApi, rentalApplicationsApi, productsApi } from '../../services/api';
 import RentalApplicationPrint from './RentalApplicationPrint';
 import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../constants/rentalDefaults';
+import { normalizeUaPhone } from '../../utils/phoneUtils';
 import {
     TECHNICAL_CONDITION_OPTIONS,
     normalizeTechnicalCondition,
@@ -15,14 +17,7 @@ import './Admin.css';
 import './RentalApplicationForm.css';
 import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers, formatRentCatalogPriceCaption } from '../../utils/rentPricing';
 
-const LESSOR = {
-    name: 'Панкрат єв Олександр Миколайович',
-    ipn: '2490020092',
-    address: '15300, м. Корюківка, вул. Садова, буд. 139',
-    phone: '+38 098 188 00 44; +38 095 672 44 00',
-    email: 'office@ppbud.info',
-    warehouseAddress: 'м. Київ, вул. Холодноярська 2а',
-};
+const LESSOR = RENTAL_LESSOR;
 
 const emptyItem = () => ({
     _key: Date.now() + Math.random(),
@@ -321,13 +316,16 @@ export default function AdminRentalApplicationForm() {
             status,
             notes,
             clientName: client.name,
-            clientPhone: client.phone,
+            clientPhone: normalizeUaPhone(client.phone),
             clientEmail: client.email,
             clientPassport: client.passport,
             clientAddress: client.address,
             clientSiteAddress: client.siteAddress,
             clientId: selectedClientId ? Number(selectedClientId) : null,
-            responsible,
+            responsible: responsible.map((person) => ({
+                ...person,
+                phone: normalizeUaPhone(person.phone),
+            })),
             rentFrom: items[0]?.rentFrom || null,
             rentTo: items[0]?.rentTo || null,
             items: items.map(({ _key, ...i }) => i),
@@ -466,7 +464,7 @@ export default function AdminRentalApplicationForm() {
                         </div>
                         {[
                             { label: 'П.І.Б.', field: 'name', placeholder: "Прізвище Ім'я По-батькові" },
-                            { label: 'Телефон', field: 'phone', placeholder: '+38 0XX XXX XX XX' },
+                            { label: 'Телефон', field: 'phone', placeholder: '380670064044' },
                             { label: 'E-mail', field: 'email', placeholder: 'email@example.com' },
                             { label: 'Паспорт / ID', field: 'passport', placeholder: 'Серія, номер або ID-картка' },
                             { label: 'Адреса проживання', field: 'address', placeholder: 'вул. Прикладна, 1, м. Київ' },
@@ -477,6 +475,9 @@ export default function AdminRentalApplicationForm() {
                                 <input
                                     value={client[field]}
                                     onChange={e => setClient(prev => ({ ...prev, [field]: e.target.value }))}
+                                    onBlur={field === 'phone'
+                                        ? (e) => setClient(prev => ({ ...prev, phone: normalizeUaPhone(e.target.value) }))
+                                        : undefined}
                                     placeholder={placeholder}
                                 />
                             </div>
@@ -497,7 +498,8 @@ export default function AdminRentalApplicationForm() {
                                         <input
                                             value={r.phone}
                                             onChange={e => setResponsible(prev => prev.map((p, pi) => pi === i ? { ...p, phone: e.target.value } : p))}
-                                            placeholder="+38 0XX XXX XX XX"
+                                            onBlur={e => setResponsible(prev => prev.map((p, pi) => pi === i ? { ...p, phone: normalizeUaPhone(e.target.value) } : p))}
+                                            placeholder="380670064044"
                                             style={{ flex: 1, border: 'none', borderBottom: '1px dashed #ddd', padding: '2px 4px', fontSize: '0.88rem', outline: 'none', background: 'transparent' }}
                                         />
                                         <button
@@ -730,30 +732,52 @@ export default function AdminRentalApplicationForm() {
                         <div className="rental-section">
                             <h2>Документ</h2>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '480px' }}>
-                                <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                     <button
                                         onClick={() =>
-                                            generateRentalPdf({
+                                            generateRentalPdf(buildRentalPdfPayload({
                                                 applicationNumber,
-                                                lessor: LESSOR,
-                                                client,
+                                                clientName: client.name,
+                                                clientPhone: client.phone,
+                                                clientEmail: client.email,
+                                                clientPassport: client.passport,
+                                                clientAddress: client.address,
+                                                clientSiteAddress: client.siteAddress,
                                                 responsible,
                                                 items,
-                                                totalRental,
-                                                totalDeposit,
                                                 discountType,
                                                 discountValue: parsedDiscount,
-                                                discountAmount,
-                                                totalRentalAfterDiscount
-                                            }).catch(console.error)
+                                            })).catch(console.error)
                                         }
                                         className="btn-secondary-icon"
                                         title="Скачати PDF"
-                                        style={{ flex: 1 }}
+                                        style={{ flex: 1, minWidth: '180px' }}
                                     >
-                                        <Download size={18} /> Скачати PDF
+                                        <Download size={18} /> Заявка (PDF)
                                     </button>
-                                    <button onClick={handlePrint} className="btn-secondary-icon" title="Друк" style={{ flex: 1 }}>
+                                    <button
+                                        onClick={() =>
+                                            generateRentalPdf(buildRentalPdfPayload({
+                                                applicationNumber,
+                                                clientName: client.name,
+                                                clientPhone: client.phone,
+                                                clientEmail: client.email,
+                                                clientPassport: client.passport,
+                                                clientAddress: client.address,
+                                                clientSiteAddress: client.siteAddress,
+                                                responsible,
+                                                items,
+                                                discountType,
+                                                discountValue: parsedDiscount,
+                                            }), { variant: 'return_inspection' }).catch(console.error)
+                                        }
+                                        className="btn-secondary-icon"
+                                        title="Акт повернення-огляду"
+                                        style={{ flex: 1, minWidth: '180px' }}
+                                    >
+                                        <Download size={18} /> Акт повернення (PDF)
+                                    </button>
+                                    <button onClick={handlePrint} className="btn-secondary-icon" title="Друк" style={{ flex: 1, minWidth: '120px' }}>
                                         <Printer size={18} /> Друк
                                     </button>
                                 </div>

@@ -1,51 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ordersApi, productsApi, rentalApplicationsApi, clientsApi } from '../../services/api';
-import {
-    Trash2, Search, Filter, Save, ClipboardList,
-    ChevronDown, ChevronUp, X, ShoppingCart,
-} from 'lucide-react';
+import { ordersApi, productsApi, clientsApi } from '../../services/api';
+import { Search, Filter, ShoppingCart, ChevronRight } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AdminPageHeader, ConfirmDialog } from '../../components/admin';
+import { AdminPageHeader } from '../../components/admin';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../constants/rentalDefaults';
-import { normalizeTechnicalCondition } from '../../constants/technicalConditions';
+import {
+    ORDER_STATUS_VARIANT,
+    getOrderStatusLabel,
+    formatOrderNumberDisplay,
+    calcOrderTotal,
+    orderHasShopItems,
+    orderHasRentItems,
+} from '../../utils/orderHelpers';
+import { normalizeUaPhone, parsePhones } from '../../utils/phoneUtils';
 import './Admin.css';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const STATUS_OPTIONS = [
-    { value: 'pending',       label: 'Новий'             },
-    { value: 'invoice_sent',  label: 'Рахунок виставлено' },
-    { value: 'paid',          label: 'Оплачено'           },
-    { value: 'processing',    label: 'В роботі'           },
-    { value: 'completed',     label: 'Виконано'           },
-    { value: 'cancelled',     label: 'Скасовано'          },
+const TYPE_FILTER_OPTIONS = [
+    { value: 'all',  label: 'Всі замовлення' },
+    { value: 'shop', label: 'Магазин' },
+    { value: 'rent', label: 'Оренда' },
 ];
-
-const STATUS_VARIANT = {
-    pending:      'warning',
-    invoice_sent: 'secondary',
-    paid:         'success',
-    processing:   'default',
-    completed:    'success',
-    cancelled:    'danger',
-};
-
-function getLabel(status) {
-    return STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
-}
-
-/** Номер з бекенду `n/DD/MM/YYYY` — показуємо як «№n · дд.мм.рррр», щоб не плутати з датою. */
-function formatOrderNumberDisplay(value) {
-    if (!value || typeof value !== 'string') return value || '—';
-    const p = value.trim().split('/');
-    if (p.length === 4 && p.every((x) => /^\d+$/.test(x))) {
-        const [n, dd, mm, yyyy] = p;
-        return `№${n} · ${dd}.${mm}.${yyyy}`;
-    }
-    return value;
-}
 
 const EMPTY_SHOP_COMPOSER = {
     customerName: '',
@@ -58,23 +33,16 @@ const EMPTY_SHOP_COMPOSER = {
     discount: 0,
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function AdminOrders() {
-    const navigate  = useNavigate();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const [orders,    setOrders]    = useState([]);
-    const [products,  setProducts]  = useState([]);
-    const [loading,   setLoading]   = useState(true);
-    const [search,    setSearch]    = useState('');
+    const [orders, setOrders] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
-    const [expanded,  setExpanded]  = useState(null);  // order id
-    const [draft,     setDraft]     = useState(null);   // editable copy of expanded order
-    const [productSearch, setProductSearch] = useState('');
-    const [saving,    setSaving]    = useState(false);
-    const [converting, setConverting] = useState(null);
-    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [typeFilter, setTypeFilter] = useState('all');
 
     const [composer, setComposer] = useState(null);
     const [composerProductSearch, setComposerProductSearch] = useState('');
@@ -83,6 +51,11 @@ export default function AdminOrders() {
 
     const shopProductsOnly = useMemo(
         () => products.filter((p) => !p.isRent),
+        [products]
+    );
+
+    const rentProductIds = useMemo(
+        () => new Set(products.filter((p) => p.isRent).map((p) => p.id)),
         [products]
     );
 
@@ -105,13 +78,7 @@ export default function AdminOrders() {
         (async () => {
             try {
                 const client = await clientsApi.get(cid);
-                const phone =
-                    String(client.phone || '')
-                        .split(/[,;\s]+/)
-                        .map((s) => s.trim())
-                        .filter(Boolean)[0] || '';
-                setExpanded(null);
-                setDraft(null);
+                const phone = parsePhones(client.phone)[0] || normalizeUaPhone(client.phone);
                 setComposer({
                     customerName: client.fullName || '',
                     customerPhone: phone,
@@ -134,28 +101,17 @@ export default function AdminOrders() {
 
     useEffect(() => {
         const raw = searchParams.get('openOrder');
-        if (!raw || orders.length === 0) return;
+        if (!raw) return;
         const oid = parseInt(raw, 10);
-        const stripOpen = () => {
-            setSearchParams((prev) => {
-                const n = new URLSearchParams(prev);
-                n.delete('openOrder');
-                return n;
-            }, { replace: true });
-        };
-        if (Number.isNaN(oid) || oid <= 0) {
-            stripOpen();
-            return;
+        setSearchParams((prev) => {
+            const n = new URLSearchParams(prev);
+            n.delete('openOrder');
+            return n;
+        }, { replace: true });
+        if (!Number.isNaN(oid) && oid > 0) {
+            navigate(`/admin/orders/${oid}`, { replace: true });
         }
-        const o = orders.find((x) => x.id === oid);
-        if (!o) {
-            stripOpen();
-            return;
-        }
-        setExpanded(oid);
-        setDraft({ ...o, items: o.items ? [...o.items.map((i) => ({ ...i }))] : [] });
-        stripOpen();
-    }, [orders, searchParams, setSearchParams]);
+    }, [searchParams, setSearchParams, navigate]);
 
     async function loadOrders() {
         setLoading(true);
@@ -178,136 +134,26 @@ export default function AdminOrders() {
         }
     }
 
-    function toggleExpand(order) {
-        if (expanded === order.id) {
-            setExpanded(null);
-            setDraft(null);
-        } else {
-            setExpanded(order.id);
-            setDraft({ ...order, items: order.items ? [...order.items.map((i) => ({ ...i }))] : [] });
-            setProductSearch('');
-        }
-    }
+    const filteredOrders = useMemo(() => orders.filter((o) => {
+        const q = search.toLowerCase();
+        const matchSearch = !q
+            || (o.customerName || '').toLowerCase().includes(q)
+            || (o.customerPhone || '').includes(q)
+            || (o.orderNumber || '').toLowerCase().includes(q);
+        const matchStatus = statusFilter === 'All' || o.status === statusFilter;
+        const matchType =
+            typeFilter === 'all'
+            || (typeFilter === 'shop' && orderHasShopItems(o, rentProductIds))
+            || (typeFilter === 'rent' && orderHasRentItems(o, rentProductIds));
+        return matchSearch && matchStatus && matchType;
+    }), [orders, search, statusFilter, typeFilter, rentProductIds]);
 
-    async function updateStatus(id, status) {
-        try {
-            await ordersApi.update(id, { status });
-            setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
-        } catch (err) {
-            alert(err.message || 'Помилка оновлення статусу');
-        }
-    }
-
-    async function handleSave() {
-        setSaving(true);
-        try {
-            const updated = await ordersApi.update(draft.id, draft);
-            setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o));
-            setExpanded(null);
-            setDraft(null);
-        } catch (err) {
-            alert(err.message || 'Помилка збереження');
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    async function handleDelete() {
-        if (!deleteTarget) return;
-        try {
-            await ordersApi.remove(deleteTarget.id);
-            setOrders((prev) => prev.filter((o) => o.id !== deleteTarget.id));
-            if (expanded === deleteTarget.id) { setExpanded(null); setDraft(null); }
-        } catch (err) {
-            alert(err.message || 'Помилка видалення');
-        } finally {
-            setDeleteTarget(null);
-        }
-    }
-
-    const rentProductIds = new Set(products.filter((p) => p.isRent).map((p) => p.id));
-
-    async function convertToRental(order) {
-        setConverting(order.id);
-        try {
-            const rentItems = (order.items || [])
-                .filter((i) => rentProductIds.has(i.id))
-                .map((i) => {
-                    const full = products.find((p) => p.id === i.id) || {};
-                    return {
-                        productId: i.id,
-                        name: i.name,
-                        serialNumber: full.serialNumber || '',
-                        inventoryNumber: full.inventoryNumber || '',
-                        technicalCondition: normalizeTechnicalCondition(full.technicalCondition),
-                        unit: i.unit || 'шт',
-                        quantity: i.quantity || 1,
-                        weightTotal: full.weightTotal || '',
-                        replacementCostPerUnit: parseFloat(full.replacementCost || 0),
-                        replacementCostTotal: parseFloat(full.replacementCost || 0) * (i.quantity || 1),
-                        depositPercent: DEFAULT_RENTAL_DEPOSIT_PERCENT,
-                        depositAmount: (
-                            parseFloat(full.replacementCost || 0) *
-                            (i.quantity || 1) *
-                            (DEFAULT_RENTAL_DEPOSIT_PERCENT / 100)
-                        ).toFixed(2),
-                        pricePerDay: parseFloat(i.price || 0),
-                        rentFrom: '', rentTo: '', days: 0, totalRental: '',
-                        kitItems: full.kitItems || [],
-                    };
-                });
-
-            const totalDeposit = rentItems.reduce((s, i) => s + parseFloat(i.depositAmount || 0), 0);
-            const payload = {
-                clientName: order.customerName || '',
-                clientPhone: order.customerPhone || '',
-                clientEmail: order.customerEmail || '',
-                clientAddress: order.address || '',
-                status: 'draft',
-                items: rentItems,
-                totalAmount: 0,
-                depositAmount: totalDeposit.toFixed(2),
-            };
-
-            const created = await rentalApplicationsApi.create(payload);
-            navigate(`/admin/rental-applications/${created.id}`);
-        } catch (err) {
-            alert(`Помилка: ${err.message}`);
-        } finally {
-            setConverting(null);
-        }
-    }
-
-    // Draft helpers
-    function setDraftField(field, value) {
-        setDraft((prev) => ({ ...prev, [field]: value }));
-    }
-
-    function addItem(product) {
-        setDraft((prev) => {
-            const items = [...prev.items, { id: product.id, name: product.name, price: product.price, quantity: 1, unit: product.unit, packSize: product.packSize || 1 }];
-            return { ...prev, items, totalAmount: calcTotal(items) };
-        });
-        setProductSearch('');
-    }
-
-    function removeItem(idx) {
-        setDraft((prev) => {
-            const items = prev.items.filter((_, i) => i !== idx);
-            return { ...prev, items, totalAmount: calcTotal(items) };
-        });
-    }
-
-    function updateQty(idx, qty) {
-        setDraft((prev) => {
-            const items = prev.items.map((item, i) => i === idx ? { ...item, quantity: parseFloat(qty) || 0 } : item);
-            return { ...prev, items, totalAmount: calcTotal(items) };
-        });
-    }
-
-    function calcTotal(items) {
-        return items.reduce((s, i) => s + (i.price * i.quantity * (i.packSize || 1)), 0);
-    }
+    const suggestedComposerProducts = composerProductSearch.length > 1
+        ? shopProductsOnly.filter((p) =>
+            p.name.toLowerCase().includes(composerProductSearch.toLowerCase())
+            || (p.sku && p.sku.toLowerCase().includes(composerProductSearch.toLowerCase()))
+        ).slice(0, 8)
+        : [];
 
     function setComposerField(field, value) {
         setComposer((prev) => (prev ? { ...prev, [field]: value } : prev));
@@ -335,8 +181,7 @@ export default function AdminOrders() {
     function removeItemComposer(idx) {
         setComposer((prev) => {
             if (!prev) return prev;
-            const items = prev.items.filter((_, i) => i !== idx);
-            return { ...prev, items };
+            return { ...prev, items: prev.items.filter((_, i) => i !== idx) };
         });
     }
 
@@ -358,10 +203,10 @@ export default function AdminOrders() {
         }
         setSavingComposer(true);
         try {
-            const total = calcTotal(composer.items);
+            const total = calcOrderTotal(composer.items);
             const created = await ordersApi.createAdmin({
                 customerName: composer.customerName.trim(),
-                customerPhone: composer.customerPhone.trim(),
+                customerPhone: normalizeUaPhone(composer.customerPhone),
                 customerEmail: composer.customerEmail?.trim() || '',
                 address: composer.address || '',
                 deliveryMethod: composer.deliveryMethod,
@@ -375,11 +220,7 @@ export default function AdminOrders() {
             setComposer(null);
             setComposerProductSearch('');
             setComposerClientId(null);
-            setExpanded(created.id);
-            setDraft({
-                ...created,
-                items: created.items ? [...created.items.map((i) => ({ ...i }))] : [],
-            });
+            navigate(`/admin/orders/${created.id}`);
         } catch (e) {
             alert(e.message || 'Помилка створення замовлення');
         } finally {
@@ -388,33 +229,10 @@ export default function AdminOrders() {
     }
 
     function openComposerBlank() {
-        setExpanded(null);
-        setDraft(null);
         setComposer({ ...EMPTY_SHOP_COMPOSER, items: [] });
         setComposerProductSearch('');
         setComposerClientId(null);
     }
-
-    const filteredOrders = orders.filter((o) => {
-        const q = search.toLowerCase();
-        const matchSearch = !q || (o.customerName || '').toLowerCase().includes(q) || (o.customerPhone || '').includes(q) || (o.orderNumber || '').toLowerCase().includes(q);
-        const matchStatus = statusFilter === 'All' || o.status === statusFilter;
-        return matchSearch && matchStatus;
-    });
-
-    const suggestedProducts = productSearch.length > 1
-        ? products.filter((p) =>
-            p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(productSearch.toLowerCase()))
-        ).slice(0, 8)
-        : [];
-
-    const suggestedComposerProducts = composerProductSearch.length > 1
-        ? shopProductsOnly.filter((p) =>
-            p.name.toLowerCase().includes(composerProductSearch.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(composerProductSearch.toLowerCase()))
-        ).slice(0, 8)
-        : [];
 
     return (
         <div>
@@ -438,7 +256,7 @@ export default function AdminOrders() {
                             onClick={() => { setComposer(null); setComposerProductSearch(''); setComposerClientId(null); }}
                             title="Закрити"
                         >
-                            <X size={16} />
+                            ×
                         </button>
                     </div>
 
@@ -447,134 +265,65 @@ export default function AdminOrders() {
                         <div className="order-composer-grid">
                             <div className="form-group">
                                 <label>Ім&apos;я</label>
-                                <input
-                                    type="text"
-                                    value={composer.customerName || ''}
-                                    onChange={(e) => setComposerField('customerName', e.target.value)}
-                                />
+                                <input type="text" value={composer.customerName || ''} onChange={(e) => setComposerField('customerName', e.target.value)} />
                             </div>
                             <div className="form-group">
                                 <label>Телефон</label>
                                 <input
                                     type="text"
+                                    inputMode="numeric"
+                                    placeholder="380670064044"
                                     value={composer.customerPhone || ''}
                                     onChange={(e) => setComposerField('customerPhone', e.target.value)}
+                                    onBlur={(e) => setComposerField('customerPhone', normalizeUaPhone(e.target.value))}
                                 />
                             </div>
                             <div className="form-group">
                                 <label>Email</label>
-                                <input
-                                    type="text"
-                                    inputMode="email"
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
-                                    value={composer.customerEmail || ''}
-                                    onChange={(e) => setComposerField('customerEmail', e.target.value)}
-                                />
+                                <input type="email" value={composer.customerEmail || ''} onChange={(e) => setComposerField('customerEmail', e.target.value)} />
                             </div>
                             <div className="form-group">
                                 <label>Знижка, %</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.5"
-                                    value={composer.discount ?? 0}
-                                    onChange={(e) => setComposerField('discount', parseFloat(e.target.value) || 0)}
-                                />
+                                <input type="number" min="0" max="100" step="0.5" value={composer.discount ?? 0} onChange={(e) => setComposerField('discount', parseFloat(e.target.value) || 0)} />
                             </div>
                             <div className="form-group order-composer-span2">
                                 <label>Адреса доставки / самовивіз</label>
-                                <input
-                                    type="text"
-                                    value={composer.address || ''}
-                                    onChange={(e) => setComposerField('address', e.target.value)}
-                                />
+                                <input type="text" placeholder="Вкажіть адресу або «Самовивіз»" value={composer.address || ''} onChange={(e) => setComposerField('address', e.target.value)} />
                             </div>
                         </div>
                     </div>
 
                     <div className="order-detail-section" style={{ marginTop: '12px' }}>
                         <h4 className="order-detail-label">Товари (лише магазин, без оренди)</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                        <div className="order-item-list">
                             {composer.items.map((item, idx) => (
-                                <div
-                                    key={`${item.id}-${idx}`}
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 110px 100px 36px',
-                                        gap: '10px',
-                                        alignItems: 'center',
-                                        padding: '8px 12px',
-                                        background: '#f9fafb',
-                                        borderRadius: '8px',
-                                        border: '1px solid #e5e7eb',
-                                    }}
-                                >
-                                    <span className="font-medium text-sm">{item.name}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={item.quantity}
-                                            onChange={(e) => updateQtyComposer(idx, e.target.value)}
-                                            style={{ width: '60px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem' }}
-                                        />
-                                        <span className="text-xs text-gray-500">{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
+                                <div key={`${item.id}-${idx}`} className="order-item-row">
+                                    <span className="order-item-row__name">{item.name}</span>
+                                    <div className="order-item-row__qty">
+                                        <input type="number" min="0" value={item.quantity} onChange={(e) => updateQtyComposer(idx, e.target.value)} />
+                                        <span className="order-item-row__unit">{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
                                     </div>
-                                    <span className="text-right font-bold text-sm">
+                                    <span className="order-item-row__price">
                                         {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
                                     </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeItemComposer(idx)}
-                                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                                    >
-                                        <X size={16} />
-                                    </button>
+                                    <button type="button" className="order-item-row__remove" onClick={() => removeItemComposer(idx)} title="Прибрати">×</button>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ position: 'relative', maxWidth: '480px' }}>
-                            <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                        <div className="order-product-search-wrap">
+                            <Search size={15} className="order-product-search-icon" />
                             <input
                                 type="text"
-                                className="order-composer-product-search"
+                                className="order-product-search-input"
                                 placeholder="Додати товар: назва або артикул..."
                                 value={composerProductSearch}
                                 onChange={(e) => setComposerProductSearch(e.target.value)}
                             />
                             {suggestedComposerProducts.length > 0 && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        right: 0,
-                                        background: 'white',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '8px',
-                                        marginTop: '4px',
-                                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                                        zIndex: 20,
-                                        maxHeight: '260px',
-                                        overflowY: 'auto',
-                                    }}
-                                >
+                                <div className="order-product-suggest">
                                     {suggestedComposerProducts.map((p) => (
-                                        <div
-                                            key={p.id}
-                                            onClick={() => addItemComposer(p)}
-                                            style={{
-                                                padding: '10px 14px',
-                                                cursor: 'pointer',
-                                                borderBottom: '1px solid #f3f4f6',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                            }}
-                                            className="hover:bg-gray-50"
-                                        >
+                                        <div key={p.id} className="order-product-suggest__item" onClick={() => addItemComposer(p)}>
                                             <div>
                                                 <div className="font-semibold text-sm">{p.name}</div>
                                                 {p.sku && <div className="text-xs text-gray-400">SKU: {p.sku}</div>}
@@ -591,7 +340,7 @@ export default function AdminOrders() {
                         <div className="text-sm">
                             Разом:{' '}
                             <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>
-                                {calcTotal(composer.items).toLocaleString()} ₴
+                                {calcOrderTotal(composer.items).toLocaleString()} ₴
                             </strong>
                         </div>
                         <div className="order-composer-card__actions">
@@ -606,32 +355,35 @@ export default function AdminOrders() {
                 </div>
             )}
 
-            {/* Filters */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', background: 'white', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+            <div className="order-filters-bar">
+                <div className="order-filters-bar__search">
+                    <Search size={16} className="order-filters-bar__search-icon" />
                     <input
                         type="text"
                         placeholder="Пошук за ім'ям, телефоном або № замовлення..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{ width: '100%', padding: '9px 9px 9px 38px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', fontSize: '0.9rem' }}
                     />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="order-filters-bar__selects">
                     <Filter size={16} style={{ color: '#9ca3af', flexShrink: 0 }} />
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', outline: 'none', fontSize: '0.9rem', background: 'white' }}
-                    >
+                    <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                        {TYPE_FILTER_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                    </select>
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option value="All">Всі статуси</option>
-                        {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        <option value="pending">Новий</option>
+                        <option value="invoice_sent">Рахунок виставлено</option>
+                        <option value="paid">Оплачено</option>
+                        <option value="processing">В роботі</option>
+                        <option value="completed">Виконано</option>
+                        <option value="cancelled">Скасовано</option>
                     </select>
                 </div>
             </div>
 
-            {/* Table */}
             <div className="admin-table-container">
                 {loading ? (
                     <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>Завантаження...</div>
@@ -640,11 +392,7 @@ export default function AdminOrders() {
                 ) : (
                     filteredOrders.map((order) => (
                         <div key={order.id} className="order-row-wrap">
-                            {/* ── Summary row ── */}
-                            <div
-                                className={`order-row-summary${expanded === order.id ? ' is-open' : ''}`}
-                                onClick={() => toggleExpand(order)}
-                            >
+                            <div className="order-row-summary order-row-summary--static">
                                 <div className="order-row-num" title={order.orderNumber || ''}>
                                     {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
                                 </div>
@@ -656,156 +404,40 @@ export default function AdminOrders() {
 
                                 <div className="order-row-items text-sm text-gray-600">
                                     {(order.items || []).slice(0, 2).map((i, idx) => (
-                                        <span key={idx}>{i.name} ×{i.quantity}{idx < Math.min(order.items.length, 2) - 1 ? ', ' : ''}</span>
+                                        <span key={idx}>
+                                            {i.name} ×{i.quantity}
+                                            {idx < Math.min(order.items.length, 2) - 1 ? ', ' : ''}
+                                        </span>
                                     ))}
-                                    {(order.items || []).length > 2 && <span className="text-gray-400"> +{order.items.length - 2}</span>}
+                                    {(order.items || []).length > 2 && (
+                                        <span className="text-gray-400"> +{order.items.length - 2}</span>
+                                    )}
                                 </div>
 
-                                <div className="order-row-amount font-bold">{parseFloat(order.totalAmount).toLocaleString()} ₴</div>
+                                <div className="order-row-amount font-bold">
+                                    {parseFloat(order.totalAmount).toLocaleString()} ₴
+                                </div>
 
-                                <div className="order-row-status" onClick={(e) => e.stopPropagation()}>
-                                    <Badge variant={STATUS_VARIANT[order.status] || 'secondary'}>
-                                        {getLabel(order.status)}
+                                <div className="order-row-status">
+                                    <Badge variant={ORDER_STATUS_VARIANT[order.status] || 'secondary'}>
+                                        {getOrderStatusLabel(order.status)}
                                     </Badge>
-                                    <select
-                                        value={order.status}
-                                        onChange={(e) => updateStatus(order.id, e.target.value)}
-                                        className="order-status-select"
-                                        title="Змінити статус"
-                                    >
-                                        {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                    </select>
                                 </div>
 
-                                <div className="order-row-chevron">
-                                    {expanded === order.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                <div className="order-row-actions">
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => navigate(`/admin/orders/${order.id}`)}
+                                    >
+                                        Детальніше <ChevronRight size={14} />
+                                    </Button>
                                 </div>
                             </div>
-
-                            {/* ── Expanded detail panel ── */}
-                            {expanded === order.id && draft && (
-                                <div className="order-row-detail">
-                                    {/* Client info */}
-                                    <div className="order-detail-section">
-                                        <h4 className="order-detail-label">Клієнт</h4>
-                                        <div className="order-detail-grid2">
-                                            <div className="form-group">
-                                                <label>Ім'я</label>
-                                                <input type="text" value={draft.customerName || ''} onChange={(e) => setDraftField('customerName', e.target.value)} />
-                                            </div>
-                                            <div className="form-group">
-                                                <label>Телефон</label>
-                                                <input type="text" value={draft.customerPhone || ''} onChange={(e) => setDraftField('customerPhone', e.target.value)} />
-                                            </div>
-                                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                                                <label>Адреса доставки</label>
-                                                <input type="text" value={draft.address || ''} onChange={(e) => setDraftField('address', e.target.value)} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Items */}
-                                    <div className="order-detail-section">
-                                        <h4 className="order-detail-label">Товари</h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                                            {draft.items.map((item, idx) => (
-                                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 110px 100px 36px', gap: '10px', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                                                    <span className="font-medium text-sm">{item.name}</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={item.quantity}
-                                                            onChange={(e) => updateQty(idx, e.target.value)}
-                                                            style={{ width: '60px', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem' }}
-                                                        />
-                                                        <span className="text-xs text-gray-500">{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
-                                                    </div>
-                                                    <span className="text-right font-bold text-sm">
-                                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
-                                                    </span>
-                                                    <button type="button" onClick={() => removeItem(idx)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Add product search */}
-                                        <div style={{ position: 'relative', maxWidth: '420px' }}>
-                                            <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
-                                            <input
-                                                type="text"
-                                                placeholder="Додати товар: введіть назву або артикул..."
-                                                value={productSearch}
-                                                onChange={(e) => setProductSearch(e.target.value)}
-                                                style={{ width: '100%', padding: '8px 8px 8px 34px', border: '1px dashed #d1d5db', borderRadius: '8px', fontSize: '0.88rem', outline: 'none' }}
-                                            />
-                                            {suggestedProducts.length > 0 && (
-                                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 20, maxHeight: '260px', overflowY: 'auto' }}>
-                                                    {suggestedProducts.map((p) => (
-                                                        <div
-                                                            key={p.id}
-                                                            onClick={() => addItem(p)}
-                                                            style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between' }}
-                                                            className="hover:bg-gray-50"
-                                                        >
-                                                            <div>
-                                                                <div className="font-semibold text-sm">{p.name}</div>
-                                                                {p.sku && <div className="text-xs text-gray-400">SKU: {p.sku}</div>}
-                                                            </div>
-                                                            <span className="font-bold text-[#e63946]">{p.price} ₴</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Footer */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #e5e7eb', marginTop: '8px', flexWrap: 'wrap', gap: '10px' }}>
-                                        <div className="text-sm">
-                                            Разом: <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>{parseFloat(draft.totalAmount || 0).toLocaleString()} ₴</strong>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                            {order.items && order.items.some((i) => rentProductIds.has(i.id)) && (
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => convertToRental(order)}
-                                                    disabled={converting === order.id}
-                                                    title="Перенести в заявку оренди"
-                                                    style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
-                                                >
-                                                    <ClipboardList size={14} /> До заявки оренди
-                                                </Button>
-                                            )}
-                                            <Button variant="ghost" size="sm" className="text-red-500" onClick={() => { setExpanded(null); setDraft(null); setDeleteTarget(order); }}>
-                                                <Trash2 size={14} /> Видалити
-                                            </Button>
-                                            <Button variant="secondary" size="sm" onClick={() => { setExpanded(null); setDraft(null); }}>
-                                                Скасувати
-                                            </Button>
-                                            <Button size="sm" onClick={handleSave} disabled={saving}>
-                                                <Save size={14} /> {saving ? 'Збереження...' : 'Зберегти'}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     ))
                 )}
             </div>
-
-            <ConfirmDialog
-                open={!!deleteTarget}
-                title="Видалити замовлення?"
-                message={deleteTarget ? `Видалити замовлення ${deleteTarget.orderNumber || '#' + deleteTarget.id}? Цю дію неможливо скасувати.` : ''}
-                confirmText="Видалити"
-                onConfirm={handleDelete}
-                onCancel={() => setDeleteTarget(null)}
-            />
         </div>
     );
 }

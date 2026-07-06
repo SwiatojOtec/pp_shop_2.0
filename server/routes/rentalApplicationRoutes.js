@@ -4,6 +4,21 @@ const RentalApplication = require('../models/RentalApplication');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { recalculateProductQuantity } = require('../services/inventoryService');
+const { normalizeUaPhone } = require('../utils/phoneUtils');
+
+function normalizeRentalPayload(body) {
+    const payload = { ...body };
+    if (payload.clientPhone != null) {
+        payload.clientPhone = normalizeUaPhone(payload.clientPhone);
+    }
+    if (Array.isArray(payload.responsible)) {
+        payload.responsible = payload.responsible.map((person) => ({
+            ...person,
+            phone: person?.phone != null ? normalizeUaPhone(person.phone) : person?.phone,
+        }));
+    }
+    return payload;
+}
 
 async function recalcRentQuantitiesForItemsLists(itemsA, itemsB) {
     const ids = new Set();
@@ -92,7 +107,7 @@ router.get('/:id', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'p
 router.post('/', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const applicationNumber = await generateAppNumber();
-        const payload = { ...req.body };
+        const payload = normalizeRentalPayload({ ...req.body });
         if (payload.rentTo && ['active', 'booked'].includes(payload.status)) {
             if (payload.rentTo < toIsoDate()) payload.status = 'overdue';
         }
@@ -114,7 +129,7 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'p
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });
         const prevItems = Array.isArray(app.items) ? app.items : [];
-        const next = { ...req.body };
+        const next = normalizeRentalPayload({ ...req.body });
         const nextStatus = next.status || app.status;
         const nextRentTo = next.rentTo || app.rentTo;
         if (nextRentTo && ['active', 'booked'].includes(nextStatus) && nextRentTo < toIsoDate()) {

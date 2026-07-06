@@ -3,6 +3,7 @@ const { generateInvoice } = require('../services/invoiceService');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const { Op } = require('sequelize');
+const { normalizeUaPhone } = require('./phoneUtils');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -247,7 +248,7 @@ if (token) {
                 }
                 await bot.sendMessage(chatId, `👤 Клієнт: <b>${state.customerName}</b>\n📱 Тепер введіть <b>номер телефону</b> клієнта:`, opts);
             } else if (state.step === 'awaiting_customer_phone') {
-                state.customerPhone = msg.text;
+                state.customerPhone = normalizeUaPhone(msg.text);
                 await bot.sendMessage(chatId, '⏳ Генерую замовлення та рахунок...');
 
                 try {

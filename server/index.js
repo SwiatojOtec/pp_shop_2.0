@@ -64,25 +64,27 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting
-// General limit: 200 requests per 15 minutes per IP
+// Rate limiting (production only — dev/HMR easily exceeds low caps)
+const isProduction = process.env.NODE_ENV === 'production';
+
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    max: isProduction ? 1000 : 10_000,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { message: 'Забагато запитів. Спробуйте пізніше.' }
+    skip: () => !isProduction,
+    message: { message: 'Забагато запитів. Спробуйте пізніше.' },
 });
 
-// Strict limit for auth routes: 10 attempts per 15 minutes (brute-force protection)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: isProduction ? 10 : 100,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { message: 'Забагато спроб входу. Спробуйте через 15 хвилин.' }
+    skip: () => !isProduction,
+    message: { message: 'Забагато спроб входу. Спробуйте через 15 хвилин.' },
 });
 
 app.use('/api/', generalLimiter);

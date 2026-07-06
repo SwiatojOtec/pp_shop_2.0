@@ -34,3 +34,7 @@ dist
 # DB backups (keep locally, not in git)
 server/backups/
 
+# Generated order documents (PDFs)
+server/uploads/order-documents/*
+!server/uploads/order-documents/.gitkeep
+

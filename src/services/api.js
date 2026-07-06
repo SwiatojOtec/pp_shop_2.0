@@ -83,6 +83,60 @@ export const ordersApi = {
     listByClient: (clientId) => apiGet(`/api/orders/by-client/${clientId}`),
     update: (id, data) => apiPut(`/api/orders/${id}`, data),
     remove: (id) => apiDelete(`/api/orders/${id}`),
+    downloadInvoice: async (id, params) => {
+        const token = getToken();
+        const qs = params?.sellerId ? `?sellerId=${encodeURIComponent(params.sellerId)}` : '';
+        const res = await fetch(`${API_URL}/api/orders/${id}/invoice${qs}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) {
+            let message = `HTTP ${res.status}`;
+            try {
+                const body = await res.json();
+                message = body.message || message;
+            } catch {
+                // ignore
+            }
+            const err = new Error(message);
+            err.status = res.status;
+            throw err;
+        }
+        return res.blob();
+    },
+    listDocuments: (id) => apiGet(`/api/orders/${id}/documents`),
+    generateInvoiceDocument: (id, data) => apiPost(`/api/orders/${id}/documents/invoice`, data),
+    generateDepositInvoiceDocument: (id, data) => apiPost(`/api/orders/${id}/documents/deposit-invoice`, data),
+    removeDocument: (orderId, docId) => apiDelete(`/api/orders/${orderId}/documents/${docId}`),
+    createOrOpenRentalApplication: (id) => apiPost(`/api/orders/${id}/rental-application`, {}),
+    saveRentalApplicationDocument: (orderId, data) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-application`, data),
+    saveRentalReturnActDocument: (orderId, data) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-return-act`, data),
+    downloadDocument: async (orderId, docId, fileName) => {
+        const token = getToken();
+        const res = await fetch(`${API_URL}/api/orders/${orderId}/documents/${docId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) {
+            let message = `HTTP ${res.status}`;
+            try {
+                const body = await res.json();
+                message = body.message || message;
+            } catch {
+                // ignore
+            }
+            throw new Error(message);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || `document-${docId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    },
 };
 
 export const authApi = {
@@ -137,6 +191,7 @@ export const rentalApplicationsApi = {
 
 export const clientsApi = {
     list: (params) => apiGet('/api/clients', params),
+    lookupByPhone: (phone) => apiGet('/api/clients/lookup', { phone }),
     get: (id) => apiGet(`/api/clients/${id}`),
     create: (data) => apiPost('/api/clients', data),
     update: (id, data) => apiPut(`/api/clients/${id}`, data),

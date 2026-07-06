@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const fmt = (n) => n ? Number(n).toFixed(2) : '—';
+const fmtMoney = (n, zeroAmounts) => (zeroAmounts ? '0.00' : fmt(n));
 const fmtDate = (d) => {
     if (!d) return '___.____.______';
     const dt = new Date(d);
@@ -17,6 +18,21 @@ const loadFontAsBase64 = async (url) => {
     return btoa(binary);
 };
 
+export const RENTAL_PDF_VARIANTS = {
+    handover: {
+        title: (date) => `АКТ ПРИЙМАННЯ-ПЕРЕДАЧІ №_____ від ${date} року.`,
+        titleDate: (items) => items[0]?.rentFrom,
+        filename: (applicationNumber) => `zaiavka-${applicationNumber || 'new'}.pdf`,
+        zeroAmounts: false,
+    },
+    return_inspection: {
+        title: (date) => `АКТ ПОВЕРНЕННЯ-ОГЛЯДУ ТЕХНІЧНОГО СТАНУ №_____ від ${date} року.`,
+        titleDate: (items) => items[0]?.rentTo || items[0]?.rentFrom,
+        filename: (applicationNumber) => `akt-povernennia-${applicationNumber || 'new'}.pdf`,
+        zeroAmounts: true,
+    },
+};
+
 export const generateRentalPdf = async ({
     applicationNumber,
     lessor,
@@ -29,7 +45,10 @@ export const generateRentalPdf = async ({
     discountValue = 0,
     discountAmount = 0,
     totalRentalAfterDiscount
-}) => {
+}, options = {}) => {
+    const variantKey = options.variant === 'return_inspection' ? 'return_inspection' : 'handover';
+    const variant = RENTAL_PDF_VARIANTS[variantKey];
+    const zeroAmounts = variant.zeroAmounts;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     // Load and embed Roboto (Cyrillic support)
@@ -59,7 +78,8 @@ export const generateRentalPdf = async ({
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.setFont(fontName, 'bold');
-    doc.text(`АКТ ПРИЙМАННЯ-ПЕРЕДАЧІ №_____ від ${fmtDate(items[0]?.rentFrom)} року.`, 148.5, 18, { align: 'center' });
+    const titleDate = fmtDate(variant.titleDate(items));
+    doc.text(variant.title(titleDate), 148.5, 18, { align: 'center' });
     doc.setFont(fontName, 'normal');
 
     // --- Parties table ---
@@ -140,15 +160,15 @@ export const generateRentalPdf = async ({
             item.unit || 'sht',
             { content: String(item.quantity || 1), styles: { halign: 'center' } },
             { content: String(item.weightTotal || '—'), styles: { halign: 'center' } },
-            { content: fmt(item.replacementCostPerUnit), styles: { halign: 'right' } },
-            { content: fmt(item.replacementCostTotal), styles: { halign: 'right' } },
-            { content: `${item.depositPercent || 0}%`, styles: { halign: 'center' } },
-            { content: fmt(item.depositAmount), styles: { halign: 'right' } },
+            { content: fmtMoney(item.replacementCostPerUnit, zeroAmounts), styles: { halign: 'right' } },
+            { content: fmtMoney(item.replacementCostTotal, zeroAmounts), styles: { halign: 'right' } },
+            { content: zeroAmounts ? '0%' : `${item.depositPercent || 0}%`, styles: { halign: 'center' } },
+            { content: fmtMoney(item.depositAmount, zeroAmounts), styles: { halign: 'right' } },
             { content: fmtDate(item.rentFrom), styles: { halign: 'center' } },
             { content: fmtDate(item.rentTo), styles: { halign: 'center' } },
             { content: String(item.days || 0), styles: { halign: 'center' } },
-            { content: fmt(item.pricePerDay), styles: { halign: 'right' } },
-            { content: fmt(item.totalRental), styles: { halign: 'right', fontStyle: 'bold', textColor: [22, 163, 74] } },
+            { content: fmtMoney(item.pricePerDay, zeroAmounts), styles: { halign: 'right' } },
+            { content: fmtMoney(item.totalRental, zeroAmounts), styles: { halign: 'right', fontStyle: 'bold', textColor: zeroAmounts ? [0, 0, 0] : [22, 163, 74] } },
         ]);
 
         // Kit sub-rows
@@ -169,13 +189,19 @@ export const generateRentalPdf = async ({
     });
 
     // Totals row
+    const sumReplacement = zeroAmounts
+        ? 0
+        : items.reduce((s, i) => s + parseFloat(i.replacementCostTotal || 0), 0);
+    const displayTotalDeposit = zeroAmounts ? 0 : totalDeposit;
+    const displayTotalRental = zeroAmounts ? 0 : totalRental;
+
     tableBody.push([
         { content: 'РАЗОМ:', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
-        { content: fmt(items.reduce((s,i) => s + parseFloat(i.replacementCostTotal||0), 0)), styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
+        { content: fmtMoney(sumReplacement, zeroAmounts), styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
         { content: '', styles: { fillColor: [230,230,230] } },
-        { content: fmt(totalDeposit), styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
+        { content: fmtMoney(displayTotalDeposit, zeroAmounts), styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
         { content: '', colSpan: 4, styles: { fillColor: [230,230,230] } },
-        { content: fmt(totalRental), styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
+        { content: fmtMoney(displayTotalRental, zeroAmounts), styles: { halign: 'right', fontStyle: 'bold', fillColor: [230,230,230] } },
     ]);
 
     autoTable(doc, {
@@ -208,14 +234,15 @@ export const generateRentalPdf = async ({
     });
 
     // --- Totals block (discount + due) ---
-    const safeTotalRental = parseFloat(totalRental || 0);
-    const safeTotalDeposit = parseFloat(totalDeposit || 0);
-    const safeDiscountAmount = Math.max(0, parseFloat(discountAmount || 0));
-    const safeTotalRentalAfterDiscount =
-        totalRentalAfterDiscount != null
+    const safeTotalRental = zeroAmounts ? 0 : parseFloat(totalRental || 0);
+    const safeTotalDeposit = zeroAmounts ? 0 : parseFloat(totalDeposit || 0);
+    const safeDiscountAmount = zeroAmounts ? 0 : Math.max(0, parseFloat(discountAmount || 0));
+    const safeTotalRentalAfterDiscount = zeroAmounts
+        ? 0
+        : (totalRentalAfterDiscount != null
             ? parseFloat(totalRentalAfterDiscount || 0)
-            : Math.max(safeTotalRental - safeDiscountAmount, 0);
-    const due = (safeTotalRentalAfterDiscount + safeTotalDeposit).toFixed(2);
+            : Math.max(safeTotalRental - safeDiscountAmount, 0));
+    const due = zeroAmounts ? '0.00' : (safeTotalRentalAfterDiscount + safeTotalDeposit).toFixed(2);
     const dueY = doc.lastAutoTable.finalY + 6;
     doc.setFontSize(10);
     doc.setFont(fontName, 'normal');
@@ -249,7 +276,15 @@ export const generateRentalPdf = async ({
         doc.text(row[1], 180, sigY + 6 + i * 7);
     });
 
-    // Save
-    const filename = `zaiavka-${applicationNumber || 'new'}.pdf`;
-    doc.save(filename);
+    const filename = variant.filename(applicationNumber);
+    const download = options.download !== false;
+    const returnBlob = !!options.returnBlob;
+
+    if (download) {
+        doc.save(filename);
+    }
+
+    if (returnBlob) {
+        return { blob: doc.output('blob'), filename };
+    }
 };

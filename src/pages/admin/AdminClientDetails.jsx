@@ -6,6 +6,7 @@ import {
     AlertTriangle, ShoppingCart,
 } from 'lucide-react';
 import { clientsApi, rentalApplicationsApi, ordersApi } from '../../services/api';
+import { parsePhones } from '../../utils/phoneUtils';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
@@ -39,10 +40,6 @@ function formatShopOrderNumber(value) {
     return value;
 }
 
-function parsePhones(raw) {
-    if (!raw) return [];
-    return raw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
-}
 
 function fmtDate(d) {
     if (!d) return '—';
@@ -395,7 +392,7 @@ export default function AdminClientDetails() {
                                                     <tr
                                                         key={o.id}
                                                         style={{ cursor: 'pointer' }}
-                                                        onClick={() => navigate(`/admin/orders?openOrder=${o.id}`)}
+                                                        onClick={() => navigate(`/admin/orders/${o.id}`)}
                                                     >
                                                         <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
                                                             {formatShopOrderNumber(o.orderNumber || `#${o.id}`)}
@@ -417,7 +414,7 @@ export default function AdminClientDetails() {
                                                                 className="action-btn"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    navigate(`/admin/orders?openOrder=${o.id}`);
+                                                                    navigate(`/admin/orders/${o.id}`);
                                                                 }}
                                                                 title="Відкрити в замовленнях"
                                                             >

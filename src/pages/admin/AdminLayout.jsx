@@ -25,7 +25,6 @@ const RENT_SECTION = [
 
 const SHOP_SECTION = [
     { path: '/admin/products', icon: <Package size={18} />,      label: 'Товари' },
-    { path: '/admin/orders',   icon: <ShoppingCart size={18} />, label: 'Замовлення' },
     { path: '/admin/blog',     icon: <FileText size={18} />,     label: 'Блог' },
 ];
 
@@ -37,6 +36,7 @@ const ENTERPRISE_SECTION = [
 ];
 
 const BASE_PATHS = ['/admin', '/admin/profile'];
+const ORDERS_PATH = '/admin/orders';
 const RENT_PATHS = [
     ...BASE_PATHS,
     '/admin/rental-applications', '/admin/clients',
@@ -44,7 +44,7 @@ const RENT_PATHS = [
 ];
 const SHOP_PATHS = [
     ...BASE_PATHS,
-    '/admin/products', '/admin/orders', '/admin/blog',
+    '/admin/products', '/admin/blog',
 ];
 const PIVDENBUD_PATHS = ['/admin/pan-pivdenbud'];
 
@@ -55,6 +55,7 @@ function pathAllowed(pathname, prefixes) {
 function allowedPrefixesForUser(role, isSubdivisionHead) {
     if (role === 'owner') return null;
     const prefixes = [...BASE_PATHS];
+    if (hasRentAccess(role) || hasShopAccess(role)) prefixes.push(ORDERS_PATH);
     if (hasRentAccess(role)) prefixes.push(...RENT_PATHS.filter((p) => !BASE_PATHS.includes(p)));
     if (hasShopAccess(role)) prefixes.push(...SHOP_PATHS.filter((p) => !BASE_PATHS.includes(p)));
     if (canUseTimesheet(role, isSubdivisionHead)) prefixes.push(...PIVDENBUD_PATHS);
@@ -99,6 +100,7 @@ export default function AdminLayout({ children }) {
 
     const showShop = hasShopAccess(role);
     const showRent = hasRentAccess(role);
+    const showOrders = showShop || showRent;
     const showEnterprise = role === 'owner';
     const showPivdenbud = canUseTimesheet(role, isSubdivisionHead);
 
@@ -122,6 +124,13 @@ export default function AdminLayout({ children }) {
                         <LayoutDashboard size={18} />
                         <span>Дашборд</span>
                     </Link>
+
+                    {showOrders && (
+                        <Link to={ORDERS_PATH} className={cls(ORDERS_PATH)}>
+                            <ShoppingCart size={18} />
+                            <span>Замовлення</span>
+                        </Link>
+                    )}
 
                     {showRent && (
                         <>
@@ -226,6 +235,7 @@ function getPageTitle(pathname) {
         '/admin/profile':                'Мій кабінет',
     };
     if (map[pathname]) return map[pathname];
+    if (pathname.startsWith('/admin/orders/')) return 'Замовлення';
     const entry = Object.entries(map).find(([k]) => k !== '/admin' && pathname.startsWith(k + '/'));
     return entry ? entry[1] : '';
 }

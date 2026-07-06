@@ -4,6 +4,7 @@ import { useToast } from '../context/ToastContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin } from 'lucide-react';
 import { ordersApi } from '../services/api';
+import { normalizeUaPhone } from '../utils/phoneUtils';
 import './Checkout.css';
 
 export default function Checkout() {
@@ -58,7 +59,7 @@ export default function Checkout() {
 
         const orderData = {
             customerName: formData.name,
-            customerPhone: formData.phone,
+            customerPhone: normalizeUaPhone(formData.phone),
             customerEmail: formData.email,
             deliveryMethod: formData.deliveryMethod,
             address: formData.deliveryMethod === 'delivery'
@@ -105,10 +106,11 @@ export default function Checkout() {
                                 />
                                 <input
                                     type="tel"
-                                    placeholder="Телефон"
+                                    placeholder="0670064044"
                                     required
                                     value={formData.phone}
                                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                    onBlur={e => setFormData({ ...formData, phone: normalizeUaPhone(e.target.value) })}
                                 />
                                 <input
                                     type="email"
