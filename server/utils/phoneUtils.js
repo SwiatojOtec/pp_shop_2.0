@@ -9,6 +9,8 @@ function normalizeUaPhone(raw) {
 
     if (d.length === 10 && d.startsWith('0')) {
         d = `38${d}`;
+    } else if (d.length === 11 && d.startsWith('0')) {
+        d = `38${d.slice(0, 10)}`;
     } else if (d.length === 9) {
         d = `380${d}`;
     } else if (d.length === 11 && d.startsWith('80')) {

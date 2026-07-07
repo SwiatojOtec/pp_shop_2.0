@@ -22,7 +22,7 @@ const TYPE_FILTER_OPTIONS = [
     { value: 'rent', label: 'Оренда' },
 ];
 
-const EMPTY_SHOP_COMPOSER = {
+const EMPTY_ORDER_COMPOSER = {
     customerName: '',
     customerPhone: '',
     customerEmail: '',
@@ -49,15 +49,19 @@ export default function AdminOrders() {
     const [savingComposer, setSavingComposer] = useState(false);
     const [composerClientId, setComposerClientId] = useState(null);
 
-    const shopProductsOnly = useMemo(
-        () => products.filter((p) => !p.isRent),
-        [products]
-    );
-
     const rentProductIds = useMemo(
         () => new Set(products.filter((p) => p.isRent).map((p) => p.id)),
         [products]
     );
+
+    const suggestedComposerProducts = composerProductSearch.length > 1
+        ? products.filter((p) => {
+            const q = composerProductSearch.toLowerCase();
+            return p.name.toLowerCase().includes(q)
+                || (p.sku && p.sku.toLowerCase().includes(q))
+                || (p.inventoryNumber && String(p.inventoryNumber).toLowerCase().includes(q));
+        }).slice(0, 8)
+        : [];
 
     useEffect(() => {
         loadOrders();
@@ -148,13 +152,6 @@ export default function AdminOrders() {
         return matchSearch && matchStatus && matchType;
     }), [orders, search, statusFilter, typeFilter, rentProductIds]);
 
-    const suggestedComposerProducts = composerProductSearch.length > 1
-        ? shopProductsOnly.filter((p) =>
-            p.name.toLowerCase().includes(composerProductSearch.toLowerCase())
-            || (p.sku && p.sku.toLowerCase().includes(composerProductSearch.toLowerCase()))
-        ).slice(0, 8)
-        : [];
-
     function setComposerField(field, value) {
         setComposer((prev) => (prev ? { ...prev, [field]: value } : prev));
     }
@@ -167,10 +164,12 @@ export default function AdminOrders() {
                 {
                     id: product.id,
                     name: product.name,
+                    sku: product.sku || '',
                     price: product.price,
                     quantity: 1,
                     unit: product.unit,
                     packSize: product.packSize || 1,
+                    isRent: !!product.isRent,
                 },
             ];
             return { ...prev, items };
@@ -229,7 +228,7 @@ export default function AdminOrders() {
     }
 
     function openComposerBlank() {
-        setComposer({ ...EMPTY_SHOP_COMPOSER, items: [] });
+        setComposer({ ...EMPTY_ORDER_COMPOSER, items: [] });
         setComposerProductSearch('');
         setComposerClientId(null);
     }
@@ -249,7 +248,7 @@ export default function AdminOrders() {
             {composer && (
                 <div className="order-composer-card admin-form">
                     <div className="order-composer-card__head">
-                        <h3 className="order-composer-card__title">Нове замовлення (магазин)</h3>
+                        <h3 className="order-composer-card__title">Нове замовлення</h3>
                         <button
                             type="button"
                             className="action-btn"
@@ -294,11 +293,14 @@ export default function AdminOrders() {
                     </div>
 
                     <div className="order-detail-section" style={{ marginTop: '12px' }}>
-                        <h4 className="order-detail-label">Товари (лише магазин, без оренди)</h4>
+                        <h4 className="order-detail-label">Товари та оренда</h4>
                         <div className="order-item-list">
                             {composer.items.map((item, idx) => (
                                 <div key={`${item.id}-${idx}`} className="order-item-row">
-                                    <span className="order-item-row__name">{item.name}</span>
+                                    <span className="order-item-row__name">
+                                        {item.name}
+                                        {item.isRent && <span className="order-item-row__tag">оренда</span>}
+                                    </span>
                                     <div className="order-item-row__qty">
                                         <input type="number" min="0" value={item.quantity} onChange={(e) => updateQtyComposer(idx, e.target.value)} />
                                         <span className="order-item-row__unit">{item.unit === 'м²' ? 'уп.' : 'шт.'}</span>
@@ -316,7 +318,7 @@ export default function AdminOrders() {
                             <input
                                 type="text"
                                 className="order-product-search-input"
-                                placeholder="Додати товар: назва або артикул..."
+                                placeholder="Додати товар або позицію оренди: назва, артикул, інв. №..."
                                 value={composerProductSearch}
                                 onChange={(e) => setComposerProductSearch(e.target.value)}
                             />
@@ -325,8 +327,14 @@ export default function AdminOrders() {
                                     {suggestedComposerProducts.map((p) => (
                                         <div key={p.id} className="order-product-suggest__item" onClick={() => addItemComposer(p)}>
                                             <div>
-                                                <div className="font-semibold text-sm">{p.name}</div>
+                                                <div className="font-semibold text-sm">
+                                                    {p.name}
+                                                    {p.isRent && <span className="order-product-suggest__tag">оренда</span>}
+                                                </div>
                                                 {p.sku && <div className="text-xs text-gray-400">SKU: {p.sku}</div>}
+                                                {p.isRent && p.inventoryNumber && (
+                                                    <div className="text-xs text-gray-400">Інв. №: {p.inventoryNumber}</div>
+                                                )}
                                             </div>
                                             <span className="font-bold text-[#e63946]">{p.price} ₴</span>
                                         </div>

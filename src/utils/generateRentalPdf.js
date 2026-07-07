@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { buildRentalActContractRef } from './rentalContractRef';
 import autoTable from 'jspdf-autotable';
 
 const fmt = (n) => n ? Number(n).toFixed(2) : '—';
@@ -44,7 +45,8 @@ export const generateRentalPdf = async ({
     discountType = 'fixed',
     discountValue = 0,
     discountAmount = 0,
-    totalRentalAfterDiscount
+    totalRentalAfterDiscount,
+    contractRef,
 }, options = {}) => {
     const variantKey = options.variant === 'return_inspection' ? 'return_inspection' : 'handover';
     const variant = RENTAL_PDF_VARIANTS[variantKey];
@@ -70,21 +72,25 @@ export const generateRentalPdf = async ({
     }
 
     // --- Title ---
+    const ref = contractRef || buildRentalActContractRef(null, { id: applicationNumber, applicationNumber });
     doc.setFontSize(8);
     doc.setTextColor(80, 80, 80);
     doc.setFont(fontName, 'normal');
-    doc.text(`Додаток № 2 до Договору оренди обладнання №____ від __________ 2026 року.`, 297 - 10, 10, { align: 'right' });
+    const appendixRightX = 297 - 10;
+    ref.appendixLines.forEach((line, index) => {
+        doc.text(line, appendixRightX, 10 + index * 4, { align: 'right' });
+    });
 
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.setFont(fontName, 'bold');
     const titleDate = fmtDate(variant.titleDate(items));
-    doc.text(variant.title(titleDate), 148.5, 18, { align: 'center' });
+    doc.text(variant.title(titleDate), 148.5, 22, { align: 'center' });
     doc.setFont(fontName, 'normal');
 
     // --- Parties table ---
     autoTable(doc, {
-        startY: 22,
+        startY: 26,
         head: [['ОРЕНДОДАВЕЦЬ', 'ОРЕНДАР']],
         body: [
             [

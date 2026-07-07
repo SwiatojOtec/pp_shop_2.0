@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildRentalActContractRef } from '../../utils/rentalContractRef';
 import './RentalApplicationPrint.css';
 
 const fmt = (n) => n ? Number(n).toLocaleString('uk-UA', { minimumFractionDigits: 2 }) : '—';
@@ -19,8 +20,10 @@ const RentalApplicationPrint = React.forwardRef(({
     discountType = 'fixed',
     discountValue = 0,
     discountAmount = 0,
-    totalRentalAfterDiscount
+    totalRentalAfterDiscount,
+    contractRef,
 }, ref) => {
+    const refData = contractRef || buildRentalActContractRef(null, { applicationNumber });
     const safeDiscountAmount = Math.max(0, Number(discountAmount || 0));
     const safeTotalRentalAfterDiscount =
         totalRentalAfterDiscount != null
@@ -36,7 +39,11 @@ const RentalApplicationPrint = React.forwardRef(({
         <div ref={ref} className="print-wrap">
             {/* Title */}
             <div className="print-title-block">
-                <div className="print-appendix">Додаток № 2<br/>до Договору оренди обладнання №____<br/>від ___________2026 року.</div>
+                <div className="print-appendix">
+                    {refData.appendixLines.map((line) => (
+                        <div key={line}>{line}</div>
+                    ))}
+                </div>
                 <h2 className="print-title">
                     Акт приймання-передачі №_____ від ____/____/2026 року.
                 </h2>

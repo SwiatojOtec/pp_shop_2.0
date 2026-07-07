@@ -4,6 +4,7 @@ import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Plus, Trash2, Save, Printer, Download, Search, X, Sparkles } from 'lucide-react';
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
 import { buildRentalPdfPayload, RENTAL_LESSOR } from '../../utils/rentalPdfPayload';
+import { buildRentalActContractRef } from '../../utils/rentalContractRef';
 import { clientsApi, rentalApplicationsApi, productsApi } from '../../services/api';
 import RentalApplicationPrint from './RentalApplicationPrint';
 import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../constants/rentalDefaults';
@@ -107,6 +108,25 @@ export default function AdminRentalApplicationForm() {
     const [upsellItems, setUpsellItems] = useState([]);
     const [upsellVisible, setUpsellVisible] = useState(false);
     const [upsellProductName, setUpsellProductName] = useState('');
+
+    const buildCurrentApplicationPayload = () => buildRentalPdfPayload({
+        applicationNumber,
+        clientName: client.name,
+        clientPhone: client.phone,
+        clientEmail: client.email,
+        clientPassport: client.passport,
+        clientAddress: client.address,
+        clientSiteAddress: client.siteAddress,
+        responsible,
+        items,
+        discountType,
+        discountValue: parsedDiscount,
+    });
+
+    const currentContractRef = buildRentalActContractRef(null, {
+        applicationNumber,
+        rentFrom: items[0]?.rentFrom,
+    });
 
     const handlePrint = useReactToPrint({ contentRef: printRef });
 
@@ -735,19 +755,7 @@ export default function AdminRentalApplicationForm() {
                                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                     <button
                                         onClick={() =>
-                                            generateRentalPdf(buildRentalPdfPayload({
-                                                applicationNumber,
-                                                clientName: client.name,
-                                                clientPhone: client.phone,
-                                                clientEmail: client.email,
-                                                clientPassport: client.passport,
-                                                clientAddress: client.address,
-                                                clientSiteAddress: client.siteAddress,
-                                                responsible,
-                                                items,
-                                                discountType,
-                                                discountValue: parsedDiscount,
-                                            })).catch(console.error)
+                                            generateRentalPdf(buildCurrentApplicationPayload()).catch(console.error)
                                         }
                                         className="btn-secondary-icon"
                                         title="Скачати PDF"
@@ -757,19 +765,7 @@ export default function AdminRentalApplicationForm() {
                                     </button>
                                     <button
                                         onClick={() =>
-                                            generateRentalPdf(buildRentalPdfPayload({
-                                                applicationNumber,
-                                                clientName: client.name,
-                                                clientPhone: client.phone,
-                                                clientEmail: client.email,
-                                                clientPassport: client.passport,
-                                                clientAddress: client.address,
-                                                clientSiteAddress: client.siteAddress,
-                                                responsible,
-                                                items,
-                                                discountType,
-                                                discountValue: parsedDiscount,
-                                            }), { variant: 'return_inspection' }).catch(console.error)
+                                            generateRentalPdf(buildCurrentApplicationPayload(), { variant: 'return_inspection' }).catch(console.error)
                                         }
                                         className="btn-secondary-icon"
                                         title="Акт повернення-огляду"
@@ -862,6 +858,7 @@ export default function AdminRentalApplicationForm() {
                     discountValue={parsedDiscount}
                     discountAmount={discountAmount}
                     totalRentalAfterDiscount={totalRentalAfterDiscount}
+                    contractRef={currentContractRef}
                     status={status}
                     notes={notes}
                 />

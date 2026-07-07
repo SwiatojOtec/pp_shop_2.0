@@ -215,8 +215,20 @@ export default function AdminClientDetails() {
                             )}
                             {client.passport && (
                                 <div className="cd-field">
-                                    <span className="cd-field-label">Паспорт / ID</span>
+                                    <span className="cd-field-label">Паспорт</span>
                                     <span className="cd-field-value">{client.passport}</span>
+                                </div>
+                            )}
+                            {client.passportIssuedAt && (
+                                <div className="cd-field">
+                                    <span className="cd-field-label">Дата видачі паспорта</span>
+                                    <span className="cd-field-value">{client.passportIssuedAt}</span>
+                                </div>
+                            )}
+                            {client.ipn && (
+                                <div className="cd-field">
+                                    <span className="cd-field-label">ІПН</span>
+                                    <span className="cd-field-value">{client.ipn}</span>
                                 </div>
                             )}
                             {client.address && (

@@ -5,12 +5,14 @@ const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { sendTelegramMessage } = require('../utils/telegram');
 const { Op } = require('sequelize');
-const { normalizeUaPhone, parsePhones, phoneTailsMatch } = require('../utils/phoneUtils');
+const { normalizeUaPhone, parsePhones, phoneTailsMatch, normalizePhonesField } = require('../utils/phoneUtils');
 const { generateInvoice, generateDepositInvoice } = require('../services/invoiceService');
 const { resolveSellerId, getSellerOptions } = require('../constants/sellers');
 const {
     saveInvoiceDocument,
     saveDepositInvoiceDocument,
+    saveRentalContractDocument,
+    saveRentalProtocolDocument,
     saveRentalApplicationDocument,
     saveRentalReturnActDocument,
     listOrderDocuments,
@@ -19,6 +21,15 @@ const {
     deleteOrderDocument,
 } = require('../services/orderDocumentService');
 const { createOrGetRentalApplicationFromOrder } = require('../services/orderRentalService');
+const {
+    checkRentalContractReadiness,
+    generateRentalContractPdf,
+    buildClientPatchFromForm,
+} = require('../services/rentalContractService');
+const {
+    checkRentalProtocolReadiness,
+    generateRentalProtocolPdf,
+} = require('../services/rentalProtocolService');
 
 async function generateOrderNumber() {
     const now = new Date();
@@ -37,6 +48,58 @@ async function generateOrderNumber() {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     return `${dailyNumber}/${day}/${month}/${year}`;
+}
+
+async function loadOrderWithClient(orderId) {
+    const order = await Order.findByPk(orderId);
+    if (!order) return null;
+
+    let client = null;
+    if (order.clientId) {
+        client = await Client.findByPk(order.clientId);
+    }
+
+    return { order, client };
+}
+
+async function upsertClientForContract(order, patch = {}) {
+    const clientPatch = buildClientPatchFromForm(patch);
+    const phone = normalizePhonesField(
+        clientPatch.phone || order.customerPhone || ''
+    );
+
+    if (order.clientId) {
+        const client = await Client.findByPk(order.clientId);
+        if (!client) {
+            const err = new Error('Прив\'язаного клієнта не знайдено');
+            err.status = 404;
+            throw err;
+        }
+
+        await client.update({
+            fullName: clientPatch.fullName || client.fullName,
+            phone: phone || client.phone,
+            address: clientPatch.address ?? client.address,
+            passport: clientPatch.passport ?? client.passport,
+            passportIssuedAt: clientPatch.passportIssuedAt ?? client.passportIssuedAt,
+            ipn: clientPatch.ipn ?? client.ipn,
+        });
+
+        return client;
+    }
+
+    const created = await Client.create({
+        fullName: clientPatch.fullName || order.customerName || '',
+        phone: phone || normalizePhonesField(order.customerPhone || ''),
+        email: order.customerEmail || null,
+        address: clientPatch.address || order.address || null,
+        passport: clientPatch.passport || null,
+        passportIssuedAt: clientPatch.passportIssuedAt || null,
+        ipn: clientPatch.ipn || null,
+    });
+
+    await order.update({ clientId: created.id });
+    return created;
 }
 
 /**
@@ -318,6 +381,184 @@ router.post('/:id/documents/deposit-invoice', authMiddleware, requireRole(['owne
         res.status(201).json({ application, document });
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/rental-contract/check', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const ctx = await loadOrderWithClient(orderId);
+        if (!ctx) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { application } = await createOrGetRentalApplicationFromOrder(orderId, req.user?.id || null);
+        const sellerId = resolveSellerId(req.body?.sellerId || ctx.order.sellerId);
+        const patch = req.body?.clientData || {};
+
+        const result = checkRentalContractReadiness({
+            order: ctx.order,
+            client: ctx.client,
+            rentalApplication: application,
+            sellerId,
+            patch,
+        });
+
+        res.json({
+            ready: result.ready,
+            missing: result.missing || [],
+        });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/rental-contract', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const ctx = await loadOrderWithClient(orderId);
+        if (!ctx) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { application } = await createOrGetRentalApplicationFromOrder(orderId, req.user?.id || null);
+        const sellerId = resolveSellerId(req.body?.sellerId || ctx.order.sellerId);
+        const patch = req.body?.clientData || {};
+
+        const precheck = checkRentalContractReadiness({
+            order: ctx.order,
+            client: ctx.client,
+            rentalApplication: application,
+            sellerId,
+            patch,
+        });
+
+        if (!precheck.ready) {
+            return res.status(400).json({
+                message: 'Даних для створення не вистачає, будь ласка заповніть поля:',
+                missing: precheck.missing,
+            });
+        }
+
+        const client = await upsertClientForContract(ctx.order, patch);
+        const freshOrder = await Order.findByPk(orderId);
+
+        const { pdfBuffer, fileName } = await generateRentalContractPdf({
+            order: freshOrder,
+            sellerId,
+            client,
+            rentalApplication: application,
+            patch,
+        });
+
+        const document = await saveRentalContractDocument({
+            orderId: freshOrder.id,
+            orderNumber: freshOrder.orderNumber,
+            sellerId,
+            pdfBuffer,
+            createdBy: req.user?.id || null,
+            fileName,
+        });
+
+        res.status(201).json({ application, client, document });
+    } catch (err) {
+        res.status(err.status || 500).json({
+            message: err.message,
+            missing: err.missing || undefined,
+        });
+    }
+});
+
+router.post('/:id/documents/rental-protocol/check', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const ctx = await loadOrderWithClient(orderId);
+        if (!ctx) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { application } = await createOrGetRentalApplicationFromOrder(orderId, req.user?.id || null);
+        const sellerId = resolveSellerId(req.body?.sellerId || ctx.order.sellerId);
+        const patch = req.body?.clientData || {};
+
+        const result = checkRentalProtocolReadiness({
+            order: ctx.order,
+            client: ctx.client,
+            rentalApplication: application,
+            sellerId,
+            patch,
+        });
+
+        res.json({
+            ready: result.ready,
+            missing: result.missing || [],
+        });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/documents/rental-protocol', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const ctx = await loadOrderWithClient(orderId);
+        if (!ctx) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const { application } = await createOrGetRentalApplicationFromOrder(orderId, req.user?.id || null);
+        const sellerId = resolveSellerId(req.body?.sellerId || ctx.order.sellerId);
+        const patch = req.body?.clientData || {};
+
+        const precheck = checkRentalProtocolReadiness({
+            order: ctx.order,
+            client: ctx.client,
+            rentalApplication: application,
+            sellerId,
+            patch,
+        });
+
+        if (!precheck.ready) {
+            return res.status(400).json({
+                message: 'Даних для створення не вистачає, будь ласка заповніть поля:',
+                missing: precheck.missing,
+            });
+        }
+
+        const client = await upsertClientForContract(ctx.order, patch);
+        const freshOrder = await Order.findByPk(orderId);
+
+        const { pdfBuffer, fileName } = await generateRentalProtocolPdf({
+            order: freshOrder,
+            sellerId,
+            client,
+            rentalApplication: application,
+            patch,
+        });
+
+        const document = await saveRentalProtocolDocument({
+            orderId: freshOrder.id,
+            orderNumber: freshOrder.orderNumber,
+            sellerId,
+            pdfBuffer,
+            createdBy: req.user?.id || null,
+            fileName,
+        });
+
+        res.status(201).json({ application, client, document });
+    } catch (err) {
+        res.status(err.status || 500).json({
+            message: err.message,
+            missing: err.missing || undefined,
+        });
     }
 });
 

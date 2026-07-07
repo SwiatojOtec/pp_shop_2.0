@@ -10,7 +10,7 @@ import { parsePhones, normalizePhonesField } from '../../utils/phoneUtils';
 import './Admin.css';
 
 const EMPTY = {
-    fullName: '', phone: '', email: '', passport: '',
+    fullName: '', phone: '', email: '', passport: '', passportIssuedAt: '', ipn: '',
     address: '', siteAddress: '', discountPercent: '', notes: '', claims: '',
 };
 
@@ -55,7 +55,8 @@ export default function AdminClients() {
     const startEdit  = (c) => {
         setEditingId(c.id);
         setForm({ fullName: c.fullName || '', phone: c.phone || '', email: c.email || '',
-                  passport: c.passport || '', address: c.address || '', siteAddress: c.siteAddress || '',
+                  passport: c.passport || '', passportIssuedAt: c.passportIssuedAt || '', ipn: c.ipn || '',
+                  address: c.address || '', siteAddress: c.siteAddress || '',
                   discountPercent: c.discountPercent ?? '', notes: c.notes || '', claims: c.claims || '' });
         setModalOpen(true);
     };
@@ -250,12 +251,22 @@ export default function AdminClients() {
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>E-mail</label>
-                                    <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                                    <label>Паспорт</label>
+                                    <input value={form.passport} onChange={e => setForm({ ...form, passport: e.target.value })} placeholder="Серія та номер, напр. AA 123456" />
                                 </div>
                                 <div className="form-group">
-                                    <label>Паспорт / ID</label>
-                                    <input value={form.passport} onChange={e => setForm({ ...form, passport: e.target.value })} placeholder="Серія, номер або ID-картка" />
+                                    <label>Дата видачі паспорта</label>
+                                    <input value={form.passportIssuedAt} onChange={e => setForm({ ...form, passportIssuedAt: e.target.value })} placeholder="ДД.ММ.РРРР" />
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>ІПН</label>
+                                    <input value={form.ipn} onChange={e => setForm({ ...form, ipn: e.target.value })} placeholder="10 цифр" />
+                                </div>
+                                <div className="form-group">
+                                    <label>E-mail</label>
+                                    <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                                 </div>
                             </div>
                             <div className="form-row">

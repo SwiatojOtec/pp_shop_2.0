@@ -23,6 +23,14 @@ const Client = sequelize.define('Client', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    passportIssuedAt: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    ipn: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     address: {
         type: DataTypes.TEXT,
         allowNull: true

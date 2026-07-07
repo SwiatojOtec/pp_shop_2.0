@@ -7,7 +7,9 @@ export const RENTAL_LESSOR = {
     warehouseAddress: 'м. Київ, вул. Холодноярська 2а',
 };
 
-export function buildRentalPdfPayload(application) {
+import { buildRentalActContractRef } from './rentalContractRef';
+
+export function buildRentalPdfPayload(application, order = null) {
     const items = Array.isArray(application?.items) ? application.items : [];
     const totalRental = items.reduce((sum, item) => sum + parseFloat(item.totalRental || 0), 0);
     const totalDeposit = items.reduce((sum, item) => sum + parseFloat(item.depositAmount || 0), 0);
@@ -38,6 +40,7 @@ export function buildRentalPdfPayload(application) {
         discountValue: parsedDiscount,
         discountAmount,
         totalRentalAfterDiscount,
+        contractRef: buildRentalActContractRef(order, application),
     };
 }
 

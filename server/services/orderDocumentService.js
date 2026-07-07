@@ -47,6 +47,18 @@ function buildRentalReturnActFileName(applicationNumber) {
     return `akt_povernennia_${safe}_${stamp}.pdf`;
 }
 
+function buildRentalContractFileName(orderNumber) {
+    const safe = String(orderNumber || 'order').replace(/\//g, '_');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    return `dogovir_${safe}_${stamp}.pdf`;
+}
+
+function buildRentalProtocolFileName(orderNumber) {
+    const safe = String(orderNumber || 'order').replace(/\//g, '_');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    return `protokol_${safe}_${stamp}.pdf`;
+}
+
 async function saveOrderDocument({
     orderId,
     type,
@@ -115,6 +127,32 @@ async function saveDepositInvoiceDocument({ orderId, orderNumber, sellerId, pdfB
         type: 'deposit_invoice',
         fileName,
         title: `Рахунок (застава) · ${seller.label}`,
+        pdfBuffer,
+        sellerId,
+        createdBy,
+    });
+}
+
+async function saveRentalContractDocument({ orderId, orderNumber, sellerId, pdfBuffer, createdBy, fileName }) {
+    const seller = getSeller(sellerId);
+    return saveOrderDocument({
+        orderId,
+        type: 'rental_contract',
+        fileName: fileName || buildRentalContractFileName(orderNumber),
+        title: `Договір оренди · ${seller.label}`,
+        pdfBuffer,
+        sellerId,
+        createdBy,
+    });
+}
+
+async function saveRentalProtocolDocument({ orderId, orderNumber, sellerId, pdfBuffer, createdBy, fileName }) {
+    const seller = getSeller(sellerId);
+    return saveOrderDocument({
+        orderId,
+        type: 'rental_protocol',
+        fileName: fileName || buildRentalProtocolFileName(orderNumber),
+        title: `Протокол (Додаток №1) · ${seller.label}`,
         pdfBuffer,
         sellerId,
         createdBy,
@@ -196,6 +234,8 @@ module.exports = {
     saveOrderDocument,
     saveInvoiceDocument,
     saveDepositInvoiceDocument,
+    saveRentalContractDocument,
+    saveRentalProtocolDocument,
     saveRentalApplicationDocument,
     saveRentalReturnActDocument,
     listOrderDocuments,

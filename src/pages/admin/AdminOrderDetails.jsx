@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, Save, Trash2, ClipboardList, Search, X,
-    User, Truck, Package, UserCheck, UserPlus, Loader2, FileText, Files, Download, Undo2,
+    User, Truck, Package, UserCheck, UserPlus, Loader2, FileText, Files, Download, Undo2, ScrollText,
 } from 'lucide-react';
 import { ordersApi, productsApi, rentalApplicationsApi, clientsApi } from '../../services/api';
 import { ConfirmDialog } from '../../components/admin';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { DEFAULT_SELLER_ID, SELLER_OPTIONS, resolveSellerId } from '../../constants/sellers';
+import { DEFAULT_SELLER_ID, SELLER_OPTIONS, FOP_SELLER_OPTIONS, resolveSellerId } from '../../constants/sellers';
 import {
     ORDER_STATUS_VARIANT,
     DELIVERY_LABELS,
@@ -52,6 +52,13 @@ export default function AdminOrderDetails() {
     const [documents, setDocuments] = useState([]);
     const [deletingDocId, setDeletingDocId] = useState(null);
     const [linkedRentalApp, setLinkedRentalApp] = useState(null);
+    const [contractLoading, setContractLoading] = useState(false);
+    const [protocolLoading, setProtocolLoading] = useState(false);
+    const [contractModalOpen, setContractModalOpen] = useState(false);
+    const [contractModalTarget, setContractModalTarget] = useState('contract');
+    const [contractMissingFields, setContractMissingFields] = useState([]);
+    const [contractForm, setContractForm] = useState({});
+    const [contractSaving, setContractSaving] = useState(false);
 
     const rentProductIds = useMemo(
         () => new Set(products.filter((p) => p.isRent).map((p) => p.id)),
@@ -94,11 +101,12 @@ export default function AdminOrderDetails() {
                 setLinkedRentalApp(rentalApp);
                 setProducts(productArr);
                 setDocuments(Array.isArray(docsData) ? docsData : []);
-                setDraft(withOrderTotal({
-                    ...orderData,
-                    sellerId: resolveSellerId(orderData?.sellerId),
-                    items: orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
-                }, { rentProductIds: rentIds, rentalApplication: rentalApp }));
+        setDraft(withOrderTotal({
+            ...orderData,
+            sellerId: resolveSellerId(orderData?.sellerId),
+            customerPhone: normalizeUaPhone(orderData?.customerPhone || ''),
+            items: orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
+        }, { rentProductIds: rentIds, rentalApplication: rentalApp }));
             } catch {
                 setOrder(null);
                 setDraft(null);
@@ -150,7 +158,7 @@ export default function AdminOrderDetails() {
         }
 
         setLinkedClient(null);
-        const phone = String(draft.customerPhone || '').trim();
+        const phone = normalizeUaPhone(String(draft.customerPhone || '').trim());
         if (!isValidUaPhone(phone)) {
             setPhoneMatch(null);
             setClientLookupLoading(false);
@@ -284,6 +292,8 @@ export default function AdminOrderDetails() {
     }
 
     function renderClientDbStatus() {
+        const phone = normalizeUaPhone(draft?.customerPhone || '');
+
         if (clientLookupLoading) {
             return (
                 <div className="od-client-status od-client-status--checking">
@@ -325,7 +335,7 @@ export default function AdminOrderDetails() {
             );
         }
 
-        if (!isValidUaPhone(draft.customerPhone)) return null;
+        if (!isValidUaPhone(phone)) return null;
 
         return (
             <div className="od-client-status od-client-status--missing">
@@ -441,7 +451,7 @@ export default function AdminOrderDetails() {
         setConverting(true);
         try {
             const application = await loadLinkedRentalApplication();
-            const pdfPayload = buildRentalPdfPayload(application);
+            const pdfPayload = buildRentalPdfPayload(application, order);
             const { blob, filename } = await generateRentalPdf(pdfPayload, {
                 download: false,
                 returnBlob: true,
@@ -468,7 +478,7 @@ export default function AdminOrderDetails() {
         setReturnActLoading(true);
         try {
             const application = await loadLinkedRentalApplication();
-            const pdfPayload = buildRentalPdfPayload(application);
+            const pdfPayload = buildRentalPdfPayload(application, order);
             const { blob, filename } = await generateRentalPdf(pdfPayload, {
                 download: false,
                 returnBlob: true,
@@ -488,6 +498,131 @@ export default function AdminOrderDetails() {
             alert(`Помилка: ${err.message}`);
         } finally {
             setReturnActLoading(false);
+        }
+    }
+
+    function openContractModal(missing, target = 'contract') {
+        const fields = Array.isArray(missing) ? missing : [];
+        setContractModalTarget(target);
+        setContractMissingFields(fields);
+        const initial = {};
+        fields.forEach((field) => {
+            initial[field.key] = field.value || '';
+        });
+        setContractForm(initial);
+        setContractModalOpen(true);
+    }
+
+    async function finishProtocolGeneration(clientData = {}) {
+        const sellerId = resolveSellerId(clientData.sellerId || draft?.sellerId);
+        const { application, client, document } = await ordersApi.generateRentalProtocolDocument(order.id, {
+            sellerId,
+            clientData,
+        });
+
+        setLinkedClient(client);
+        setOrder((prev) => (prev ? {
+            ...prev,
+            clientId: client.id,
+            rentalApplicationId: application.id,
+        } : prev));
+        setDraft((prev) => (prev ? {
+            ...prev,
+            clientId: client.id,
+            rentalApplicationId: application.id,
+        } : prev));
+        setLinkedRentalApp(application);
+        setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
+        await ordersApi.downloadDocument(order.id, document.id, document.fileName);
+        setContractModalOpen(false);
+    }
+
+    async function finishContractGeneration(clientData = {}) {
+        const sellerId = resolveSellerId(clientData.sellerId || draft?.sellerId);
+        const { application, client, document } = await ordersApi.generateRentalContractDocument(order.id, {
+            sellerId,
+            clientData,
+        });
+
+        setLinkedClient(client);
+        setOrder((prev) => (prev ? {
+            ...prev,
+            clientId: client.id,
+            rentalApplicationId: application.id,
+        } : prev));
+        setDraft((prev) => (prev ? {
+            ...prev,
+            clientId: client.id,
+            rentalApplicationId: application.id,
+        } : prev));
+        setLinkedRentalApp(application);
+        setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
+        await ordersApi.downloadDocument(order.id, document.id, document.fileName);
+        setContractModalOpen(false);
+    }
+
+    async function handleCreateRentalProtocol() {
+        if (!order || protocolLoading || contractSaving) return;
+        setProtocolLoading(true);
+        try {
+            const sellerId = resolveSellerId(draft?.sellerId);
+            const check = await ordersApi.checkRentalProtocol(order.id, { sellerId });
+            if (check.ready) {
+                await finishProtocolGeneration();
+            } else {
+                openContractModal(check.missing, 'protocol');
+            }
+        } catch (err) {
+            if (err.missing?.length) {
+                openContractModal(err.missing, 'protocol');
+            } else {
+                alert(err.message || 'Не вдалося перевірити дані для протоколу');
+            }
+        } finally {
+            setProtocolLoading(false);
+        }
+    }
+
+    async function handleCreateRentalContract() {
+        if (!order || contractLoading || contractSaving) return;
+        setContractLoading(true);
+        try {
+            const sellerId = resolveSellerId(draft?.sellerId);
+            const check = await ordersApi.checkRentalContract(order.id, { sellerId });
+            if (check.ready) {
+                await finishContractGeneration();
+            } else {
+                openContractModal(check.missing, 'contract');
+            }
+        } catch (err) {
+            if (err.missing?.length) {
+                openContractModal(err.missing, 'contract');
+            } else {
+                alert(err.message || 'Не вдалося перевірити дані для договору');
+            }
+        } finally {
+            setContractLoading(false);
+        }
+    }
+
+    async function handleSubmitContractForm(e) {
+        e.preventDefault();
+        if (!order || contractSaving) return;
+        setContractSaving(true);
+        try {
+            if (contractModalTarget === 'protocol') {
+                await finishProtocolGeneration(contractForm);
+            } else {
+                await finishContractGeneration(contractForm);
+            }
+        } catch (err) {
+            if (err.missing?.length) {
+                openContractModal(err.missing, contractModalTarget);
+            } else {
+                alert(err.message || 'Не вдалося сформувати договір');
+            }
+        } finally {
+            setContractSaving(false);
         }
     }
 
@@ -762,10 +897,28 @@ export default function AdminOrderDetails() {
                                     variant="secondary"
                                     className="od-docs-actions__btn od-docs-actions__btn--return"
                                     onClick={handleGenerateReturnActDocument}
-                                    disabled={converting || returnActLoading}
+                                    disabled={converting || returnActLoading || contractLoading}
                                 >
                                     <Undo2 size={16} />
                                     {returnActLoading ? 'Формуємо…' : 'Акт повернення-огляду (PDF)'}
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    className="od-docs-actions__btn od-docs-actions__btn--contract"
+                                    onClick={handleCreateRentalContract}
+                                    disabled={converting || returnActLoading || contractLoading || contractSaving || protocolLoading}
+                                >
+                                    <ScrollText size={16} />
+                                    {contractLoading || contractSaving ? 'Формуємо…' : 'Створити договір оренди'}
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    className="od-docs-actions__btn od-docs-actions__btn--protocol"
+                                    onClick={handleCreateRentalProtocol}
+                                    disabled={converting || returnActLoading || contractLoading || contractSaving || protocolLoading}
+                                >
+                                    <FileText size={16} />
+                                    {protocolLoading ? 'Формуємо…' : 'Протокол (Додаток №1)'}
                                 </Button>
                             </>
                         )}
@@ -821,6 +974,64 @@ export default function AdminOrderDetails() {
                     </div>
                 </div>
             </div>
+
+            {contractModalOpen && (
+                <div className="od-contract-modal-backdrop" onClick={() => !contractSaving && setContractModalOpen(false)}>
+                    <div className="od-contract-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="od-contract-modal__title">
+                            Даних для створення не вистачає, будь ласка заповніть поля:
+                        </h3>
+                        <form onSubmit={handleSubmitContractForm} className="od-contract-modal__form">
+                            {contractMissingFields.map((field) => (
+                                <div className="form-group" key={field.key}>
+                                    <label>{field.label}</label>
+                                    {field.key === 'sellerId' ? (
+                                        <select
+                                            value={contractForm.sellerId || draft?.sellerId || DEFAULT_SELLER_ID}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                setContractForm((prev) => ({ ...prev, sellerId: value }));
+                                                setField('sellerId', value);
+                                            }}
+                                        >
+                                            {FOP_SELLER_OPTIONS.map((seller) => (
+                                                <option key={seller.id} value={seller.id}>
+                                                    {seller.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={field.key === 'passportIssued' ? 'text' : 'text'}
+                                            value={contractForm[field.key] || ''}
+                                            onChange={(e) => setContractForm((prev) => ({
+                                                ...prev,
+                                                [field.key]: e.target.value,
+                                            }))}
+                                            placeholder={
+                                                field.key === 'passportIssued'
+                                                    ? 'ДД.ММ.РРРР'
+                                                    : field.key === 'ipn'
+                                                        ? '10 цифр'
+                                                        : ''
+                                            }
+                                            required
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                            <div className="od-contract-modal__actions">
+                                <Button type="button" variant="secondary" onClick={() => setContractModalOpen(false)} disabled={contractSaving}>
+                                    Скасувати
+                                </Button>
+                                <Button type="submit" disabled={contractSaving}>
+                                    {contractSaving ? 'Зберігаємо…' : 'Зберегти і сформувати PDF'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <ConfirmDialog
                 open={deleteOpen}

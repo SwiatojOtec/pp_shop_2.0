@@ -14,6 +14,12 @@ const SELLERS = [
         bankMfo: '322001',
         iban: 'UA733220010000026002330029958',
         signedBy: 'Панкрат\'єв М.О.',
+        rentalContract: {
+            contractCity: 'м. Київ',
+            personName: 'Панкрат\'єв Микола Олександрович',
+            edrRecordDate: '14.03.2012',
+            edrRecordNumber: '2 146 017 0000 012345',
+        },
     },
     {
         id: 'fop_pankratiev_mykhailo',
@@ -28,6 +34,12 @@ const SELLERS = [
         bankMfo: '322001',
         iban: 'UA473220010000026001350113243',
         signedBy: 'Панкрат\'єв М.О.',
+        rentalContract: {
+            contractCity: 'м. Київ',
+            personName: 'Панкрат\'єв Михайло Олександрович',
+            edrRecordDate: '22.06.2015',
+            edrRecordNumber: '2 146 017 0000 023456',
+        },
     },
     {
         id: 'fop_pankratiev_om',
@@ -42,6 +54,12 @@ const SELLERS = [
         bankMfo: '351005',
         iban: 'UA363510050000026008134274800',
         signedBy: 'Панкрат\'єв О.М.',
+        rentalContract: {
+            contractCity: 'м. Київ',
+            personName: 'Панкрат\'єв Олександр Миколайович',
+            edrRecordDate: '11.01.2006',
+            edrRecordNumber: '2 146 017 0000 004725',
+        },
     },
     {
         id: 'tov_pan_pivdenbud',
@@ -75,6 +93,10 @@ function getSellerOptions() {
     return SELLERS.map(({ id, label }) => ({ id, label }));
 }
 
+function getFopSellerOptions() {
+    return SELLERS.filter((s) => s.type === 'fop').map(({ id, label }) => ({ id, label }));
+}
+
 function formatSupplierBlock(seller) {
     if (seller.type === 'tov') {
         return `${seller.fullName}\nЮр. адреса: ${seller.legalAddress}\n${seller.taxIdLabel} ${seller.taxId}`;
@@ -88,5 +110,6 @@ module.exports = {
     getSeller,
     resolveSellerId,
     getSellerOptions,
+    getFopSellerOptions,
     formatSupplierBlock,
 };

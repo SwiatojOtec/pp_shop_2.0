@@ -158,6 +158,66 @@
     border-color: #059669;
 }
 
+.od-docs-actions__btn--contract {
+    color: #4338ca;
+    border-color: #a5b4fc;
+    background: #f8f7ff;
+}
+
+.od-docs-actions__btn--contract:hover:not(:disabled) {
+    background: #eef2ff;
+    border-color: #4338ca;
+}
+
+.od-docs-actions__btn--protocol {
+    color: #0f766e;
+    border-color: #5eead4;
+    background: #f0fdfa;
+}
+
+.od-docs-actions__btn--protocol:hover:not(:disabled) {
+    background: #ccfbf1;
+    border-color: #0f766e;
+}
+
+.od-contract-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1200;
+}
+
+.od-contract-modal {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+}
+
+.od-contract-modal__title {
+    margin: 0 0 16px;
+    font-size: 1.05rem;
+    line-height: 1.45;
+    color: #111827;
+}
+
+.od-contract-modal__form .form-group {
+    margin-bottom: 14px;
+}
+
+.od-contract-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
 .od-docs-linked-app {
     display: block;
     margin-top: 4px;

@@ -508,6 +508,20 @@
     border-bottom: none;
 }
 
+.order-product-suggest__tag,
+.order-item-row__tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    background: #dbeafe;
+    color: #1d4ed8;
+    vertical-align: middle;
+}
+
 .order-detail-footer {
     display: flex;
     justify-content: space-between;

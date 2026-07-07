@@ -7,6 +7,8 @@ export const SELLER_OPTIONS = [
     { id: 'tov_pan_pivdenbud', label: 'ТОВ «ПАН-ПІВДЕНЬБУД»' },
 ];
 
+export const FOP_SELLER_OPTIONS = SELLER_OPTIONS.filter((s) => s.id !== 'tov_pan_pivdenbud');
+
 export function resolveSellerId(sellerId) {
     const id = String(sellerId || '').trim();
     if (SELLER_OPTIONS.some((s) => s.id === id)) return id;

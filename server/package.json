@@ -28,11 +28,15 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "libreoffice-convert": "^1.8.2",
+    "mammoth": "^1.12.0",
     "node-telegram-bot-api": "^0.67.0",
     "pdfkit": "^0.17.2",
     "pdfkit-table": "^0.1.99",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
+    "pizzip": "^3.2.0",
+    "puppeteer": "^25.3.0",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {

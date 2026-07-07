@@ -21,14 +21,17 @@ export async function apiFetch(path, options = {}) {
 
     if (!res.ok) {
         let message = `HTTP ${res.status}`;
+        let missing;
         try {
             const body = await res.json();
             message = body.message || message;
+            missing = body.missing;
         } catch {
             // ignore parse errors
         }
         const err = new Error(message);
         err.status = res.status;
+        if (missing) err.missing = missing;
         if (res.status === 401) {
             window.dispatchEvent(new CustomEvent('api:unauthorized'));
         }
@@ -112,6 +115,14 @@ export const ordersApi = {
         apiPost(`/api/orders/${orderId}/documents/rental-application`, data),
     saveRentalReturnActDocument: (orderId, data) =>
         apiPost(`/api/orders/${orderId}/documents/rental-return-act`, data),
+    checkRentalContract: (orderId, data) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-contract/check`, data),
+    generateRentalContractDocument: (orderId, data) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-contract`, data),
+    checkRentalProtocol: (orderId, data) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-protocol/check`, data),
+    generateRentalProtocolDocument: (orderId, data) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-protocol`, data),
     downloadDocument: async (orderId, docId, fileName) => {
         const token = getToken();
         const res = await fetch(`${API_URL}/api/orders/${orderId}/documents/${docId}`, {
