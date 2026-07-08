@@ -13,7 +13,7 @@ import {
     orderHasShopItems,
     orderHasRentItems,
 } from '../../utils/orderHelpers';
-import { normalizeUaPhone, parsePhones } from '../../utils/phoneUtils';
+import { normalizeUaPhone, parsePhones, isValidUaPhone } from '../../utils/phoneUtils';
 import './Admin.css';
 
 const TYPE_FILTER_OPTIONS = [
@@ -33,6 +33,17 @@ const EMPTY_ORDER_COMPOSER = {
     discount: 0,
 };
 
+function buildComposerFromClient(client) {
+    const phone = parsePhones(client.phone)[0] || normalizeUaPhone(client.phone);
+    return {
+        customerName: client.fullName || '',
+        customerPhone: phone,
+        customerEmail: client.email || '',
+        address: [client.address, client.siteAddress].filter(Boolean).join(', ') || '',
+        discount: Number(client.discountPercent || 0) || 0,
+    };
+}
+
 export default function AdminOrders() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -48,6 +59,8 @@ export default function AdminOrders() {
     const [composerProductSearch, setComposerProductSearch] = useState('');
     const [savingComposer, setSavingComposer] = useState(false);
     const [composerClientId, setComposerClientId] = useState(null);
+    const [composerClientSuggestions, setComposerClientSuggestions] = useState([]);
+    const [composerClientSuggestLoading, setComposerClientSuggestLoading] = useState(false);
 
     const rentProductIds = useMemo(
         () => new Set(products.filter((p) => p.isRent).map((p) => p.id)),
@@ -82,16 +95,10 @@ export default function AdminOrders() {
         (async () => {
             try {
                 const client = await clientsApi.get(cid);
-                const phone = parsePhones(client.phone)[0] || normalizeUaPhone(client.phone);
                 setComposer({
-                    customerName: client.fullName || '',
-                    customerPhone: phone,
-                    customerEmail: client.email || '',
-                    address: [client.address, client.siteAddress].filter(Boolean).join(', ') || '',
-                    deliveryMethod: 'pickup',
-                    paymentMethod: 'invoice',
+                    ...EMPTY_ORDER_COMPOSER,
+                    ...buildComposerFromClient(client),
                     items: [],
-                    discount: Number(client.discountPercent || 0) || 0,
                 });
                 setComposerProductSearch('');
                 setComposerClientId(cid);
@@ -116,6 +123,43 @@ export default function AdminOrders() {
             navigate(`/admin/orders/${oid}`, { replace: true });
         }
     }, [searchParams, setSearchParams, navigate]);
+
+    useEffect(() => {
+        if (!composer || composerClientId) {
+            setComposerClientSuggestions([]);
+            return undefined;
+        }
+
+        const nameQ = String(composer.customerName || '').trim();
+        const phoneQ = normalizeUaPhone(composer.customerPhone || '');
+
+        if (nameQ.length < 2 && !isValidUaPhone(phoneQ)) {
+            setComposerClientSuggestions([]);
+            setComposerClientSuggestLoading(false);
+            return undefined;
+        }
+
+        setComposerClientSuggestLoading(true);
+        const timer = setTimeout(async () => {
+            try {
+                let results = [];
+                if (nameQ.length >= 2) {
+                    const data = await clientsApi.list({ q: nameQ });
+                    results = Array.isArray(data) ? data : [];
+                } else if (isValidUaPhone(phoneQ)) {
+                    const res = await clientsApi.lookupByPhone(phoneQ);
+                    if (res?.found && res.client) results = [res.client];
+                }
+                setComposerClientSuggestions(results.slice(0, 8));
+            } catch {
+                setComposerClientSuggestions([]);
+            } finally {
+                setComposerClientSuggestLoading(false);
+            }
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [composer?.customerName, composer?.customerPhone, composer, composerClientId]);
 
     async function loadOrders() {
         setLoading(true);
@@ -153,7 +197,17 @@ export default function AdminOrders() {
     }), [orders, search, statusFilter, typeFilter, rentProductIds]);
 
     function setComposerField(field, value) {
+        if (field === 'customerName' || field === 'customerPhone') {
+            setComposerClientId(null);
+        }
         setComposer((prev) => (prev ? { ...prev, [field]: value } : prev));
+    }
+
+    function selectComposerClient(client) {
+        const patch = buildComposerFromClient(client);
+        setComposer((prev) => (prev ? { ...prev, ...patch } : prev));
+        setComposerClientId(client.id);
+        setComposerClientSuggestions([]);
     }
 
     function addItemComposer(product) {
@@ -231,7 +285,12 @@ export default function AdminOrders() {
         setComposer({ ...EMPTY_ORDER_COMPOSER, items: [] });
         setComposerProductSearch('');
         setComposerClientId(null);
+        setComposerClientSuggestions([]);
     }
+
+    const showComposerClientSuggest = composer
+        && !composerClientId
+        && (composerClientSuggestLoading || composerClientSuggestions.length > 0);
 
     return (
         <div>
@@ -262,9 +321,40 @@ export default function AdminOrders() {
                     <div className="order-detail-section">
                         <h4 className="order-detail-label">Клієнт</h4>
                         <div className="order-composer-grid">
-                            <div className="form-group">
+                            <div className="form-group order-composer-client-search">
                                 <label>Ім&apos;я</label>
-                                <input type="text" value={composer.customerName || ''} onChange={(e) => setComposerField('customerName', e.target.value)} />
+                                <input
+                                    type="text"
+                                    value={composer.customerName || ''}
+                                    onChange={(e) => setComposerField('customerName', e.target.value)}
+                                    autoComplete="off"
+                                />
+                                {showComposerClientSuggest && (
+                                    <div className="order-client-suggest">
+                                        {composerClientSuggestLoading && (
+                                            <div className="order-client-suggest__item order-client-suggest__item--muted">
+                                                Шукаємо в базі клієнтів…
+                                            </div>
+                                        )}
+                                        {!composerClientSuggestLoading && composerClientSuggestions.map((client) => (
+                                            <button
+                                                key={client.id}
+                                                type="button"
+                                                className="order-client-suggest__item"
+                                                onClick={() => selectComposerClient(client)}
+                                            >
+                                                <div>
+                                                    <div className="order-client-suggest__name">{client.fullName}</div>
+                                                    <div className="order-client-suggest__meta">
+                                                        {parsePhones(client.phone)[0] || client.phone}
+                                                        {client.email ? ` · ${client.email}` : ''}
+                                                    </div>
+                                                </div>
+                                                <span className="order-client-suggest__pick">Обрати</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>Телефон</label>
@@ -275,6 +365,7 @@ export default function AdminOrders() {
                                     value={composer.customerPhone || ''}
                                     onChange={(e) => setComposerField('customerPhone', e.target.value)}
                                     onBlur={(e) => setComposerField('customerPhone', normalizeUaPhone(e.target.value))}
+                                    autoComplete="off"
                                 />
                             </div>
                             <div className="form-group">
@@ -290,6 +381,11 @@ export default function AdminOrders() {
                                 <input type="text" placeholder="Вкажіть адресу або «Самовивіз»" value={composer.address || ''} onChange={(e) => setComposerField('address', e.target.value)} />
                             </div>
                         </div>
+                        {composerClientId && (
+                            <p className="order-composer-client-linked">
+                                Клієнта обрано з бази — поля заповнено автоматично.
+                            </p>
+                        )}
                     </div>
 
                     <div className="order-detail-section" style={{ marginTop: '12px' }}>

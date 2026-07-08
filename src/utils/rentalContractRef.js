@@ -20,9 +20,12 @@ export function buildContractNumber(orderRef, date = new Date()) {
     if (Number.isNaN(dt.getTime())) {
         return '____';
     }
-    const stamp = `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
-    const suffix = String(orderRef?.orderNumber || orderRef?.id || '1').replace(/\//g, '_');
-    return `${stamp}_${suffix}`;
+    const stamp = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${String(dt.getFullYear()).slice(-2)}`;
+    const rawSuffix = String(orderRef?.orderNumber || orderRef?.id || '1').trim();
+    const firstSlashPart = rawSuffix.split('/').map((p) => p.trim()).find(Boolean);
+    const fallbackMatch = rawSuffix.match(/(\d+)/);
+    const suffix = firstSlashPart || fallbackMatch?.[1] || String(orderRef?.id || '1');
+    return `${stamp}/${suffix}`;
 }
 
 export function resolveContractDate(order, application) {

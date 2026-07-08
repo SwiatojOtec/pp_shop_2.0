@@ -208,8 +208,14 @@ function renderInvoicePdf({
     });
 }
 
-function formatInvoiceDate(order) {
-    return new Date(order.createdAt).toLocaleDateString('uk-UA');
+function buildDocumentNumber(order, date = new Date()) {
+    const dt = date instanceof Date ? date : new Date(date);
+    const stamp = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${String(dt.getFullYear()).slice(-2)}`;
+    const rawSuffix = String(order?.orderNumber || order?.id || '1').trim();
+    const firstSlashPart = rawSuffix.split('/').map((p) => p.trim()).find(Boolean);
+    const fallbackMatch = rawSuffix.match(/(\d+)/);
+    const suffix = firstSlashPart || fallbackMatch?.[1] || String(order?.id || '1');
+    return `${stamp}/${suffix}`;
 }
 
 const generateInvoice = async (order, options = {}) => {
@@ -234,12 +240,13 @@ const generateInvoice = async (order, options = {}) => {
         };
     });
 
+    const documentNumber = String(options.documentNumber || '').trim() || buildDocumentNumber(order, order.createdAt);
     return renderInvoicePdf({
         order,
         seller,
         amounts,
         tableDatas,
-        title: `Рахунок на оплату №${order.orderNumber} від ${formatInvoiceDate(order)}р.`,
+        title: `Рахунок на оплату №${documentNumber}`,
         discountPercent,
     });
 };
@@ -280,12 +287,13 @@ const generateDepositInvoice = async (order, options = {}) => {
         total: row.lineTotal.toFixed(2),
     }));
 
+    const documentNumber = String(options.documentNumber || '').trim() || buildDocumentNumber(order, order.createdAt);
     return renderInvoicePdf({
         order,
         seller,
         amounts,
         tableDatas,
-        title: `Рахунок на оплату застави №${order.orderNumber} від ${formatInvoiceDate(order)}р.`,
+        title: `Рахунок на оплату №${documentNumber}`,
         discountPercent: 0,
     });
 };

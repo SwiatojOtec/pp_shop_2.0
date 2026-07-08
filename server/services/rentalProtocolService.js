@@ -126,7 +126,7 @@ async function generateRentalProtocolPdf({
 
     return {
         pdfBuffer,
-        fileName: `protokol_${buildContractNumber(order, protocolDate).replace(/\./g, '-')}.pdf`,
+        fileName: `protokol_${buildContractNumber(order, protocolDate).replace(/\//g, '-')}.pdf`,
         lessee: check.lessee,
     };
 }

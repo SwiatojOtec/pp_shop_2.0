@@ -37,9 +37,12 @@ function formatContractDate(date = new Date()) {
 
 function buildContractNumber(order, date = new Date()) {
     const dt = date instanceof Date ? date : new Date(date);
-    const stamp = `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
-    const suffix = String(order?.orderNumber || order?.id || '1').replace(/\//g, '_');
-    return `${stamp}_${suffix}`;
+    const stamp = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${String(dt.getFullYear()).slice(-2)}`;
+    const rawSuffix = String(order?.orderNumber || order?.id || '1').trim();
+    const firstSlashPart = rawSuffix.split('/').map((p) => p.trim()).find(Boolean);
+    const fallbackMatch = rawSuffix.match(/(\d+)/);
+    const suffix = firstSlashPart || fallbackMatch?.[1] || String(order?.id || '1');
+    return `${stamp}/${suffix}`;
 }
 
 function resolveLesseeData(order, client, rentalApplication, patch = {}) {
@@ -93,12 +96,13 @@ function validateSellerForContract(sellerId) {
     return { ok: true, seller };
 }
 
-function buildTemplateTokens(order, seller, lessee, contractDate = new Date()) {
+function buildTemplateTokens(order, seller, lessee, contractDate = new Date(), contractNumber = null) {
     const dateParts = formatContractDate(contractDate);
     const rc = seller.rentalContract || {};
+    const resolvedContractNumber = String(contractNumber || '').trim() || buildContractNumber(order, contractDate);
 
     return {
-        '[[CONTRACT_NUMBER]]': buildContractNumber(order, contractDate),
+        '[[CONTRACT_NUMBER]]': resolvedContractNumber,
         '[[CONTRACT_DAY]]': dateParts.day,
         '[[CONTRACT_MONTH]]': dateParts.month,
         '[[CONTRACT_YEAR]]': dateParts.year,
@@ -146,13 +150,14 @@ async function generateRentalContractPdf({ order, sellerId, client, rentalApplic
         throw err;
     }
 
-    const contractDate = new Date();
-    const tokens = buildTemplateTokens(order, check.seller, check.lessee, contractDate);
+    const contractDate = new Date(order?.createdAt || Date.now());
+    const resolvedContractNumber = String(patch?.contractNumber || '').trim() || buildContractNumber(order, contractDate);
+    const tokens = buildTemplateTokens(order, check.seller, check.lessee, contractDate, resolvedContractNumber);
     const { pdfBuffer } = await generatePdfFromTemplate(TEMPLATE_PATH, tokens);
 
     return {
         pdfBuffer,
-        fileName: `dogovir_${buildContractNumber(order, contractDate).replace(/\./g, '-')}.pdf`,
+        fileName: `dogovir_${resolvedContractNumber.replace(/\//g, '-')}.pdf`,
         lessee: check.lessee,
     };
 }

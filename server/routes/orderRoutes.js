@@ -19,6 +19,8 @@ const {
     getOrderDocumentFile,
     deleteOrderDocuments,
     deleteOrderDocument,
+    getNextDailyDocumentSequence,
+    formatDailyDocumentNumber,
 } = require('../services/orderDocumentService');
 const { createOrGetRentalApplicationFromOrder } = require('../services/orderRentalService');
 const {
@@ -334,7 +336,13 @@ router.post('/:id/documents/invoice', authMiddleware, requireRole(['owner', 'sho
         }
 
         const sellerId = resolveSellerId(req.body?.sellerId || order.sellerId);
-        const pdfBuffer = await generateInvoice(order, { sellerId });
+        const baseDate = new Date(order.createdAt || Date.now());
+        const sequence = await getNextDailyDocumentSequence({
+            date: baseDate,
+            types: ['invoice', 'deposit_invoice'],
+        });
+        const documentNumber = formatDailyDocumentNumber(baseDate, sequence);
+        const pdfBuffer = await generateInvoice(order, { sellerId, documentNumber });
         const document = await saveInvoiceDocument({
             orderId: order.id,
             orderNumber: order.orderNumber,
@@ -366,9 +374,16 @@ router.post('/:id/documents/deposit-invoice', authMiddleware, requireRole(['owne
 
         const freshOrder = await Order.findByPk(orderId);
         const sellerId = resolveSellerId(req.body?.sellerId || freshOrder.sellerId);
+        const baseDate = new Date(freshOrder.createdAt || Date.now());
+        const sequence = await getNextDailyDocumentSequence({
+            date: baseDate,
+            types: ['invoice', 'deposit_invoice'],
+        });
+        const documentNumber = formatDailyDocumentNumber(baseDate, sequence);
         const pdfBuffer = await generateDepositInvoice(freshOrder, {
             sellerId,
             rentalApplication: application,
+            documentNumber,
         });
         const document = await saveDepositInvoiceDocument({
             orderId: freshOrder.id,
@@ -446,13 +461,19 @@ router.post('/:id/documents/rental-contract', authMiddleware, requireRole(['owne
 
         const client = await upsertClientForContract(ctx.order, patch);
         const freshOrder = await Order.findByPk(orderId);
+        const baseDate = new Date(freshOrder.createdAt || Date.now());
+        const sequence = await getNextDailyDocumentSequence({
+            date: baseDate,
+            types: ['rental_contract'],
+        });
+        const contractNumber = formatDailyDocumentNumber(baseDate, sequence);
 
         const { pdfBuffer, fileName } = await generateRentalContractPdf({
             order: freshOrder,
             sellerId,
             client,
             rentalApplication: application,
-            patch,
+            patch: { ...patch, contractNumber },
         });
 
         const document = await saveRentalContractDocument({

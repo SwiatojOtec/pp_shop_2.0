@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs').promises;
+const { Op } = require('sequelize');
 const OrderDocument = require('../models/OrderDocument');
 const { getSeller } = require('../constants/sellers');
 
@@ -7,6 +8,20 @@ const UPLOAD_ROOT = path.join(__dirname, '../uploads/order-documents');
 
 async function ensureDir(dir) {
     await fs.mkdir(dir, { recursive: true });
+}
+
+function getDayBounds(date = new Date()) {
+    const dt = date instanceof Date ? date : new Date(date);
+    const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { start, end };
+}
+
+function formatDailyDocumentNumber(date = new Date(), sequence = 1) {
+    const dt = date instanceof Date ? date : new Date(date);
+    const stamp = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${String(dt.getFullYear()).slice(-2)}`;
+    return `${stamp}/${Math.max(1, Number(sequence) || 1)}`;
 }
 
 function buildInvoiceFileName(orderNumber) {
@@ -27,6 +42,21 @@ function serializeDocument(doc) {
         createdAt: row.createdAt,
         createdBy: row.createdBy,
     };
+}
+
+async function getNextDailyDocumentSequence({ date = new Date(), types = [] } = {}) {
+    const { start, end } = getDayBounds(date);
+    const where = {
+        createdAt: {
+            [Op.gte]: start,
+            [Op.lt]: end,
+        },
+    };
+    if (Array.isArray(types) && types.length) {
+        where.type = { [Op.in]: types };
+    }
+    const count = await OrderDocument.count({ where });
+    return count + 1;
 }
 
 function buildDepositInvoiceFileName(orderNumber) {
@@ -242,4 +272,6 @@ module.exports = {
     getOrderDocumentFile,
     deleteOrderDocument,
     deleteOrderDocuments,
+    getNextDailyDocumentSequence,
+    formatDailyDocumentNumber,
 };
