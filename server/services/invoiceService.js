@@ -12,6 +12,7 @@ const {
     calcLineDisplayAmounts,
     sellerAppliesVat,
     roundMoney,
+    parseDiscountPercent,
 } = require('../utils/orderAmounts');
 
 const RENT_INVOICE_NAME_PREFIX = 'Надання в оренду будiвельних машин i устатковання. ';
@@ -173,7 +174,7 @@ function renderInvoicePdf({
                 doc.moveDown(0.5);
                 currentY = doc.y;
                 doc.text(`Знижка (${discountPercent}%):`, labelX, currentY, { width: 100, align: 'right' });
-                doc.text(discountAmount.toFixed(2), valueX, currentY, { width: rowWidth, align: 'right' });
+                doc.text(`-${discountAmount.toFixed(2)}`, valueX, currentY, { width: rowWidth, align: 'right' });
             }
 
             if (amounts.appliesVat) {
@@ -225,7 +226,7 @@ const generateInvoice = async (order, options = {}) => {
     const rentalApplication = await loadRentalApplication(order);
     const billingOptions = { rentProductIds, rentalApplication };
     const amounts = calcOrderAmounts(order.items, order.discount, seller, billingOptions);
-    const discountPercent = Number(order.discount) || 0;
+    const discountPercent = parseDiscountPercent(order.discount);
 
     const tableDatas = (order.items || []).map((item, i) => {
         const line = calcLineDisplayAmounts(item, appliesVat, billingOptions);

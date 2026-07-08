@@ -22,6 +22,7 @@ import {
     calcOrderAmounts,
     calcLineDisplayAmounts,
     withOrderTotal,
+    parseDiscountPercent,
 } from '../../utils/orderAmounts';
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
 import { buildRentalPdfPayload, blobToBase64 } from '../../utils/rentalPdfPayload';
@@ -105,6 +106,7 @@ export default function AdminOrderDetails() {
             ...orderData,
             sellerId: resolveSellerId(orderData?.sellerId),
             customerPhone: normalizeUaPhone(orderData?.customerPhone || ''),
+            discount: parseDiscountPercent(orderData?.discount),
             items: orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
         }, { rentProductIds: rentIds, rentalApplication: rentalApp }));
             } catch {
@@ -179,12 +181,33 @@ export default function AdminOrderDetails() {
     function setField(field, value) {
         setDraft((prev) => {
             if (!prev) return prev;
-            const next = { ...prev, [field]: value };
+            const next = {
+                ...prev,
+                [field]: field === 'discount' ? parseDiscountPercent(value) : value,
+            };
             if (field === 'sellerId' || field === 'discount') {
                 return withOrderTotal(next, billingOptions);
             }
             return next;
         });
+    }
+
+    async function persistDraft() {
+        if (!draft) return null;
+        const payload = withOrderTotal({
+            ...draft,
+            customerPhone: normalizeUaPhone(draft.customerPhone),
+            sellerId: resolveSellerId(draft.sellerId),
+            discount: parseDiscountPercent(draft.discount),
+        }, billingOptions);
+        const updated = await ordersApi.update(draft.id, payload);
+        setOrder(updated);
+        setDraft({
+            ...updated,
+            discount: parseDiscountPercent(updated.discount),
+            items: updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+        });
+        return updated;
     }
 
     function addItem(product) {
@@ -230,17 +253,7 @@ export default function AdminOrderDetails() {
         if (!draft) return;
         setSaving(true);
         try {
-            const payload = withOrderTotal({
-                ...draft,
-                customerPhone: normalizeUaPhone(draft.customerPhone),
-                sellerId: resolveSellerId(draft.sellerId),
-            }, billingOptions);
-            const updated = await ordersApi.update(draft.id, payload);
-            setOrder(updated);
-            setDraft({
-                ...updated,
-                items: updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
-            });
+            await persistDraft();
         } catch (err) {
             alert(err.message || 'Помилка збереження');
         } finally {
@@ -252,13 +265,22 @@ export default function AdminOrderDetails() {
         if (!draft || !clientId) return;
         setLinkingClient(true);
         try {
-            const updated = await ordersApi.update(draft.id, { ...draft, clientId });
+            const client = await clientsApi.get(clientId);
+            const clientDiscount = parseDiscountPercent(client?.discountPercent);
+            const payload = withOrderTotal({
+                ...draft,
+                clientId,
+                customerPhone: normalizeUaPhone(draft.customerPhone),
+                sellerId: resolveSellerId(draft.sellerId),
+                discount: clientDiscount > 0 ? clientDiscount : parseDiscountPercent(draft.discount),
+            }, billingOptions);
+            const updated = await ordersApi.update(draft.id, payload);
             setOrder(updated);
             setDraft({
                 ...updated,
+                discount: parseDiscountPercent(updated.discount),
                 items: updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
             });
-            const client = await clientsApi.get(clientId);
             setLinkedClient(client);
             setPhoneMatch(null);
         } catch (err) {
@@ -351,14 +373,15 @@ export default function AdminOrderDetails() {
     }
 
     async function handleDownloadInvoice() {
-        if (!order) return;
+        if (!order || !draft) return;
         setInvoiceLoading(true);
         try {
-            const doc = await ordersApi.generateInvoiceDocument(order.id, {
-                sellerId: resolveSellerId(draft?.sellerId),
+            const saved = await persistDraft();
+            const doc = await ordersApi.generateInvoiceDocument(saved.id, {
+                sellerId: resolveSellerId(saved.sellerId),
             });
             setDocuments((prev) => [doc, ...prev.filter((d) => d.id !== doc.id)]);
-            await ordersApi.downloadDocument(order.id, doc.id, doc.fileName);
+            await ordersApi.downloadDocument(saved.id, doc.id, doc.fileName);
         } catch (err) {
             alert(err.message || 'Не вдалося сформувати рахунок');
         } finally {
@@ -367,18 +390,19 @@ export default function AdminOrderDetails() {
     }
 
     async function handleDownloadDepositInvoice() {
-        if (!order) return;
+        if (!order || !draft) return;
         setDepositInvoiceLoading(true);
         try {
-            const { application, document } = await ordersApi.generateDepositInvoiceDocument(order.id, {
-                sellerId: resolveSellerId(draft?.sellerId),
+            const saved = await persistDraft();
+            const { application, document } = await ordersApi.generateDepositInvoiceDocument(saved.id, {
+                sellerId: resolveSellerId(saved.sellerId),
             });
 
             setOrder((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
             setDraft((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
             setLinkedRentalApp(application);
             setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
-            await ordersApi.downloadDocument(order.id, document.id, document.fileName);
+            await ordersApi.downloadDocument(saved.id, document.id, document.fileName);
         } catch (err) {
             alert(err.message || 'Не вдалося сформувати рахунок на заставу');
         } finally {
@@ -736,8 +760,8 @@ export default function AdminOrderDetails() {
                             min="0"
                             max="100"
                             step="0.5"
-                            value={draft.discount ?? 0}
-                            onChange={(e) => setField('discount', parseFloat(e.target.value) || 0)}
+                            value={parseDiscountPercent(draft.discount)}
+                            onChange={(e) => setField('discount', e.target.value)}
                         />
                     </div>
                     <div className="form-group" style={{ marginTop: 16, marginBottom: 0 }}>
@@ -827,6 +851,21 @@ export default function AdminOrderDetails() {
                                     })}{' '}
                                     ₴
                                 </strong>
+                                {parseDiscountPercent(draft.discount) > 0 && (
+                                    <span className="od-footer-bar__vat">
+                                        {' '}
+                                        (знижка {parseDiscountPercent(draft.discount)}%: −
+                                        {(
+                                            (orderAmounts.appliesVat
+                                                ? orderAmounts.grossSubtotal - orderAmounts.grossAfterDiscount
+                                                : orderAmounts.netSubtotal - orderAmounts.netAfterDiscount)
+                                        ).toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        })}{' '}
+                                        ₴)
+                                    </span>
+                                )}
                                 {orderAmounts.appliesVat && (
                                     <span className="od-footer-bar__vat">
                                         {' '}

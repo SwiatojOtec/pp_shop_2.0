@@ -10,6 +10,16 @@ function roundMoney(value) {
     return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+export function parseDiscountPercent(value) {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    }
+    const normalized = String(value).trim().replace(/\s/g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+}
+
 function buildRentalAppIndex(rentalApplication) {
     const map = new Map();
     const items = rentalApplication?.items;
@@ -73,7 +83,7 @@ export function calcOrderAmounts(items, discountPercent = 0, sellerId, billingOp
             0
         )
     );
-    const discount = Number(discountPercent) || 0;
+    const discount = parseDiscountPercent(discountPercent);
     const netAfterDiscount = roundMoney(netSubtotal * (1 - discount / 100));
 
     if (!appliesVat) {
@@ -118,20 +128,16 @@ export function calcLineDisplayAmounts(item, sellerId, billingOptions = {}) {
             const qty = Number(appLine.quantity) || Number(item.quantity) || 1;
 
             if (netLine > 0 && days > 0) {
-                const netUnit = roundMoney(pricePerDay > 0 ? pricePerDay : netLine / (days * qty));
-                if (!appliesVat) {
-                    return {
-                        quantity: days * qty,
-                        unit: 'доба',
-                        unitPrice: netUnit,
-                        lineTotal: netLine,
-                    };
-                }
+                const quantity = days * qty;
+                const netUnit = roundMoney(pricePerDay > 0 ? pricePerDay : netLine / quantity);
+                const lineTotal = appliesVat
+                    ? roundMoney(netLine * (1 + UA_VAT_RATE))
+                    : netLine;
                 return {
-                    quantity: days * qty,
+                    quantity,
                     unit: 'доба',
-                    unitPrice: roundMoney(netUnit * (1 + UA_VAT_RATE)),
-                    lineTotal: roundMoney(netLine * (1 + UA_VAT_RATE)),
+                    unitPrice: quantity > 0 ? roundMoney(lineTotal / quantity) : lineTotal,
+                    lineTotal,
                 };
             }
         }
@@ -140,19 +146,14 @@ export function calcLineDisplayAmounts(item, sellerId, billingOptions = {}) {
     const netUnit = (Number(item.price) || 0) * (Number(item.packSize) || 1);
     const quantity = Number(item.quantity) || 0;
     const netLine = roundMoney(netUnit * quantity);
-    if (!appliesVat) {
-        return {
-            quantity,
-            unit: item.unit === 'м²' ? 'уп.' : (item.unit || 'шт.'),
-            unitPrice: netUnit,
-            lineTotal: netLine,
-        };
-    }
+    const lineTotal = appliesVat
+        ? roundMoney(netLine * (1 + UA_VAT_RATE))
+        : netLine;
     return {
         quantity,
         unit: item.unit === 'м²' ? 'уп.' : (item.unit || 'шт.'),
-        unitPrice: roundMoney(netUnit * (1 + UA_VAT_RATE)),
-        lineTotal: roundMoney(netLine * (1 + UA_VAT_RATE)),
+        unitPrice: quantity > 0 ? roundMoney(lineTotal / quantity) : lineTotal,
+        lineTotal,
     };
 }
 

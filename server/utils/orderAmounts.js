@@ -6,6 +6,16 @@ function roundMoney(value) {
     return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function parseDiscountPercent(value) {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    }
+    const normalized = String(value).trim().replace(/\s/g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+}
+
 function buildRentalAppIndex(rentalApplication) {
     const map = new Map();
     const items = rentalApplication?.items;
@@ -75,7 +85,7 @@ function calcOrderAmounts(items, discountPercent = 0, seller, billingOptions = {
             0
         )
     );
-    const discount = Number(discountPercent) || 0;
+    const discount = parseDiscountPercent(discountPercent);
     const netAfterDiscount = roundMoney(netSubtotal * (1 - discount / 100));
 
     if (!appliesVat) {
@@ -189,12 +199,14 @@ function calcLineDisplayAmounts(item, appliesVat, billingOptions = {}) {
             const qty = Number(appLine.quantity) || Number(item.quantity) || 1;
 
             if (netLine > 0 && days > 0) {
-                const netUnit = roundMoney(pricePerDay > 0 ? pricePerDay : netLine / (days * qty));
-                const { unitPrice, lineTotal } = applyVatToLine(netUnit, netLine, appliesVat);
+                const quantity = days * qty;
+                const netUnit = roundMoney(pricePerDay > 0 ? pricePerDay : netLine / quantity);
+                const { lineTotal } = applyVatToLine(netUnit, netLine, appliesVat);
                 return {
-                    quantity: days * qty,
+                    quantity,
                     unit: 'доба',
-                    unitPrice,
+                    // Ціна в таблиці має множитися на кількість без розбіжності копійок.
+                    unitPrice: quantity > 0 ? roundMoney(lineTotal / quantity) : lineTotal,
                     lineTotal,
                 };
             }
@@ -204,12 +216,12 @@ function calcLineDisplayAmounts(item, appliesVat, billingOptions = {}) {
     const quantity = Number(item.quantity) || 0;
     const netUnit = calcLineNetUnitPrice(item);
     const netLine = roundMoney(netUnit * quantity);
-    const { unitPrice, lineTotal } = applyVatToLine(netUnit, netLine, appliesVat);
+    const { lineTotal } = applyVatToLine(netUnit, netLine, appliesVat);
 
     return {
         quantity,
         unit: item.unit === 'м²' ? 'уп.' : (item.unit || 'шт.'),
-        unitPrice,
+        unitPrice: quantity > 0 ? roundMoney(lineTotal / quantity) : lineTotal,
         lineTotal,
     };
 }
@@ -228,6 +240,7 @@ module.exports = {
     UA_VAT_PERCENT,
     UA_VAT_RATE,
     roundMoney,
+    parseDiscountPercent,
     buildRentalAppIndex,
     resolveLineNetTotal,
     calcItemsNetSubtotal,

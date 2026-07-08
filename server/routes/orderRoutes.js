@@ -770,6 +770,10 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'shop_manager', 'shop_r
         if (updates.customerPhone != null) {
             updates.customerPhone = normalizeUaPhone(updates.customerPhone);
         }
+        if (updates.discount != null) {
+            const n = Number(String(updates.discount).replace(',', '.'));
+            updates.discount = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+        }
         if (updates.sellerId != null) {
             updates.sellerId = resolveSellerId(updates.sellerId);
         }
