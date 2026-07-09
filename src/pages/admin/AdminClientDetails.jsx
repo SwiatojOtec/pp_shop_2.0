@@ -6,8 +6,9 @@ import {
     AlertTriangle, ShoppingCart,
 } from 'lucide-react';
 import { clientsApi, rentalApplicationsApi, ordersApi } from '../../services/api';
-import { parsePhones } from '../../utils/phoneUtils';
+import { parsePhones, normalizePhonesField } from '../../utils/phoneUtils';
 import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 import './AdminClientDetails.css';
@@ -64,6 +65,9 @@ export default function AdminClientDetails() {
     const [claimsDraft, setClaimsDraft] = useState('');
     const [claimsSaving, setClaimsSaving] = useState(false);
     const claimsRef = useRef(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editForm, setEditForm] = useState(null);
+    const [editSaving, setEditSaving] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -130,6 +134,46 @@ export default function AdminClientDetails() {
         setTimeout(() => notesRef.current?.focus(), 50);
     }
 
+    function openEditModal() {
+        setEditForm({
+            fullName: client.fullName || '',
+            phone: client.phone || '',
+            email: client.email || '',
+            passport: client.passport || '',
+            passportIssuedAt: client.passportIssuedAt || '',
+            ipn: client.ipn || '',
+            address: client.address || '',
+            siteAddress: client.siteAddress || '',
+            discountPercent: client.discountPercent ?? '',
+            notes: client.notes || '',
+            claims: client.claims || '',
+        });
+        setEditModalOpen(true);
+    }
+
+    async function saveEditModal() {
+        if (!editForm?.fullName?.trim() || !editForm?.phone?.trim()) {
+            alert('Заповніть ПІБ і телефон');
+            return;
+        }
+        setEditSaving(true);
+        try {
+            const payload = {
+                ...editForm,
+                phone: normalizePhonesField(editForm.phone),
+                discountPercent: editForm.discountPercent === '' ? 0 : Number(editForm.discountPercent),
+            };
+            const updated = await clientsApi.update(id, payload);
+            setClient(updated);
+            setEditModalOpen(false);
+            setEditForm(null);
+        } catch (e) {
+            alert(e.message || 'Помилка збереження');
+        } finally {
+            setEditSaving(false);
+        }
+    }
+
     if (loading) return <div className="cd-loading">Завантаження...</div>;
     if (!client) return <div className="cd-loading cd-loading--err">Клієнта не знайдено</div>;
 
@@ -169,7 +213,7 @@ export default function AdminClientDetails() {
                 </div>
 
                 <div className="cd-header-actions">
-                    <button className="cd-btn cd-btn--ghost" onClick={() => navigate('/admin/clients')}>
+                    <button type="button" className="cd-btn cd-btn--ghost" onClick={openEditModal}>
                         <Edit2 size={14} /> Редагувати
                     </button>
                     {canCreateShopOrders && (
@@ -177,9 +221,6 @@ export default function AdminClientDetails() {
                             <ShoppingCart size={14} /> Замовлення
                         </Link>
                     )}
-                    <Link to={`/admin/rental-applications/new?clientId=${client.id}`} className="cd-btn cd-btn--primary">
-                        <Plus size={14} /> Нова заявка
-                    </Link>
                 </div>
             </div>
 
@@ -304,18 +345,12 @@ export default function AdminClientDetails() {
                                     <span className="cd-badge-count">{applications.length}</span>
                                 )}
                             </span>
-                            <Link to={`/admin/rental-applications/new?clientId=${client.id}`} className="cd-new-app-link">
-                                <Plus size={13} /> Нова заявка
-                            </Link>
                         </div>
 
                         {applications.length === 0 ? (
                             <div className="cd-apps-empty">
                                 <ClipboardList size={36} style={{ opacity: 0.2, marginBottom: '10px' }} />
                                 <p>Заявок ще немає</p>
-                                <Link to={`/admin/rental-applications/new?clientId=${client.id}`} className="cd-btn cd-btn--primary" style={{ marginTop: '12px', display: 'inline-flex' }}>
-                                    <Plus size={14} /> Створити першу заявку
-                                </Link>
                             </div>
                         ) : (
                             <div className="admin-table-container" style={{ marginTop: '4px' }}>
@@ -527,6 +562,91 @@ export default function AdminClientDetails() {
                     </div>
                 </div>
             </div>
+
+            {editModalOpen && editForm && (
+                <div className="admin-modal-overlay" onClick={() => { setEditModalOpen(false); setEditForm(null); }}>
+                    <div className="admin-modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Редагувати клієнта</h2>
+                            <button type="button" className="action-btn" onClick={() => { setEditModalOpen(false); setEditForm(null); }}>
+                                <XIcon size={14} />
+                            </button>
+                        </div>
+
+                        <div className="admin-form">
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>П.І.Б. *</label>
+                                    <input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Телефон *</label>
+                                    <input
+                                        value={editForm.phone}
+                                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                        onBlur={(e) => setEditForm({ ...editForm, phone: normalizePhonesField(e.target.value) })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Паспорт</label>
+                                    <input value={editForm.passport} onChange={(e) => setEditForm({ ...editForm, passport: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Дата видачі паспорта</label>
+                                    <input value={editForm.passportIssuedAt} onChange={(e) => setEditForm({ ...editForm, passportIssuedAt: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>ІПН</label>
+                                    <input value={editForm.ipn} onChange={(e) => setEditForm({ ...editForm, ipn: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>E-mail</label>
+                                    <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Адреса проживання</label>
+                                    <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Адреса майданчика</label>
+                                    <input value={editForm.siteAddress} onChange={(e) => setEditForm({ ...editForm, siteAddress: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="form-row" style={{ alignItems: 'flex-start' }}>
+                                <div className="form-group" style={{ maxWidth: '160px', flexShrink: 0 }}>
+                                    <label>Знижка, %</label>
+                                    <input type="number" min="0" max="100" step="0.5" value={editForm.discountPercent} onChange={(e) => setEditForm({ ...editForm, discountPercent: e.target.value })} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                    <div className="form-group" style={{ margin: 0 }}>
+                                        <label>Нотатки</label>
+                                        <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} style={{ resize: 'vertical' }} />
+                                    </div>
+                                    <div className="form-group" style={{ margin: 0 }}>
+                                        <label>Претензії</label>
+                                        <textarea value={editForm.claims} onChange={(e) => setEditForm({ ...editForm, claims: e.target.value })} rows={3} style={{ resize: 'vertical' }} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                            <Button onClick={saveEditModal} disabled={editSaving}>
+                                {editSaving ? 'Збереження...' : 'Зберегти'}
+                            </Button>
+                            <Button variant="secondary" onClick={() => { setEditModalOpen(false); setEditForm(null); }}>
+                                Скасувати
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

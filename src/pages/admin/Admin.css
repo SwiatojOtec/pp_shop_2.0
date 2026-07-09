@@ -401,6 +401,17 @@
     border: 1px solid #e5e7eb;
 }
 
+.order-item-row--rent {
+    grid-template-columns: minmax(0, 1fr) 190px 110px 40px;
+}
+
+.order-item-row__measures {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .order-item-row__name {
     font-weight: 600;
     font-size: 0.9rem;

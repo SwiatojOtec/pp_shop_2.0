@@ -17,6 +17,7 @@ import {
 import './Admin.css';
 import './RentalApplicationForm.css';
 import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers, formatRentCatalogPriceCaption } from '../../utils/rentPricing';
+import { parseDiscountPercent } from '../../utils/orderAmounts';
 
 const LESSOR = RENTAL_LESSOR;
 
@@ -70,6 +71,53 @@ function recalcLineTotals(item) {
         pricePerDay: rate,
         totalRental,
     };
+}
+
+async function enrichApplicationItem(rawItem) {
+    const row = { ...emptyItem(), ...rawItem, _key: Date.now() + Math.random() };
+    row.technicalCondition = normalizeTechnicalCondition(rawItem.technicalCondition);
+
+    if (row.productId) {
+        try {
+            const product = await productsApi.getById(row.productId);
+            if (product) {
+                row.catalogPrice = parseFloat(product.price || 0) || 0;
+                const tiers = coerceDbRentPriceTiers(product.rentPriceTiers);
+                if (tiers) row.rentPriceTiers = tiers;
+            }
+        } catch {
+            // keep saved values if product fetch fails
+        }
+    }
+
+    if (row.catalogPrice === '' || row.catalogPrice === null || row.catalogPrice === undefined) {
+        const savedCatalog = parseFloat(rawItem.catalogPrice);
+        row.catalogPrice = Number.isFinite(savedCatalog) ? savedCatalog : '';
+    }
+
+    return recalcLineTotals(row);
+}
+
+function resolveApplicationDiscount(data) {
+    const saved = parseDiscountPercent(data?.discountValue);
+    if (saved > 0) {
+        return {
+            discountType: data.discountType === 'percent' ? 'percent' : 'fixed',
+            discountValue: String(saved),
+        };
+    }
+
+    const orderDiscount = parseDiscountPercent(data?.linkedOrder?.discount);
+    if (orderDiscount > 0) {
+        return { discountType: 'percent', discountValue: String(orderDiscount) };
+    }
+
+    const clientDiscount = parseDiscountPercent(data?.clientDiscount);
+    if (clientDiscount > 0) {
+        return { discountType: 'percent', discountValue: String(clientDiscount) };
+    }
+
+    return { discountType: 'fixed', discountValue: '' };
 }
 
 export default function AdminRentalApplicationForm() {
@@ -151,54 +199,55 @@ export default function AdminRentalApplicationForm() {
             address: picked.address || '',
             siteAddress: picked.siteAddress || ''
         });
-        const discountPercent = Number(picked.discountPercent || 0);
+        const discountPercent = parseDiscountPercent(picked.discountPercent);
         setDiscountType('percent');
-        setDiscountValue(String(discountPercent));
+        setDiscountValue(discountPercent > 0 ? String(discountPercent) : '');
     }, [isNew, clients, searchParams]);
 
     // Load existing application
     useEffect(() => {
-        if (!isNew) {
-            rentalApplicationsApi.get(id)
-                .then(data => {
-                    if (!data) return;
-                    setApplicationNumber(data.applicationNumber || '');
-                    setStatus(data.status || 'draft');
-                    setNotes(data.notes || '');
-                    setDiscountType(data.discountType === 'percent' ? 'percent' : 'fixed');
-                    setDiscountValue(
-                        data.discountValue !== null && data.discountValue !== undefined
-                            ? String(data.discountValue)
-                            : ''
-                    );
-                    setClient({
-                        name: data.clientName || '',
-                        phone: data.clientPhone || '',
-                        email: data.clientEmail || '',
-                        passport: data.clientPassport || '',
-                        address: data.clientAddress || '',
-                        siteAddress: data.clientSiteAddress || '',
-                    });
-                    setSelectedClientId(data.clientId ? String(data.clientId) : '');
-                    if (data.responsible && Array.isArray(data.responsible)) {
-                        setResponsible(data.responsible);
-                    }
-                    setItems(data.items && data.items.length > 0
-                        ? data.items.map((i) => {
-                            const row = { ...emptyItem(), ...i, _key: Date.now() + Math.random() };
-                            row.technicalCondition = normalizeTechnicalCondition(i.technicalCondition);
-                            if (row.catalogPrice === '' || row.catalogPrice === null || row.catalogPrice === undefined) {
-                                const pd = parseFloat(i.pricePerDay);
-                                row.catalogPrice = Number.isFinite(pd) ? pd : '';
-                            }
-                            return recalcLineTotals(row);
-                        })
-                        : [emptyItem()]
-                    );
-                })
-                .catch(() => {})
-                .finally(() => setLoading(false));
-        }
+        if (isNew) return undefined;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const data = await rentalApplicationsApi.get(id);
+                if (!data || cancelled) return;
+
+                setApplicationNumber(data.applicationNumber || '');
+                setStatus(data.status || 'draft');
+                setNotes(data.notes || '');
+
+                const resolvedDiscount = resolveApplicationDiscount(data);
+                setDiscountType(resolvedDiscount.discountType);
+                setDiscountValue(resolvedDiscount.discountValue);
+
+                setClient({
+                    name: data.clientName || '',
+                    phone: data.clientPhone || '',
+                    email: data.clientEmail || '',
+                    passport: data.clientPassport || '',
+                    address: data.clientAddress || '',
+                    siteAddress: data.clientSiteAddress || '',
+                });
+                setSelectedClientId(data.clientId ? String(data.clientId) : '');
+                if (data.responsible && Array.isArray(data.responsible)) {
+                    setResponsible(data.responsible);
+                }
+
+                const rawItems = data.items && data.items.length > 0 ? data.items : [emptyItem()];
+                const enrichedItems = await Promise.all(rawItems.map((item) => enrichApplicationItem(item)));
+                if (!cancelled) {
+                    setItems(enrichedItems);
+                }
+            } catch {
+                // ignore
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+
+        return () => { cancelled = true; };
     }, [id, isNew]);
 
     // Product search with debounce
@@ -321,7 +370,7 @@ export default function AdminRentalApplicationForm() {
 
     const totalRental = items.reduce((s, i) => s + parseFloat(i.totalRental || 0), 0);
     const totalDeposit = items.reduce((s, i) => s + parseFloat(i.depositAmount || 0), 0);
-    const parsedDiscount = Math.max(0, parseFloat(discountValue || 0) || 0);
+    const parsedDiscount = parseDiscountPercent(discountValue);
     const rawDiscountAmount =
         discountType === 'percent'
             ? (totalRental * Math.min(parsedDiscount, 100)) / 100
@@ -467,9 +516,9 @@ export default function AdminRentalApplicationForm() {
                                         address: picked.address || '',
                                         siteAddress: picked.siteAddress || ''
                                     });
-                                    const discountPercent = Number(picked.discountPercent || 0);
+                                    const discountPercent = parseDiscountPercent(picked.discountPercent);
                                     setDiscountType('percent');
-                                    setDiscountValue(String(discountPercent));
+                                    setDiscountValue(discountPercent > 0 ? String(discountPercent) : '');
                                 }}
                                 style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #ddd' }}
                             >

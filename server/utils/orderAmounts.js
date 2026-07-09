@@ -1,6 +1,7 @@
 /** Стандартна ставка ПДВ в Україні, % */
 const UA_VAT_PERCENT = 20;
 const UA_VAT_RATE = UA_VAT_PERCENT / 100;
+const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('./rentPricing');
 
 function roundMoney(value) {
     return Math.round((Number(value) || 0) * 100) / 100;
@@ -36,17 +37,28 @@ function isRentBillingItem(item, rentProductIds) {
     return Array.isArray(rentProductIds) && rentProductIds.includes(item?.id);
 }
 
-function resolveRentLineNetTotal(orderItem, appLine) {
-    const parsedTotal = parseFloat(appLine?.totalRental);
-    if (Number.isFinite(parsedTotal) && parsedTotal > 0) {
-        return roundMoney(parsedTotal);
-    }
+function resolveOrderItemRentPricePerDay(orderItem) {
+    const catalogPrice = parseFloat(orderItem?.catalogPrice ?? orderItem?.price) || 0;
+    const days = Number(orderItem?.rentDays) || 1;
+    const tiers = coerceDbRentPriceTiers(orderItem?.rentPriceTiers);
+    return getRentPricePerDayFromTiers(tiers, catalogPrice, days);
+}
 
-    const days = Number(appLine?.days) || 0;
-    const pricePerDay = parseFloat(appLine?.pricePerDay) || 0;
-    const qty = Number(appLine?.quantity) || Number(orderItem?.quantity) || 1;
+function resolveRentLineNetTotal(orderItem, appLine) {
+    const days = Number(orderItem?.rentDays) || Number(appLine?.days) || 0;
+    const qty = Number(orderItem?.quantity) || Number(appLine?.quantity) || 1;
+    const pricePerDay = resolveOrderItemRentPricePerDay(orderItem);
+
     if (days > 0 && pricePerDay > 0) {
         return roundMoney(days * pricePerDay * qty);
+    }
+
+    if (appLine) {
+        const parsedTotal = parseFloat(appLine?.totalRental);
+        if (Number.isFinite(parsedTotal) && parsedTotal > 0) {
+            const appQty = Number(appLine.quantity) || 1;
+            return roundMoney(parsedTotal * (qty / appQty));
+        }
     }
 
     return 0;
@@ -55,7 +67,7 @@ function resolveRentLineNetTotal(orderItem, appLine) {
 function resolveLineNetTotal(item, rentProductIds, rentalAppIndex) {
     if (isRentBillingItem(item, rentProductIds)) {
         const appLine = rentalAppIndex.get(Number(item?.id));
-        const rentTotal = appLine ? resolveRentLineNetTotal(item, appLine) : 0;
+        const rentTotal = resolveRentLineNetTotal(item, appLine);
         if (rentTotal > 0) return rentTotal;
     }
 
@@ -192,24 +204,19 @@ function calcLineDisplayAmounts(item, appliesVat, billingOptions = {}) {
 
     if (isRentBillingItem(item, billingOptions.rentProductIds)) {
         const appLine = rentalAppIndex.get(Number(item?.id));
-        if (appLine) {
-            const netLine = resolveRentLineNetTotal(item, appLine);
-            const days = Number(appLine.days) || 0;
-            const pricePerDay = parseFloat(appLine.pricePerDay) || 0;
-            const qty = Number(appLine.quantity) || Number(item.quantity) || 1;
+        const days = Number(item.rentDays) || Number(appLine?.days) || 0;
+        const qty = Number(item.quantity) || Number(appLine?.quantity) || 1;
+        const netLine = resolveRentLineNetTotal(item, appLine);
 
-            if (netLine > 0 && days > 0) {
-                const quantity = days * qty;
-                const netUnit = roundMoney(pricePerDay > 0 ? pricePerDay : netLine / quantity);
-                const { lineTotal } = applyVatToLine(netUnit, netLine, appliesVat);
-                return {
-                    quantity,
-                    unit: 'доба',
-                    // Ціна в таблиці має множитися на кількість без розбіжності копійок.
-                    unitPrice: quantity > 0 ? roundMoney(lineTotal / quantity) : lineTotal,
-                    lineTotal,
-                };
-            }
+        if (netLine > 0 && days > 0) {
+            const { lineTotal } = applyVatToLine(netLine, netLine, appliesVat);
+            return {
+                quantity: qty,
+                rentDays: days,
+                isRentLine: true,
+                unit: 'шт',
+                lineTotal,
+            };
         }
     }
 

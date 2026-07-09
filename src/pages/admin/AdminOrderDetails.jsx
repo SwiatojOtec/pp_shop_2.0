@@ -24,11 +24,61 @@ import {
     withOrderTotal,
     parseDiscountPercent,
 } from '../../utils/orderAmounts';
+import { coerceDbRentPriceTiers } from '../../utils/rentPricing';
 import { generateRentalPdf } from '../../utils/generateRentalPdf';
 import { buildRentalPdfPayload, blobToBase64 } from '../../utils/rentalPdfPayload';
 import { isValidUaPhone, normalizeUaPhone } from '../../utils/phoneUtils';
 import './Admin.css';
 import './AdminOrderDetails.css';
+
+function buildOrderItemFromProduct(product) {
+    const item = {
+        id: product.id,
+        name: product.name,
+        sku: product.sku || '',
+        price: product.price,
+        quantity: 1,
+        unit: product.unit,
+        packSize: product.packSize || 1,
+        isRent: !!product.isRent,
+    };
+    if (product.isRent) {
+        item.catalogPrice = parseFloat(product.price || 0) || 0;
+        item.rentPriceTiers = coerceDbRentPriceTiers(product.rentPriceTiers);
+        item.rentDays = 1;
+    }
+    return item;
+}
+
+function normalizeOrderItems(items, rentProductIds) {
+    return (items || []).map((item) => {
+        const isRent = item.isRent || rentProductIds.has(item.id);
+        if (!isRent) return { ...item };
+        return {
+            ...item,
+            isRent: true,
+            rentDays: Math.max(1, Number(item.rentDays) || 1),
+        };
+    });
+}
+
+function enrichOrderItemsFromProducts(items, products, rentProductIds) {
+    const byId = new Map((products || []).map((p) => [p.id, p]));
+    return normalizeOrderItems(items, rentProductIds).map((item) => {
+        const isRent = item.isRent || rentProductIds.has(item.id);
+        if (!isRent) return item;
+        const product = byId.get(item.id);
+        if (!product) return item;
+        return {
+            ...item,
+            isRent: true,
+            catalogPrice: item.catalogPrice ?? (parseFloat(product.price) || 0),
+            rentPriceTiers: coerceDbRentPriceTiers(item.rentPriceTiers)
+                || coerceDbRentPriceTiers(product.rentPriceTiers),
+            rentDays: Math.max(1, Number(item.rentDays) || 1),
+        };
+    });
+}
 
 export default function AdminOrderDetails() {
     const { id } = useParams();
@@ -107,7 +157,11 @@ export default function AdminOrderDetails() {
             sellerId: resolveSellerId(orderData?.sellerId),
             customerPhone: normalizeUaPhone(orderData?.customerPhone || ''),
             discount: parseDiscountPercent(orderData?.discount),
-            items: orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
+            items: enrichOrderItemsFromProducts(
+                orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
+                productArr,
+                rentIds
+            ),
         }, { rentProductIds: rentIds, rentalApplication: rentalApp }));
             } catch {
                 setOrder(null);
@@ -205,7 +259,11 @@ export default function AdminOrderDetails() {
         setDraft({
             ...updated,
             discount: parseDiscountPercent(updated.discount),
-            items: updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+            items: enrichOrderItemsFromProducts(
+                updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+                products,
+                rentProductIds
+            ),
         });
         return updated;
     }
@@ -213,19 +271,7 @@ export default function AdminOrderDetails() {
     function addItem(product) {
         setDraft((prev) => {
             if (!prev) return prev;
-            const items = [
-                ...prev.items,
-                {
-                    id: product.id,
-                    name: product.name,
-                    sku: product.sku || '',
-                    price: product.price,
-                    quantity: 1,
-                    unit: product.unit,
-                    packSize: product.packSize || 1,
-                    isRent: !!product.isRent,
-                },
-            ];
+            const items = [...prev.items, buildOrderItemFromProduct(product)];
             return withOrderTotal({ ...prev, items }, billingOptions);
         });
         setProductSearch('');
@@ -244,6 +290,16 @@ export default function AdminOrderDetails() {
             if (!prev) return prev;
             const items = prev.items.map((item, i) =>
                 i === idx ? { ...item, quantity: parseFloat(qty) || 0 } : item
+            );
+            return withOrderTotal({ ...prev, items }, billingOptions);
+        });
+    }
+
+    function updateRentDays(idx, days) {
+        setDraft((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.map((item, i) =>
+                i === idx ? { ...item, rentDays: Math.max(1, parseFloat(days) || 1) } : item
             );
             return withOrderTotal({ ...prev, items }, billingOptions);
         });
@@ -279,7 +335,11 @@ export default function AdminOrderDetails() {
             setDraft({
                 ...updated,
                 discount: parseDiscountPercent(updated.discount),
-                items: updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+                items: enrichOrderItemsFromProducts(
+                    updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+                    products,
+                    rentProductIds
+                ),
             });
             setLinkedClient(client);
             setPhoneMatch(null);
@@ -788,20 +848,45 @@ export default function AdminOrderDetails() {
 
                     <div className="order-item-list">
                         {draft.items.map((item, idx) => {
+                            const isRentLine = item.isRent || rentProductIds.has(item.id);
                             const line = calcLineDisplayAmounts(item, draft.sellerId, billingOptions);
                             return (
-                            <div key={idx} className="order-item-row">
+                            <div key={idx} className={`order-item-row${isRentLine ? ' order-item-row--rent' : ''}`}>
                                 <span className="order-item-row__name">{item.name}</span>
-                                <div className="order-item-row__qty">
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={line.quantity ?? item.quantity}
-                                        onChange={(e) => updateQty(idx, e.target.value)}
-                                        readOnly={line.unit === 'доба'}
-                                    />
-                                    <span className="order-item-row__unit">{line.unit || (item.unit === 'м²' ? 'уп.' : 'шт.')}</span>
-                                </div>
+                                {isRentLine ? (
+                                    <div className="order-item-row__measures">
+                                        <div className="order-item-row__qty">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={item.quantity ?? 1}
+                                                onChange={(e) => updateQty(idx, e.target.value)}
+                                            />
+                                            <span className="order-item-row__unit">шт</span>
+                                        </div>
+                                        <div className="order-item-row__qty">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={line.rentDays ?? item.rentDays ?? 1}
+                                                onChange={(e) => updateRentDays(idx, e.target.value)}
+                                            />
+                                            <span className="order-item-row__unit">діб</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="order-item-row__qty">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={line.quantity ?? item.quantity}
+                                            onChange={(e) => updateQty(idx, e.target.value)}
+                                        />
+                                        <span className="order-item-row__unit">{line.unit || (item.unit === 'м²' ? 'уп.' : 'шт.')}</span>
+                                    </div>
+                                )}
                                 <span className="order-item-row__price">
                                     {line.lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴
                                 </span>

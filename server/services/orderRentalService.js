@@ -1,10 +1,13 @@
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 const Order = require('../models/Order');
+const Client = require('../models/Client');
 const Product = require('../models/Product');
 const RentalApplication = require('../models/RentalApplication');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../constants/rentalDefaults');
 const { recalculateProductQuantity } = require('./inventoryService');
+const { parseDiscountPercent } = require('../utils/orderAmounts');
+const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../utils/rentPricing');
 
 async function generateAppNumber() {
     const year = new Date().getFullYear();
@@ -29,6 +32,10 @@ function buildRentItemsFromOrder(order, productsById) {
             const product = productsById.get(line.id) || {};
             const qty = Number(line.quantity) || 1;
             const replacementCost = parseFloat(product.replacementCost || 0);
+            const catalogPrice = parseFloat(product.price || 0) || 0;
+            const rentPriceTiers = coerceDbRentPriceTiers(product.rentPriceTiers);
+            const rentDays = Math.max(1, Number(line.rentDays) || 1);
+            const pricePerDay = getRentPricePerDayFromTiers(rentPriceTiers, catalogPrice, rentDays);
             return {
                 productId: line.id,
                 name: line.name || product.name || '',
@@ -44,14 +51,29 @@ function buildRentItemsFromOrder(order, productsById) {
                 depositAmount: (
                     replacementCost * qty * (DEFAULT_RENTAL_DEPOSIT_PERCENT / 100)
                 ).toFixed(2),
-                pricePerDay: parseFloat(line.price || product.price || 0),
+                catalogPrice,
+                rentPriceTiers,
+                pricePerDay,
                 rentFrom: '',
                 rentTo: '',
-                days: 0,
-                totalRental: '',
+                days: rentDays,
+                totalRental: (rentDays * pricePerDay * qty).toFixed(2),
                 kitItems: Array.isArray(product.kitItems) ? product.kitItems : [],
             };
         });
+}
+
+async function resolveApplicationDiscount(order, transaction) {
+    let discount = parseDiscountPercent(order.discount);
+    if (discount > 0) return discount;
+
+    if (order.clientId) {
+        const client = await Client.findByPk(order.clientId, { transaction });
+        if (client) {
+            discount = parseDiscountPercent(client.discountPercent);
+        }
+    }
+    return discount;
 }
 
 async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) {
@@ -91,6 +113,7 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
 
         const totalDeposit = rentItems.reduce((sum, line) => sum + parseFloat(line.depositAmount || 0), 0);
         const applicationNumber = await generateAppNumber();
+        const discountPercent = await resolveApplicationDiscount(order, transaction);
 
         const application = await RentalApplication.create({
             applicationNumber,
@@ -103,6 +126,9 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
             items: rentItems,
             totalAmount: 0,
             depositAmount: totalDeposit.toFixed(2),
+            discountType: discountPercent > 0 ? 'percent' : 'fixed',
+            discountValue: discountPercent,
+            discountAmount: 0,
             createdBy,
         }, { transaction });
 

@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const RentalApplication = require('../models/RentalApplication');
+const Order = require('../models/Order');
+const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { recalculateProductQuantity } = require('../services/inventoryService');
 const { normalizeUaPhone } = require('../utils/phoneUtils');
+const { parseDiscountPercent } = require('../utils/orderAmounts');
 
 function normalizeRentalPayload(body) {
     const payload = { ...body };
@@ -97,7 +100,29 @@ router.get('/:id', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'p
         const app = await RentalApplication.findByPk(req.params.id);
         if (!app) return res.status(404).json({ message: 'Application not found' });
         await applyAutoOverdueStatus(app);
-        res.json(app);
+
+        const linkedOrder = await Order.findOne({
+            where: { rentalApplicationId: app.id },
+            attributes: ['id', 'orderNumber', 'discount', 'clientId'],
+        });
+
+        let clientDiscount = 0;
+        if (app.clientId) {
+            const client = await Client.findByPk(app.clientId, { attributes: ['discountPercent'] });
+            clientDiscount = parseDiscountPercent(client?.discountPercent);
+        }
+
+        const payload = app.toJSON();
+        payload.linkedOrder = linkedOrder
+            ? {
+                id: linkedOrder.id,
+                orderNumber: linkedOrder.orderNumber,
+                discount: parseDiscountPercent(linkedOrder.discount),
+            }
+            : null;
+        payload.clientDiscount = clientDiscount;
+
+        res.json(payload);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

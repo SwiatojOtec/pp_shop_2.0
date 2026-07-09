@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Edit2, Plus, Trash2, X, Phone, Mail, MapPin, ClipboardList, Search, User, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { Edit2, Plus, Trash2, X, Phone, Mail, MapPin, Search, User, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AdminPageHeader, ConfirmDialog } from '../../components/admin';
 import { Button } from '../../components/ui/button';
@@ -193,14 +193,6 @@ export default function AdminClients() {
                                     </td>
                                     <td style={{ textAlign: 'right' }}>
                                         <div style={{ display: 'inline-flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                                            <Link
-                                                to={`/admin/rental-applications/new?clientId=${c.id}`}
-                                                className="action-btn"
-                                                title="Нова заявка оренди"
-                                                style={{ color: '#7c3aed' }}
-                                            >
-                                                <ClipboardList size={15} />
-                                            </Link>
                                             {canCreateShopOrders && (
                                                 <Link
                                                     to={`/admin/orders?newClientId=${c.id}`}
