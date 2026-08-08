@@ -81,7 +81,7 @@ async function getApplicationById(id) {
 
     const linkedOrder = await Order.findOne({
         where: { rentalApplicationId: app.id },
-        attributes: ['id', 'orderNumber', 'discount', 'clientId'],
+        attributes: ['id', 'orderNumber', 'discount', 'clientId', 'sellerId'],
     });
 
     let clientDiscount = 0;
@@ -96,6 +96,7 @@ async function getApplicationById(id) {
             id: linkedOrder.id,
             orderNumber: linkedOrder.orderNumber,
             discount: parseDiscountPercent(linkedOrder.discount),
+            sellerId: linkedOrder.sellerId || null,
         }
         : null;
     payload.clientDiscount = clientDiscount;

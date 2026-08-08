@@ -224,6 +224,7 @@ export default function DealWorkspace() {
                     embedded
                     hideHeader
                     hideDocumentTab
+                    sellerId={draft?.sellerId}
                     onSaved={handleRentalSaved}
                 />
             );

@@ -1,8 +1,6 @@
 import { Plus, X } from 'lucide-react';
-import { RENTAL_LESSOR } from '../../documents/rentalPdfPayload';
 import { normalizeUaPhone } from '../../../../utils/phoneUtils';
-
-const LESSOR = RENTAL_LESSOR;
+import { getRentalLessor } from '../../../../constants/sellers';
 
 const CLIENT_FIELDS = [
     { label: 'П.І.Б.', field: 'name', placeholder: "Прізвище Ім'я По-батькові" },
@@ -23,17 +21,19 @@ export default function RentalPartiesSection({
     onResponsibleChange,
     onAddResponsible,
     onRemoveResponsible,
+    sellerId,
 }) {
+    const lessor = getRentalLessor(sellerId);
     return (
         <div className="rental-parties-grid">
             <div className="rental-party-block">
                 <h3 className="party-title">Орендодавець</h3>
-                <div className="party-field"><span>П.І.Б.:</span><strong>{LESSOR.name}</strong></div>
-                <div className="party-field"><span>ІПН:</span>{LESSOR.ipn}</div>
-                <div className="party-field"><span>Адреса:</span>{LESSOR.address}</div>
-                <div className="party-field"><span>Телефон:</span>{LESSOR.phone}</div>
-                <div className="party-field"><span>E-mail:</span>{LESSOR.email}</div>
-                <div className="party-field"><span>Адреса складу:</span>{LESSOR.warehouseAddress}</div>
+                <div className="party-field"><span>П.І.Б.:</span><strong>{lessor.name}</strong></div>
+                <div className="party-field"><span>ІПН:</span>{lessor.ipn}</div>
+                <div className="party-field"><span>Адреса:</span>{lessor.address}</div>
+                <div className="party-field"><span>Телефон:</span>{lessor.phone}</div>
+                <div className="party-field"><span>E-mail:</span>{lessor.email}</div>
+                <div className="party-field"><span>Адреса складу:</span>{lessor.warehouseAddress}</div>
             </div>
 
             <div className="rental-party-block">

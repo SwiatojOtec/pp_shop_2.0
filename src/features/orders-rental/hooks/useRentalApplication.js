@@ -28,6 +28,7 @@ export function useRentalApplication(id, isNew, options = {}) {
     const [client, setClient] = useState({ name: '', phone: '', email: '', passport: '', address: '', siteAddress: '' });
     const [responsible, setResponsible] = useState([]);
     const [items, setItems] = useState([emptyItem()]);
+    const [linkedOrder, setLinkedOrder] = useState(null);
 
     const applyClient = useCallback((picked) => {
         if (!picked) return;
@@ -92,6 +93,7 @@ export function useRentalApplication(id, isNew, options = {}) {
                     siteAddress: data.clientSiteAddress || '',
                 });
                 setSelectedClientId(data.clientId ? String(data.clientId) : '');
+                setLinkedOrder(data.linkedOrder || null);
                 if (data.responsible && Array.isArray(data.responsible)) {
                     setResponsible(data.responsible);
                 }
@@ -250,6 +252,7 @@ export function useRentalApplication(id, isNew, options = {}) {
         setResponsible,
         items,
         setItems,
+        linkedOrder,
         applyClient,
         handleClientSelect,
         updateItem,

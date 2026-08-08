@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Save } from 'lucide-react';
 import { generateRentalPdf } from '../../documents/generateRentalPdf';
-import { buildRentalPdfPayload, RENTAL_LESSOR } from '../../documents/rentalPdfPayload';
+import { buildRentalPdfPayload } from '../../documents/rentalPdfPayload';
 import { buildRentalActContractRef } from '../../documents/rentalContractRef';
+import { getRentalLessor } from '../../../../constants/sellers';
 import RentalApplicationPrint from './RentalApplicationPrint';
 import RentalFormHeader from './RentalFormHeader';
 import RentalFormTabs from './RentalFormTabs';
@@ -16,14 +17,13 @@ import { useRentalTotals } from '../../hooks/useRentalTotals';
 import { useProductSearch } from '../../hooks/useProductSearch';
 import { STATUS_SELECT_OPTIONS } from '../../model/rentalStatus';
 
-const LESSOR = RENTAL_LESSOR;
-
 export default function RentalApplicationEditor({
     id,
     embedded = false,
     hideHeader = false,
     hideDocumentTab = false,
     onSaved,
+    sellerId: sellerIdProp,
 }) {
     const isNew = !id || id === 'new';
     const printRef = useRef();
@@ -32,6 +32,9 @@ export default function RentalApplicationEditor({
     const app = useRentalApplication(id, isNew, { embedded, onSaved });
     const totals = useRentalTotals(app.items, app.discountType, app.discountValue);
     const search = useProductSearch(app.items, app.setItems);
+
+    const sellerId = sellerIdProp || app.linkedOrder?.sellerId || null;
+    const lessor = useMemo(() => getRentalLessor(sellerId), [sellerId]);
 
     useEffect(() => {
         if (hideDocumentTab && tab === 'document') {
@@ -51,7 +54,9 @@ export default function RentalApplicationEditor({
         items: app.items,
         discountType: app.discountType,
         discountValue: totals.parsedDiscount,
-    }), [app, totals.parsedDiscount]);
+        linkedOrder: app.linkedOrder,
+        sellerId,
+    }, app.linkedOrder), [app, totals.parsedDiscount, sellerId]);
 
     const currentContractRef = buildRentalActContractRef(null, {
         applicationNumber: app.applicationNumber,
@@ -139,6 +144,7 @@ export default function RentalApplicationEditor({
                         onResponsibleChange={handleResponsibleChange}
                         onAddResponsible={handleAddResponsible}
                         onRemoveResponsible={handleRemoveResponsible}
+                        sellerId={sellerId}
                     />
                 )}
 
@@ -192,7 +198,7 @@ export default function RentalApplicationEditor({
                     <RentalApplicationPrint
                         ref={printRef}
                         applicationNumber={app.applicationNumber}
-                        lessor={LESSOR}
+                        lessor={lessor}
                         client={app.client}
                         responsible={app.responsible}
                         items={app.items}

@@ -1,14 +1,8 @@
-export const RENTAL_LESSOR = {
-    name: 'Панкрат єв Олександр Миколайович',
-    ipn: '2490020092',
-    address: '15300, м. Корюківка, вул. Садова, буд. 139',
-    phone: '+38 098 188 00 44; +38 095 672 44 00',
-    email: 'office@ppbud.info',
-    warehouseAddress: 'м. Київ, вул. Холодноярська 2а',
-};
-
 import { buildRentalActContractRef } from './rentalContractRef';
 import { computeRentalTotals } from '../model/rentalTotals';
+import { DEFAULT_SELLER_ID, getRentalLessor, RENTAL_LESSOR } from '../../../constants/sellers';
+
+export { RENTAL_LESSOR };
 
 export function buildRentalPdfPayload(application, order = null) {
     const items = Array.isArray(application?.items) ? application.items : [];
@@ -21,9 +15,14 @@ export function buildRentalPdfPayload(application, order = null) {
         totalRentalAfterDiscount,
     } = computeRentalTotals(items, discountType, application?.discountValue);
 
+    const sellerId = order?.sellerId
+        || application?.sellerId
+        || application?.linkedOrder?.sellerId
+        || DEFAULT_SELLER_ID;
+
     return {
         applicationNumber: application?.applicationNumber,
-        lessor: RENTAL_LESSOR,
+        lessor: getRentalLessor(sellerId),
         client: {
             name: application?.clientName || '',
             phone: application?.clientPhone || '',
