@@ -1,6 +1,6 @@
 const Order = require('../../../models/Order');
 const { normalizeUaPhone } = require('../../../utils/phoneUtils');
-const { resolveSellerId, getSellerOptions } = require('../../../constants/sellers');
+const { resolveSellerId } = require('../../../constants/sellers');
 const { generateInvoice, generateDepositInvoice } = require('../services/invoiceService');
 const {
     saveInvoiceDocument,
@@ -31,6 +31,7 @@ const {
     upsertClientForContract,
     getOrdersByClient,
 } = require('../services/orderService');
+const { decodeBase64Pdf } = require('../utils/decodeBase64Pdf');
 
 async function createOrder(req, res) {
     try {
@@ -133,9 +134,7 @@ async function getAllOrders(req, res) {
     }
 }
 
-function getSellersList(req, res) {
-    res.json(getSellerOptions());
-}
+/* sellers list removed — frontend uses constants/sellers */
 
 async function listDocuments(req, res) {
     try {
@@ -454,20 +453,11 @@ async function uploadRentalApplicationDocument(req, res) {
         if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
 
         const { contentBase64, fileName, title } = req.body || {};
-        if (!contentBase64) {
-            return res.status(400).json({ message: 'Не передано PDF-файл' });
+        const decoded = decodeBase64Pdf(contentBase64);
+        if (!decoded.ok) {
+            return res.status(decoded.status).json({ message: decoded.message });
         }
-
-        let pdfBuffer;
-        try {
-            pdfBuffer = Buffer.from(contentBase64, 'base64');
-        } catch {
-            return res.status(400).json({ message: 'Некоректний формат файлу' });
-        }
-
-        if (!pdfBuffer.length) {
-            return res.status(400).json({ message: 'Порожній файл' });
-        }
+        const { pdfBuffer } = decoded;
 
         const { application } = await createOrGetRentalApplicationFromOrder(
             orderId,
@@ -500,20 +490,11 @@ async function uploadRentalReturnActDocument(req, res) {
         if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
 
         const { contentBase64, fileName, title } = req.body || {};
-        if (!contentBase64) {
-            return res.status(400).json({ message: 'Не передано PDF-файл' });
+        const decoded = decodeBase64Pdf(contentBase64);
+        if (!decoded.ok) {
+            return res.status(decoded.status).json({ message: decoded.message });
         }
-
-        let pdfBuffer;
-        try {
-            pdfBuffer = Buffer.from(contentBase64, 'base64');
-        } catch {
-            return res.status(400).json({ message: 'Некоректний формат файлу' });
-        }
-
-        if (!pdfBuffer.length) {
-            return res.status(400).json({ message: 'Порожній файл' });
-        }
+        const { pdfBuffer } = decoded;
 
         const { application } = await createOrGetRentalApplicationFromOrder(
             orderId,
@@ -550,23 +531,6 @@ async function createRentalApplicationFromOrder(req, res) {
         res.status(created ? 201 : 200).json({ application, created });
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message });
-    }
-}
-
-async function getOrderInvoice(req, res) {
-    try {
-        const order = await Order.findByPk(req.params.id);
-        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
-
-        const sellerId = resolveSellerId(req.query.sellerId || order.sellerId);
-        const pdfBuffer = await generateInvoice(order, { sellerId });
-        const fileName = `Invoice_${String(order.orderNumber || order.id).replace(/\//g, '_')}.pdf`;
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-        res.send(pdfBuffer);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
     }
 }
 
@@ -619,7 +583,6 @@ module.exports = {
     createAdminOrder,
     getOrdersByClientHandler,
     getAllOrders,
-    getSellersList,
     listDocuments,
     createInvoiceDocument,
     createDepositInvoiceDocument,
@@ -632,7 +595,6 @@ module.exports = {
     uploadRentalApplicationDocument,
     uploadRentalReturnActDocument,
     createRentalApplicationFromOrder,
-    getOrderInvoice,
     getOrderById,
     updateOrder,
     deleteOrder,

@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 const { recalculateProductQuantity } = require('../../../services/inventoryService');
 const { normalizeUaPhone } = require('../../../utils/phoneUtils');
 const { parseDiscountPercent } = require('../../../utils/orderAmounts');
+const { generateAppNumber } = require('../utils/orderNumbering');
 
 function normalizeRentalPayload(body) {
     const payload = { ...body };
@@ -27,18 +28,6 @@ async function recalcRentQuantitiesForItemsLists(itemsA, itemsB) {
         if (Number.isFinite(id) && id > 0) ids.add(id);
     }
     await Promise.all([...ids].map((id) => recalculateProductQuantity(id)));
-}
-
-async function generateAppNumber() {
-    const year = new Date().getFullYear();
-    const last = await RentalApplication.findOne({
-        where: { applicationNumber: { [Op.like]: `RA-${year}-%` } },
-        order: [['id', 'DESC']]
-    });
-    const nextNum = last
-        ? String(parseInt(last.applicationNumber.split('-')[2]) + 1).padStart(3, '0')
-        : '001';
-    return `RA-${year}-${nextNum}`;
 }
 
 const toIsoDate = (date = new Date()) => {
@@ -160,7 +149,6 @@ async function deleteApplication(id) {
 module.exports = {
     normalizeRentalPayload,
     recalcRentQuantitiesForItemsLists,
-    generateAppNumber,
     toIsoDate,
     shouldBeOverdue,
     applyAutoOverdueStatus,

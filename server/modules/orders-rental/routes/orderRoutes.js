@@ -13,8 +13,6 @@ router.get('/by-client/:clientId', authMiddleware, requireRole(ORDER_ROLES), ord
 
 router.get('/', authMiddleware, requireRole(ORDER_ROLES), orderController.getAllOrders);
 
-router.get('/sellers/list', authMiddleware, requireRole(ORDER_ROLES), orderController.getSellersList);
-
 router.get('/:id/documents', authMiddleware, requireRole(ORDER_ROLES), orderController.listDocuments);
 
 router.post('/:id/documents/invoice', authMiddleware, requireRole(ORDER_ROLES), orderController.createInvoiceDocument);
@@ -38,8 +36,6 @@ router.post('/:id/documents/rental-application', authMiddleware, requireRole(ORD
 router.post('/:id/documents/rental-return-act', authMiddleware, requireRole(ORDER_ROLES), orderController.uploadRentalReturnActDocument);
 
 router.post('/:id/rental-application', authMiddleware, requireRole(ORDER_ROLES), orderController.createRentalApplicationFromOrder);
-
-router.get('/:id/invoice', authMiddleware, requireRole(ORDER_ROLES), orderController.getOrderInvoice);
 
 router.get('/:id', authMiddleware, requireRole(ORDER_ROLES), orderController.getOrderById);
 

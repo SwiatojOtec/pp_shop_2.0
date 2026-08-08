@@ -86,26 +86,6 @@ export const ordersApi = {
     listByClient: (clientId) => apiGet(`/api/orders/by-client/${clientId}`),
     update: (id, data) => apiPut(`/api/orders/${id}`, data),
     remove: (id) => apiDelete(`/api/orders/${id}`),
-    downloadInvoice: async (id, params) => {
-        const token = getToken();
-        const qs = params?.sellerId ? `?sellerId=${encodeURIComponent(params.sellerId)}` : '';
-        const res = await fetch(`${API_URL}/api/orders/${id}/invoice${qs}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) {
-            let message = `HTTP ${res.status}`;
-            try {
-                const body = await res.json();
-                message = body.message || message;
-            } catch {
-                // ignore
-            }
-            const err = new Error(message);
-            err.status = res.status;
-            throw err;
-        }
-        return res.blob();
-    },
     listDocuments: (id) => apiGet(`/api/orders/${id}/documents`),
     generateInvoiceDocument: (id, data) => apiPost(`/api/orders/${id}/documents/invoice`, data),
     generateDepositInvoiceDocument: (id, data) => apiPost(`/api/orders/${id}/documents/deposit-invoice`, data),

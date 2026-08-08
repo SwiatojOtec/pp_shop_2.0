@@ -5,25 +5,7 @@ const { sendTelegramMessage } = require('../../../utils/telegram');
 const { normalizeUaPhone, parsePhones, phoneTailsMatch, normalizePhonesField } = require('../../../utils/phoneUtils');
 const { resolveSellerId } = require('../../../constants/sellers');
 const { buildClientPatchFromForm } = require('./rentalContractService');
-
-async function generateOrderNumber() {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const countToday = await Order.count({
-        where: {
-            createdAt: {
-                [Op.gte]: startOfDay
-            }
-        }
-    });
-
-    const dailyNumber = countToday + 1;
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    return `${dailyNumber}/${day}/${month}/${year}`;
-}
+const { generateOrderNumber } = require('../utils/orderNumbering');
 
 async function loadOrderWithClient(orderId) {
     const order = await Order.findByPk(orderId);

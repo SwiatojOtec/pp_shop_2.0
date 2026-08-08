@@ -1,4 +1,3 @@
-const { Op } = require('sequelize');
 const sequelize = require('../../../config/db');
 const Order = require('../../../models/Order');
 const Client = require('../../../models/Client');
@@ -8,18 +7,7 @@ const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDef
 const { recalculateProductQuantity } = require('../../../services/inventoryService');
 const { parseDiscountPercent } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
-
-async function generateAppNumber() {
-    const year = new Date().getFullYear();
-    const last = await RentalApplication.findOne({
-        where: { applicationNumber: { [Op.like]: `RA-${year}-%` } },
-        order: [['id', 'DESC']],
-    });
-    const nextNum = last
-        ? String(parseInt(last.applicationNumber.split('-')[2], 10) + 1).padStart(3, '0')
-        : '001';
-    return `RA-${year}-${nextNum}`;
-}
+const { generateAppNumber } = require('../utils/orderNumbering');
 
 function buildRentItemsFromOrder(order, productsById) {
     const items = Array.isArray(order.items) ? order.items : [];
@@ -42,7 +30,7 @@ function buildRentItemsFromOrder(order, productsById) {
                 serialNumber: product.serialNumber || '',
                 inventoryNumber: product.inventoryNumber || '',
                 technicalCondition: product.technicalCondition || '',
-                unit: line.unit || product.unit || 'шт',
+                unit: line.unit || product.unit || 'С€С‚',
                 quantity: qty,
                 weightTotal: product.weightTotal || '',
                 replacementCostPerUnit: replacementCost,
@@ -83,7 +71,7 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
             lock: transaction.LOCK.UPDATE,
         });
         if (!order) {
-            const err = new Error('Замовлення не знайдено');
+            const err = new Error('Р—Р°РјРѕРІР»РµРЅРЅСЏ РЅРµ Р·РЅР°Р№РґРµРЅРѕ');
             err.status = 404;
             throw err;
         }
@@ -106,7 +94,7 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
         const rentItems = buildRentItemsFromOrder(order, productsById);
 
         if (!rentItems.length) {
-            const err = new Error('У замовленні немає позицій оренди');
+            const err = new Error('РЈ Р·Р°РјРѕРІР»РµРЅРЅС– РЅРµРјР°С” РїРѕР·РёС†С–Р№ РѕСЂРµРЅРґРё');
             err.status = 400;
             throw err;
         }
