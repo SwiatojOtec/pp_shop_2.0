@@ -1,8 +1,8 @@
-export default function RentalFormTabs({ tab, onTabChange, itemsCount }) {
+export default function RentalFormTabs({ tab, onTabChange, itemsCount, hideDocumentTab = false }) {
     const tabs = [
         { key: 'parties',  label: 'Сторони' },
         { key: 'items',    label: `Позиції (${itemsCount})` },
-        { key: 'document', label: 'Документ' },
+        ...(hideDocumentTab ? [] : [{ key: 'document', label: 'Документ' }]),
     ];
 
     return (

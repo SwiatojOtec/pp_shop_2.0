@@ -11,7 +11,8 @@ import {
 } from '../model/rentalItems';
 import { computeRentalTotals } from '../model/rentalTotals';
 
-export function useRentalApplication(id, isNew) {
+export function useRentalApplication(id, isNew, options = {}) {
+    const { embedded = false, onSaved } = options;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -205,8 +206,12 @@ export function useRentalApplication(id, isNew) {
                 const saved = isNew
                     ? await rentalApplicationsApi.create(payload)
                     : await rentalApplicationsApi.update(id, payload);
-                if (isNew) navigate(`/admin/rental-applications/${saved.id}`, { replace: true });
-                return true;
+                if (embedded && onSaved) {
+                    onSaved(saved);
+                } else if (isNew) {
+                    navigate(`/admin/rental-applications/${saved.id}`, { replace: true });
+                }
+                return saved;
             } catch (err) {
                 if (attempt === 1 && (err.status === 503 || err.status === 401)) {
                     await new Promise(r => setTimeout(r, 600));
@@ -223,7 +228,7 @@ export function useRentalApplication(id, isNew) {
         } finally {
             setSaving(false);
         }
-    }, [status, notes, client, selectedClientId, responsible, items, isNew, id, navigate, discountType, discountValue]);
+    }, [status, notes, client, selectedClientId, responsible, items, isNew, id, navigate, discountType, discountValue, embedded, onSaved]);
 
     return {
         loading,

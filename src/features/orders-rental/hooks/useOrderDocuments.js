@@ -282,6 +282,7 @@ export function useOrderDocuments({
         setContractForm,
         contractSaving,
         formatDocDateTime,
+        loadLinkedRentalApplication,
         handleDownloadInvoice,
         handleDownloadDepositInvoice,
         handleDownloadStoredDocument,

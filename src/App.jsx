@@ -19,7 +19,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import ProductEdit from './pages/admin/ProductEdit';
 import AdminBlog from './pages/admin/AdminBlog';
 import AdminBlogEdit from './pages/admin/AdminBlogEdit';
-import AdminOrderDetails from './features/orders-rental/pages/AdminOrderDetails';
+import DealWorkspace from './features/orders-rental/pages/DealWorkspace';
 import OrdersRentalList from './features/orders-rental/pages/OrdersRentalList';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminRent from './pages/admin/AdminRent';
@@ -199,7 +199,7 @@ function AppContent() {
             element={
               <RequireAdmin>
                 <AdminLayout>
-                  <AdminOrderDetails />
+                  <DealWorkspace />
                 </AdminLayout>
               </RequireAdmin>
             }

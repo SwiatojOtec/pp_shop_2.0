@@ -1,0 +1,51 @@
+.deal-workspace-tabs {
+    margin-bottom: 20px;
+}
+
+.deal-workspace-empty {
+    padding: 32px 24px;
+    background: #fff;
+    border: 1px solid var(--admin-border, #e5e7eb);
+    border-radius: 12px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.deal-workspace-empty p {
+    margin: 0 0 16px;
+}
+
+.deal-workspace-loading {
+    padding: 24px;
+    color: #999;
+}
+
+.rental-form-page--embedded {
+    max-width: none;
+}
+
+.rental-form-page--embedded .rental-tabs-nav {
+    margin-bottom: 16px;
+}
+
+.rental-embedded-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.rental-embedded-toolbar__title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--admin-dark, #111);
+}
+
+.rental-embedded-toolbar__actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
