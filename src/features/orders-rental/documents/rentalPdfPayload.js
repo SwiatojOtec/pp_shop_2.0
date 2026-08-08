@@ -8,18 +8,18 @@ export const RENTAL_LESSOR = {
 };
 
 import { buildRentalActContractRef } from './rentalContractRef';
+import { computeRentalTotals } from '../model/rentalTotals';
 
 export function buildRentalPdfPayload(application, order = null) {
     const items = Array.isArray(application?.items) ? application.items : [];
-    const totalRental = items.reduce((sum, item) => sum + parseFloat(item.totalRental || 0), 0);
-    const totalDeposit = items.reduce((sum, item) => sum + parseFloat(item.depositAmount || 0), 0);
     const discountType = application?.discountType || 'fixed';
-    const parsedDiscount = parseFloat(application?.discountValue || 0);
-    const rawDiscountAmount = discountType === 'percent'
-        ? (totalRental * Math.min(parsedDiscount, 100)) / 100
-        : parsedDiscount;
-    const discountAmount = Math.min(rawDiscountAmount, totalRental);
-    const totalRentalAfterDiscount = Math.max(totalRental - discountAmount, 0);
+    const {
+        totalRental,
+        totalDeposit,
+        parsedDiscount,
+        discountAmount,
+        totalRentalAfterDiscount,
+    } = computeRentalTotals(items, discountType, application?.discountValue);
 
     return {
         applicationNumber: application?.applicationNumber,

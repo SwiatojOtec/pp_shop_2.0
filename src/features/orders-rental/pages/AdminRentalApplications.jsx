@@ -5,24 +5,7 @@ import { rentalApplicationsApi } from '../../../services/api';
 import { AdminPageHeader, AdminFilters, AdminTable, ConfirmDialog } from '../../../components/admin';
 import { Badge } from '../../../components/ui/badge';
 import '../../../pages/admin/Admin.css';
-
-const STATUS_META = {
-    draft:    { label: 'Чернетка',     variant: 'secondary' },
-    active:   { label: 'Активна',      variant: 'success'   },
-    booked:   { label: 'Заброньовано', variant: 'default'   },
-    overdue:  { label: 'Прострочено',  variant: 'danger'    },
-    returned: { label: 'Повернуто',    variant: 'secondary' },
-    cancelled:{ label: 'Скасована',    variant: 'danger'    },
-};
-
-const STATUS_FILTER_OPTIONS = [
-    { value: 'draft',     label: 'Чернетки' },
-    { value: 'active',    label: 'Активні' },
-    { value: 'booked',    label: 'Заброньовані' },
-    { value: 'overdue',   label: 'Прострочені' },
-    { value: 'returned',  label: 'Повернуто' },
-    { value: 'cancelled', label: 'Скасовані' },
-];
+import { STATUS_META, STATUS_FILTER_OPTIONS } from '../model/rentalStatus';
 
 function fmtDate(d) {
     if (!d) return '—';
