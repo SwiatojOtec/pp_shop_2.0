@@ -1,5 +1,5 @@
 import React from 'react';
-import { buildRentalActContractRef } from '../../utils/rentalContractRef';
+import { buildRentalActContractRef, formatContractDate } from '../../utils/rentalContractRef';
 import './RentalApplicationPrint.css';
 
 const fmt = (n) => n ? Number(n).toLocaleString('uk-UA', { minimumFractionDigits: 2 }) : '—';
@@ -8,6 +8,21 @@ const fmtDate = (d) => {
     const dt = new Date(d);
     return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
 };
+
+const fmtFormalUaDate = (d) => {
+    if (!d) return '«____» _____.______';
+    const { day, month, year } = formatContractDate(d);
+    if (!month || day === '__') return '«____» _____.______';
+    return `«${day}» ${month} ${year}`;
+};
+
+function resolveMinRentDays(items = []) {
+    const days = (items || [])
+        .map((item) => Number(item?.days) || 0)
+        .filter((n) => n > 0);
+    if (!days.length) return '____';
+    return String(Math.max(...days));
+}
 
 const RentalApplicationPrint = React.forwardRef(({
     applicationNumber,
@@ -25,15 +40,18 @@ const RentalApplicationPrint = React.forwardRef(({
 }, ref) => {
     const refData = contractRef || buildRentalActContractRef(null, { applicationNumber });
     const safeDiscountAmount = Math.max(0, Number(discountAmount || 0));
+    const safeTotalRental = Number(totalRental || 0);
+    const safeTotalDeposit = Number(totalDeposit || 0);
     const safeTotalRentalAfterDiscount =
         totalRentalAfterDiscount != null
             ? Number(totalRentalAfterDiscount || 0)
-            : Math.max(Number(totalRental || 0) - safeDiscountAmount, 0);
-    const grandTotal = safeTotalRentalAfterDiscount + Number(totalDeposit || 0);
-    const discountLabel =
-        discountType === 'percent'
-            ? `Знижка (${Number(discountValue || 0).toFixed(2)}%)`
-            : 'Знижка (грн)';
+            : Math.max(safeTotalRental - safeDiscountAmount, 0);
+    const grandTotal = safeTotalRentalAfterDiscount + safeTotalDeposit;
+    const discountPctLabel = discountType === 'percent'
+        ? `${Number(discountValue || 0).toFixed(0)}%`
+        : 'грн';
+    const titleDate = fmtFormalUaDate(items?.[0]?.rentFrom);
+    const minDays = resolveMinRentDays(items);
 
     return (
         <div ref={ref} className="print-wrap">
@@ -45,7 +63,7 @@ const RentalApplicationPrint = React.forwardRef(({
                     ))}
                 </div>
                 <h2 className="print-title">
-                    Акт приймання-передачі №_____ від ____/____/2026 року.
+                    Специфікація-Акт прийому-передачі № _____ від  {titleDate} року.
                 </h2>
             </div>
 
@@ -81,6 +99,16 @@ const RentalApplicationPrint = React.forwardRef(({
                     </tr>
                 </tbody>
             </table>
+
+            <div className="print-preamble">
+                <p>
+                    Сторони склали цю Специфікацію-Акт прийому-передачі про те, що Орендодавець передає,
+                    а Орендар приймає у строкове платне користування наступне Обладнання
+                </p>
+                <p>
+                    Мінімальний строк оренди інструменту за цим Актом: <b>{minDays}</b> діб.
+                </p>
+            </div>
 
             {/* Instrument label */}
             <div className="print-instrument-header">ІНСТРУМЕНТ:</div>
@@ -164,14 +192,47 @@ const RentalApplicationPrint = React.forwardRef(({
                 </tbody>
             </table>
 
-            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', fontSize: '12px' }}>
-                {safeDiscountAmount > 0 && (
-                    <>
-                        <div><b>{discountLabel}:</b> -{fmt(safeDiscountAmount)} грн</div>
-                        <div><b>Оренда зі знижкою:</b> {fmt(safeTotalRentalAfterDiscount)} грн</div>
-                    </>
-                )}
-                <div><b>До сплати:</b> {fmt(grandTotal)} грн</div>
+            <div className="print-footer-grid">
+                <div className="print-legal-block">
+                    <p>
+                        <b>1. Підтвердження стану Обладнання та інструктажу (АКТОВА ЧАСТИНА):</b>
+                    </p>
+                    <p>
+                        1.1. Підписанням цього документа Орендар підтверджує, що він особисто оглянув Обладнання,
+                        перевірив його працездатність, комплектність та зовнішній вигляд у присутності Орендодавця.
+                        Обладнання передається у технічно справному стані. Претензій Орендар не має.
+                    </p>
+                    <p>
+                        1.2. Орендар підтверджує, що Орендодавець провів інструктаж з техніки безпеки та правил
+                        експлуатації Обладнання. Будь-які ризики випадкової загибелі або пошкодження переходять
+                        до Орендаря з моменту підписання цього документа.
+                    </p>
+                    <p>
+                        1.3. АКЦЕПТ ОФЕРТИ: Підписанням цієї Специфікації-Акта Орендар повністю та беззаперечно
+                        приймає (акцептує) усі умови Публічного договору (оферти) оренди обладнання, затвердженого
+                        Орендодавцем, та надає згоду на обробку своїх персональних даних.
+                    </p>
+                    <p>
+                        <b>2. Заключні положення:</b> Ця Специфікація-Акт складена на паперовому носії у двох
+                        ідентичних примірниках, які мають однакову юридичну силу, і є невід&apos;ємною частиною
+                        Публічного договору (оферти) оренди обладнання.
+                    </p>
+                </div>
+
+                <div className="print-money-block">
+                    <div>Загальна сума платежу за послуги оренди: <b>{fmt(safeTotalRental)} грн</b></div>
+                    {safeDiscountAmount > 0 && (
+                        <>
+                            <div>Знижка на послуги оренди ({discountPctLabel}): <b>-{fmt(safeDiscountAmount)} грн</b></div>
+                            <div>Загальна сума платежу за послуги оренди зі знижкою: <b>{fmt(safeTotalRentalAfterDiscount)} грн</b></div>
+                        </>
+                    )}
+                    <div>Загальна сума гарантійного платежу: <b>{fmt(safeTotalDeposit)} грн</b></div>
+                    <div className="print-money-total">Всього до сплати (Аванс + Застава): <b>{fmt(grandTotal)} грн</b></div>
+                    <div className="print-money-note">
+                        Ці суми Орендар сплачує на підставі виставленого рахунку до моменту фактичної видачі Обладнання
+                    </div>
+                </div>
             </div>
 
             {/* Signatures */}

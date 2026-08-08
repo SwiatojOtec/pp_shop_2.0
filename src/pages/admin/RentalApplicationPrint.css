@@ -56,6 +56,62 @@
     line-height: 1.4;
 }
 
+.print-preamble {
+    margin: 8px 0 10px;
+    font-size: 9px;
+    line-height: 1.45;
+}
+
+.print-preamble p {
+    margin: 0 0 4px;
+}
+
+.print-money-block {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-end;
+    font-size: 11px;
+}
+
+.print-footer-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+    align-items: start;
+}
+
+.print-footer-grid .print-money-block {
+    margin-top: 0;
+}
+
+.print-footer-grid .print-legal-block {
+    margin-top: 0;
+}
+
+.print-money-total {
+    font-weight: 700;
+}
+
+.print-money-note {
+    margin-top: 4px;
+    font-size: 9px;
+    text-align: right;
+    max-width: 420px;
+}
+
+.print-legal-block {
+    margin-top: 10px;
+    font-size: 8.5px;
+    line-height: 1.4;
+}
+
+.print-legal-block p {
+    margin: 0 0 5px;
+}
+
 /* Instrument header */
 .print-instrument-header {
     text-align: center;
