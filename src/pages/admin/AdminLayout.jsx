@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Package, ShoppingCart, Home, LogOut, FileText,
-    Wrench, Building2, Warehouse, Settings, Users, ClipboardList,
+    Wrench, Building2, Warehouse, Settings, Users,
     ContactRound, ChevronRight, Network,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +17,6 @@ import './Admin.css';
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
 const RENT_SECTION = [
-    { path: '/admin/rental-applications', icon: <ClipboardList size={18} />, label: 'Заявки оренди' },
     { path: '/admin/clients',             icon: <ContactRound size={18} />,  label: 'Клієнти' },
     { path: '/admin/rent',                icon: <Wrench size={18} />,        label: 'Каталог інструментів' },
     { path: '/admin/warehouses',          icon: <Warehouse size={18} />,     label: 'Склад' },
@@ -128,7 +127,7 @@ export default function AdminLayout({ children }) {
                     {showOrders && (
                         <Link to={ORDERS_PATH} className={cls(ORDERS_PATH)}>
                             <ShoppingCart size={18} />
-                            <span>Замовлення</span>
+                            <span>Замовлення та оренда</span>
                         </Link>
                     )}
 
@@ -219,14 +218,14 @@ export default function AdminLayout({ children }) {
 function getPageTitle(pathname) {
     const map = {
         '/admin':                        'Дашборд',
-        '/admin/rental-applications':    'Заявки оренди',
+        '/admin/orders':                 'Замовлення та оренда',
+        '/admin/rental-applications':    'Замовлення та оренда',
         '/admin/clients':                'Клієнти',
         '/admin/rent':                   'Каталог інструментів',
         '/admin/warehouses':             'Склад',
         '/admin/warehouses/positions':   'Склад · Позиції',
         '/admin/warehouses/events':      'Склад · Журнал подій',
         '/admin/products':               'Товари',
-        '/admin/orders':                 'Замовлення',
         '/admin/blog':                   'Блог',
         '/admin/pan-pivdenbud':          'ПАН ПІВДЕНЬБУД',
         '/admin/users':                  'Користувачі',
@@ -235,7 +234,7 @@ function getPageTitle(pathname) {
         '/admin/profile':                'Мій кабінет',
     };
     if (map[pathname]) return map[pathname];
-    if (pathname.startsWith('/admin/orders/')) return 'Замовлення';
+    if (pathname.startsWith('/admin/orders/')) return 'Замовлення та оренда';
     const entry = Object.entries(map).find(([k]) => k !== '/admin' && pathname.startsWith(k + '/'));
     return entry ? entry[1] : '';
 }

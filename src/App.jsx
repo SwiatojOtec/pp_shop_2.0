@@ -19,12 +19,11 @@ import AdminProducts from './pages/admin/AdminProducts';
 import ProductEdit from './pages/admin/ProductEdit';
 import AdminBlog from './pages/admin/AdminBlog';
 import AdminBlogEdit from './pages/admin/AdminBlogEdit';
-import AdminOrders from './features/orders-rental/pages/AdminOrders';
 import AdminOrderDetails from './features/orders-rental/pages/AdminOrderDetails';
+import OrdersRentalList from './features/orders-rental/pages/OrdersRentalList';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminRent from './pages/admin/AdminRent';
 import AdminRentEdit from './pages/admin/AdminRentEdit';
-import AdminRentalApplications from './features/orders-rental/pages/AdminRentalApplications';
 import AdminRentalApplicationForm from './features/orders-rental/pages/AdminRentalApplicationForm';
 import PanPivdenbud from './pages/admin/PanPivdenbud';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -153,13 +152,7 @@ function AppContent() {
           />
           <Route
             path="/admin/rental-applications"
-            element={
-              <RequireAdmin>
-                <AdminLayout>
-                  <AdminRentalApplications />
-                </AdminLayout>
-              </RequireAdmin>
-            }
+            element={<Navigate to="/admin/orders?tab=rental" replace />}
           />
           <Route
             path="/admin/rental-applications/new"
@@ -196,7 +189,7 @@ function AppContent() {
             element={
               <RequireAdmin>
                 <AdminLayout>
-                  <AdminOrders />
+                  <OrdersRentalList />
                 </AdminLayout>
               </RequireAdmin>
             }

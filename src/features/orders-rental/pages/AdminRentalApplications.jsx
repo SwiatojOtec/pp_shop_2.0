@@ -10,7 +10,7 @@ import { fmtDate as fmtDateShared } from '../model/rentalDocFormat';
 
 const fmtDate = (d) => fmtDateShared(d, '—');
 
-export default function AdminRentalApplications() {
+export default function AdminRentalApplications({ hideHeader = false }) {
     const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading]           = useState(true);
@@ -128,15 +128,17 @@ export default function AdminRentalApplications() {
 
     return (
         <div>
-            <AdminPageHeader
-                title="Заявки оренди"
-                subtitle="Договори та заявки на оренду інструменту"
-                actions={
-                    <Link to="/admin/rental-applications/new" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-                        <Plus size={16} /> Створити заявку
-                    </Link>
-                }
-            />
+            {!hideHeader && (
+                <AdminPageHeader
+                    title="Заявки оренди"
+                    subtitle="Договори та заявки на оренду інструменту"
+                    actions={
+                        <Link to="/admin/rental-applications/new" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+                            <Plus size={16} /> Створити заявку
+                        </Link>
+                    }
+                />
+            )}
 
             <AdminFilters
                 search={search}

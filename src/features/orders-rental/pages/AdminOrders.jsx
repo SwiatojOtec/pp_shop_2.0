@@ -44,7 +44,7 @@ function buildComposerFromClient(client) {
     };
 }
 
-export default function AdminOrders() {
+export default function AdminOrders({ hideHeader = false }) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -294,15 +294,24 @@ export default function AdminOrders() {
 
     return (
         <div>
-            <AdminPageHeader
-                title="Замовлення"
-                subtitle={`${filteredOrders.length} з ${orders.length}`}
-                actions={
+            {!hideHeader && (
+                <AdminPageHeader
+                    title="Замовлення"
+                    subtitle={`${filteredOrders.length} з ${orders.length}`}
+                    actions={
+                        <Button type="button" variant="secondary" onClick={openComposerBlank}>
+                            <ShoppingCart size={16} /> Нове замовлення
+                        </Button>
+                    }
+                />
+            )}
+            {hideHeader && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                     <Button type="button" variant="secondary" onClick={openComposerBlank}>
                         <ShoppingCart size={16} /> Нове замовлення
                     </Button>
-                }
-            />
+                </div>
+            )}
 
             {composer && (
                 <div className="order-composer-card admin-form">
