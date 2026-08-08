@@ -1,0 +1,295 @@
+import { useState } from 'react';
+import { ordersApi, rentalApplicationsApi } from '../../../services/api';
+import { resolveSellerId } from '../../../constants/sellers';
+import { formatOrderDate } from '../amounts/orderHelpers';
+import { generateRentalPdf } from '../documents/generateRentalPdf';
+import { buildRentalPdfPayload, blobToBase64 } from '../documents/rentalPdfPayload';
+
+export function useOrderDocuments({
+    order,
+    draft,
+    setOrder,
+    setDraft,
+    setDocuments,
+    setLinkedRentalApp,
+    setLinkedClient,
+    persistDraft,
+}) {
+    const [converting, setConverting] = useState(false);
+    const [returnActLoading, setReturnActLoading] = useState(false);
+    const [invoiceLoading, setInvoiceLoading] = useState(false);
+    const [depositInvoiceLoading, setDepositInvoiceLoading] = useState(false);
+    const [deletingDocId, setDeletingDocId] = useState(null);
+    const [contractLoading, setContractLoading] = useState(false);
+    const [protocolLoading, setProtocolLoading] = useState(false);
+    const [contractModalOpen, setContractModalOpen] = useState(false);
+    const [contractModalTarget, setContractModalTarget] = useState('contract');
+    const [contractMissingFields, setContractMissingFields] = useState([]);
+    const [contractForm, setContractForm] = useState({});
+    const [contractSaving, setContractSaving] = useState(false);
+
+    function formatDocDateTime(value) {
+        if (!value) return '';
+        const dt = new Date(value);
+        const date = formatOrderDate(value);
+        const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        return `${date} · ${time}`;
+    }
+
+    async function handleDownloadInvoice() {
+        if (!order || !draft) return;
+        setInvoiceLoading(true);
+        try {
+            const saved = await persistDraft();
+            const doc = await ordersApi.generateInvoiceDocument(saved.id, {
+                sellerId: resolveSellerId(saved.sellerId),
+            });
+            setDocuments((prev) => [doc, ...prev.filter((d) => d.id !== doc.id)]);
+            await ordersApi.downloadDocument(saved.id, doc.id, doc.fileName);
+        } catch (err) {
+            alert(err.message || 'Не вдалося сформувати рахунок');
+        } finally {
+            setInvoiceLoading(false);
+        }
+    }
+
+    async function handleDownloadDepositInvoice() {
+        if (!order || !draft) return;
+        setDepositInvoiceLoading(true);
+        try {
+            const saved = await persistDraft();
+            const { application, document } = await ordersApi.generateDepositInvoiceDocument(saved.id, {
+                sellerId: resolveSellerId(saved.sellerId),
+            });
+
+            setOrder((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
+            setDraft((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
+            setLinkedRentalApp(application);
+            setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
+            await ordersApi.downloadDocument(saved.id, document.id, document.fileName);
+        } catch (err) {
+            alert(err.message || 'Не вдалося сформувати рахунок на заставу');
+        } finally {
+            setDepositInvoiceLoading(false);
+        }
+    }
+
+    async function handleDownloadStoredDocument(doc) {
+        if (!order || !doc?.id) return;
+        try {
+            await ordersApi.downloadDocument(order.id, doc.id, doc.fileName);
+        } catch (err) {
+            alert(err.message || 'Не вдалося завантажити файл');
+        }
+    }
+
+    async function handleDeleteDocument(doc) {
+        if (!order || !doc?.id) return;
+        if (!window.confirm('Видалити цей файл?')) return;
+
+        setDeletingDocId(doc.id);
+        try {
+            await ordersApi.removeDocument(order.id, doc.id);
+            setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+        } catch (err) {
+            alert(err.message || 'Не вдалося видалити файл');
+        } finally {
+            setDeletingDocId(null);
+        }
+    }
+
+    async function loadLinkedRentalApplication() {
+        let applicationId = order.rentalApplicationId;
+        if (!applicationId) {
+            const { application: createdApp } = await ordersApi.createOrOpenRentalApplication(order.id);
+            applicationId = createdApp.id;
+        }
+
+        const application = await rentalApplicationsApi.get(applicationId);
+
+        setOrder((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
+        setDraft((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
+        setLinkedRentalApp(application);
+
+        return application;
+    }
+
+    async function generateRentalPdfDocument({ variant, saveApi, titlePrefix }) {
+        const application = await loadLinkedRentalApplication();
+        const pdfPayload = buildRentalPdfPayload(application, order);
+        const { blob, filename } = await generateRentalPdf(pdfPayload, {
+            download: false,
+            returnBlob: true,
+            ...(variant ? { variant } : {}),
+        });
+
+        const contentBase64 = await blobToBase64(blob);
+        const { document } = await saveApi(order.id, {
+            contentBase64,
+            fileName: filename,
+            title: `${titlePrefix} · ${application.applicationNumber || application.id}`,
+        });
+
+        setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
+        await ordersApi.downloadDocument(order.id, document.id, document.fileName);
+    }
+
+    async function handleGenerateRentalDocument() {
+        if (!order || converting || returnActLoading) return;
+        setConverting(true);
+        try {
+            await generateRentalPdfDocument({
+                saveApi: ordersApi.saveRentalApplicationDocument,
+                titlePrefix: 'Заявка',
+            });
+        } catch (err) {
+            alert(`Помилка: ${err.message}`);
+        } finally {
+            setConverting(false);
+        }
+    }
+
+    async function handleGenerateReturnActDocument() {
+        if (!order || converting || returnActLoading) return;
+        setReturnActLoading(true);
+        try {
+            await generateRentalPdfDocument({
+                variant: 'return_inspection',
+                saveApi: ordersApi.saveRentalReturnActDocument,
+                titlePrefix: 'Акт повернення',
+            });
+        } catch (err) {
+            alert(`Помилка: ${err.message}`);
+        } finally {
+            setReturnActLoading(false);
+        }
+    }
+
+    function openContractModal(missing, target = 'contract') {
+        const fields = Array.isArray(missing) ? missing : [];
+        setContractModalTarget(target);
+        setContractMissingFields(fields);
+        const initial = {};
+        fields.forEach((field) => {
+            initial[field.key] = field.value || '';
+        });
+        setContractForm(initial);
+        setContractModalOpen(true);
+    }
+
+    async function finishRentalDocumentGeneration(target, clientData = {}) {
+        const sellerId = resolveSellerId(clientData.sellerId || draft?.sellerId);
+        const generateApi = target === 'protocol'
+            ? ordersApi.generateRentalProtocolDocument
+            : ordersApi.generateRentalContractDocument;
+
+        const { application, client, document } = await generateApi(order.id, {
+            sellerId,
+            clientData,
+        });
+
+        setLinkedClient(client);
+        setOrder((prev) => (prev ? {
+            ...prev,
+            clientId: client.id,
+            rentalApplicationId: application.id,
+        } : prev));
+        setDraft((prev) => (prev ? {
+            ...prev,
+            clientId: client.id,
+            rentalApplicationId: application.id,
+        } : prev));
+        setLinkedRentalApp(application);
+        setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
+        await ordersApi.downloadDocument(order.id, document.id, document.fileName);
+        setContractModalOpen(false);
+    }
+
+    async function handleCreateRentalProtocol() {
+        if (!order || protocolLoading || contractSaving) return;
+        setProtocolLoading(true);
+        try {
+            const sellerId = resolveSellerId(draft?.sellerId);
+            const check = await ordersApi.checkRentalProtocol(order.id, { sellerId });
+            if (check.ready) {
+                await finishRentalDocumentGeneration('protocol');
+            } else {
+                openContractModal(check.missing, 'protocol');
+            }
+        } catch (err) {
+            if (err.missing?.length) {
+                openContractModal(err.missing, 'protocol');
+            } else {
+                alert(err.message || 'Не вдалося перевірити дані для протоколу');
+            }
+        } finally {
+            setProtocolLoading(false);
+        }
+    }
+
+    async function handleCreateRentalContract() {
+        if (!order || contractLoading || contractSaving) return;
+        setContractLoading(true);
+        try {
+            const sellerId = resolveSellerId(draft?.sellerId);
+            const check = await ordersApi.checkRentalContract(order.id, { sellerId });
+            if (check.ready) {
+                await finishRentalDocumentGeneration('contract');
+            } else {
+                openContractModal(check.missing, 'contract');
+            }
+        } catch (err) {
+            if (err.missing?.length) {
+                openContractModal(err.missing, 'contract');
+            } else {
+                alert(err.message || 'Не вдалося перевірити дані для договору');
+            }
+        } finally {
+            setContractLoading(false);
+        }
+    }
+
+    async function handleSubmitContractForm(e) {
+        e.preventDefault();
+        if (!order || contractSaving) return;
+        setContractSaving(true);
+        try {
+            await finishRentalDocumentGeneration(contractModalTarget, contractForm);
+        } catch (err) {
+            if (err.missing?.length) {
+                openContractModal(err.missing, contractModalTarget);
+            } else {
+                alert(err.message || 'Не вдалося сформувати договір');
+            }
+        } finally {
+            setContractSaving(false);
+        }
+    }
+
+    return {
+        converting,
+        returnActLoading,
+        invoiceLoading,
+        depositInvoiceLoading,
+        deletingDocId,
+        contractLoading,
+        protocolLoading,
+        contractModalOpen,
+        setContractModalOpen,
+        contractModalTarget,
+        contractMissingFields,
+        contractForm,
+        setContractForm,
+        contractSaving,
+        formatDocDateTime,
+        handleDownloadInvoice,
+        handleDownloadDepositInvoice,
+        handleDownloadStoredDocument,
+        handleDeleteDocument,
+        handleGenerateRentalDocument,
+        handleGenerateReturnActDocument,
+        handleCreateRentalProtocol,
+        handleCreateRentalContract,
+        handleSubmitContractForm,
+    };
+}
