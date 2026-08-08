@@ -1,24 +1,18 @@
 import jsPDF from 'jspdf';
-import { buildRentalActContractRef, formatContractDate } from './rentalContractRef';
+import { buildRentalActContractRef } from './rentalContractRef';
 import autoTable from 'jspdf-autotable';
+import {
+    fmtPdfMoney as fmt,
+    fmtDate,
+    fmtFormalUaDate,
+    resolveMinRentDays,
+    discountPctLabel as buildDiscountPctLabel,
+} from '../model/rentalDocFormat';
 
 const PAGE_BOTTOM = 205;
 const PAGE_RIGHT = 292;
 
-const fmt = (n) => (Number.isFinite(Number(n)) ? Number(n).toFixed(2) : '—');
 const fmtMoney = (n, zeroAmounts) => (zeroAmounts ? '0.00' : fmt(n));
-const fmtDate = (d) => {
-    if (!d) return '___.____.______';
-    const dt = new Date(d);
-    return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
-};
-
-const fmtFormalUaDate = (d) => {
-    if (!d) return '«____» _____.______';
-    const { day, month, year } = formatContractDate(d);
-    if (!month || day === '__') return '«____» _____.______';
-    return `«${day}» ${month} ${year}`;
-};
 
 const loadFontAsBase64 = async (url) => {
     const res = await fetch(url);
@@ -53,14 +47,6 @@ export const RENTAL_PDF_VARIANTS = {
         isHandover: false,
     },
 };
-
-function resolveMinRentDays(items = []) {
-    const days = (items || [])
-        .map((item) => Number(item?.days) || 0)
-        .filter((n) => n > 0);
-    if (!days.length) return '____';
-    return String(Math.max(...days));
-}
 
 function countKitRows(items = []) {
     return (items || []).reduce(
@@ -320,9 +306,7 @@ export const generateRentalPdf = async ({
     let cursorY = doc.lastAutoTable.finalY + (compact ? 2.5 : 3.5);
 
     if (isHandover) {
-        const discountPctLabel = discountType === 'percent'
-            ? `${Number(discountValue || 0).toFixed(0)}%`
-            : 'грн';
+        const discountPctLabel = buildDiscountPctLabel(discountType, discountValue);
 
         const moneyLines = [
             { label: 'Загальна сума платежу за послуги оренди:', value: `${fmt(safeTotalRental)} грн`, bold: false },

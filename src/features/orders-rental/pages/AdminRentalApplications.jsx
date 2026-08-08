@@ -6,12 +6,9 @@ import { AdminPageHeader, AdminFilters, AdminTable, ConfirmDialog } from '../../
 import { Badge } from '../../../components/ui/badge';
 import '../../../pages/admin/Admin.css';
 import { STATUS_META, STATUS_FILTER_OPTIONS } from '../model/rentalStatus';
+import { fmtDate as fmtDateShared } from '../model/rentalDocFormat';
 
-function fmtDate(d) {
-    if (!d) return '—';
-    const dt = new Date(d);
-    return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
-}
+const fmtDate = (d) => fmtDateShared(d, '—');
 
 export default function AdminRentalApplications() {
     const navigate = useNavigate();

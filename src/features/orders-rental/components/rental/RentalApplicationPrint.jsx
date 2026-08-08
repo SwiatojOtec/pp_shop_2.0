@@ -1,28 +1,15 @@
 import React from 'react';
-import { buildRentalActContractRef, formatContractDate } from '../../documents/rentalContractRef';
+import { buildRentalActContractRef } from '../../documents/rentalContractRef';
+import {
+    fmtPrintMoney as fmt,
+    fmtDate as fmtDateShared,
+    fmtFormalUaDate,
+    resolveMinRentDays,
+    discountPctLabel as buildDiscountPctLabel,
+} from '../../model/rentalDocFormat';
 import '../../styles/RentalApplicationPrint.css';
 
-const fmt = (n) => n ? Number(n).toLocaleString('uk-UA', { minimumFractionDigits: 2 }) : '—';
-const fmtDate = (d) => {
-    if (!d) return '___/___/______';
-    const dt = new Date(d);
-    return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
-};
-
-const fmtFormalUaDate = (d) => {
-    if (!d) return '«____» _____.______';
-    const { day, month, year } = formatContractDate(d);
-    if (!month || day === '__') return '«____» _____.______';
-    return `«${day}» ${month} ${year}`;
-};
-
-function resolveMinRentDays(items = []) {
-    const days = (items || [])
-        .map((item) => Number(item?.days) || 0)
-        .filter((n) => n > 0);
-    if (!days.length) return '____';
-    return String(Math.max(...days));
-}
+const fmtDate = (d) => fmtDateShared(d, '___/___/______');
 
 const RentalApplicationPrint = React.forwardRef(({
     applicationNumber,
@@ -47,9 +34,7 @@ const RentalApplicationPrint = React.forwardRef(({
             ? Number(totalRentalAfterDiscount || 0)
             : Math.max(safeTotalRental - safeDiscountAmount, 0);
     const grandTotal = safeTotalRentalAfterDiscount + safeTotalDeposit;
-    const discountPctLabel = discountType === 'percent'
-        ? `${Number(discountValue || 0).toFixed(0)}%`
-        : 'грн';
+    const discountPctLabel = buildDiscountPctLabel(discountType, discountValue);
     const titleDate = fmtFormalUaDate(items?.[0]?.rentFrom);
     const minDays = resolveMinRentDays(items);
 
