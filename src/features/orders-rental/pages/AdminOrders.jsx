@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ordersApi, productsApi, clientsApi } from '../../services/api';
+import { ordersApi, productsApi, clientsApi } from '../../../services/api';
 import { Search, Filter, ShoppingCart, ChevronRight } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AdminPageHeader } from '../../components/admin';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
+import { AdminPageHeader } from '../../../components/admin';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
 import {
     ORDER_STATUS_VARIANT,
     getOrderStatusLabel,
@@ -12,9 +12,9 @@ import {
     calcOrderTotal,
     orderHasShopItems,
     orderHasRentItems,
-} from '../../utils/orderHelpers';
-import { normalizeUaPhone, parsePhones, isValidUaPhone } from '../../utils/phoneUtils';
-import './Admin.css';
+} from '../amounts/orderHelpers';
+import { normalizeUaPhone, parsePhones, isValidUaPhone } from '../../../utils/phoneUtils';
+import '../../../pages/admin/Admin.css';
 
 const TYPE_FILTER_OPTIONS = [
     { value: 'all',  label: 'Всі замовлення' },

@@ -2,22 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { ArrowLeft, Plus, Trash2, Save, Printer, Download, Search, X, Sparkles } from 'lucide-react';
-import { generateRentalPdf } from '../../utils/generateRentalPdf';
-import { buildRentalPdfPayload, RENTAL_LESSOR } from '../../utils/rentalPdfPayload';
-import { buildRentalActContractRef } from '../../utils/rentalContractRef';
-import { clientsApi, rentalApplicationsApi, productsApi } from '../../services/api';
-import RentalApplicationPrint from './RentalApplicationPrint';
-import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../constants/rentalDefaults';
-import { normalizeUaPhone } from '../../utils/phoneUtils';
+import { generateRentalPdf } from '../documents/generateRentalPdf';
+import { buildRentalPdfPayload, RENTAL_LESSOR } from '../documents/rentalPdfPayload';
+import { buildRentalActContractRef } from '../documents/rentalContractRef';
+import { clientsApi, rentalApplicationsApi, productsApi } from '../../../services/api';
+import RentalApplicationPrint from '../components/rental/RentalApplicationPrint';
+import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../../constants/rentalDefaults';
+import { normalizeUaPhone } from '../../../utils/phoneUtils';
 import {
     TECHNICAL_CONDITION_OPTIONS,
     normalizeTechnicalCondition,
     isCanonicalTechnicalCondition,
-} from '../../constants/technicalConditions';
-import './Admin.css';
-import './RentalApplicationForm.css';
-import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers, formatRentCatalogPriceCaption } from '../../utils/rentPricing';
-import { parseDiscountPercent } from '../../utils/orderAmounts';
+} from '../../../constants/technicalConditions';
+import '../../../pages/admin/Admin.css';
+import '../styles/RentalApplicationForm.css';
+import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers, formatRentCatalogPriceCaption } from '../../../utils/rentPricing';
+import { parseDiscountPercent } from '../amounts/orderAmounts';
 
 const LESSOR = RENTAL_LESSOR;
 

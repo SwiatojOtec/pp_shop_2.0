@@ -38,3 +38,8 @@ server/backups/
 server/uploads/order-documents/*
 !server/uploads/order-documents/.gitkeep
 
+# Local scratch / one-off patch scripts (templates live in server/templates/)
+scripts/_*
+scripts/patch-*
+scripts/inspect-contract.cjs
+

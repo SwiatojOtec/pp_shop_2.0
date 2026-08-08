@@ -4,11 +4,11 @@ import {
     ArrowLeft, Save, Trash2, ClipboardList, Search, X,
     User, Truck, Package, UserCheck, UserPlus, Loader2, FileText, Files, Download, Undo2, ScrollText,
 } from 'lucide-react';
-import { ordersApi, productsApi, rentalApplicationsApi, clientsApi } from '../../services/api';
-import { ConfirmDialog } from '../../components/admin';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { DEFAULT_SELLER_ID, SELLER_OPTIONS, FOP_SELLER_OPTIONS, resolveSellerId } from '../../constants/sellers';
+import { ordersApi, productsApi, rentalApplicationsApi, clientsApi } from '../../../services/api';
+import { ConfirmDialog } from '../../../components/admin';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { DEFAULT_SELLER_ID, SELLER_OPTIONS, FOP_SELLER_OPTIONS, resolveSellerId } from '../../../constants/sellers';
 import {
     ORDER_STATUS_VARIANT,
     DELIVERY_LABELS,
@@ -17,19 +17,19 @@ import {
     formatOrderNumberDisplay,
     formatOrderDate,
     orderHasRentItems,
-} from '../../utils/orderHelpers';
+} from '../amounts/orderHelpers';
 import {
     calcOrderAmounts,
     calcLineDisplayAmounts,
     withOrderTotal,
     parseDiscountPercent,
-} from '../../utils/orderAmounts';
-import { coerceDbRentPriceTiers } from '../../utils/rentPricing';
-import { generateRentalPdf } from '../../utils/generateRentalPdf';
-import { buildRentalPdfPayload, blobToBase64 } from '../../utils/rentalPdfPayload';
-import { isValidUaPhone, normalizeUaPhone } from '../../utils/phoneUtils';
-import './Admin.css';
-import './AdminOrderDetails.css';
+} from '../amounts/orderAmounts';
+import { coerceDbRentPriceTiers } from '../../../utils/rentPricing';
+import { generateRentalPdf } from '../documents/generateRentalPdf';
+import { buildRentalPdfPayload, blobToBase64 } from '../documents/rentalPdfPayload';
+import { isValidUaPhone, normalizeUaPhone } from '../../../utils/phoneUtils';
+import '../../../pages/admin/Admin.css';
+import '../styles/AdminOrderDetails.css';
 
 function buildOrderItemFromProduct(product) {
     const item = {

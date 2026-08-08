@@ -1,6 +1,6 @@
 import React from 'react';
-import { buildRentalActContractRef, formatContractDate } from '../../utils/rentalContractRef';
-import './RentalApplicationPrint.css';
+import { buildRentalActContractRef, formatContractDate } from '../../documents/rentalContractRef';
+import '../../styles/RentalApplicationPrint.css';
 
 const fmt = (n) => n ? Number(n).toLocaleString('uk-UA', { minimumFractionDigits: 2 }) : '—';
 const fmtDate = (d) => {

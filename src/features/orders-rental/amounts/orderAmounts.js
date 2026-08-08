@@ -1,5 +1,5 @@
-import { resolveSellerId } from '../constants/sellers';
-import { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } from './rentPricing';
+import { resolveSellerId } from '../../../constants/sellers';
+import { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } from '../../../utils/rentPricing';
 
 /** Стандартна ставка ПДВ в Україні, % */
 export const UA_VAT_PERCENT = 20;
