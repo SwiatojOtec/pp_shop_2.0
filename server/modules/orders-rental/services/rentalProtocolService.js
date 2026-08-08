@@ -1,15 +1,15 @@
 const path = require('path');
-const { getSeller } = require('../constants/sellers');
-const { numberToWordsUA } = require('../utils/numberToWordsUA');
-const { generatePdfFromTemplate } = require('../utils/rentalDocxPdf');
+const { getSeller } = require('../../../constants/sellers');
+const { numberToWordsUA } = require('../../../utils/numberToWordsUA');
+const { generatePdfFromTemplate } = require('../../../utils/rentalDocxPdf');
 const {
     checkRentalContractReadiness,
     buildContractNumber,
     buildClientPatchFromForm,
     resolveLesseeData,
-} = require('../services/rentalContractService');
+} = require('./rentalContractService');
 
-const TEMPLATE_PATH = path.join(__dirname, '../templates/rental-protocol-instrument.docx');
+const TEMPLATE_PATH = path.join(__dirname, '../../../templates/rental-protocol-instrument.docx');
 
 const UK_MONTHS_GENITIVE = [
     'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',

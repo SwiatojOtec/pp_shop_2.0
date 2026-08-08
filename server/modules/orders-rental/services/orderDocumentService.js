@@ -1,10 +1,10 @@
 const path = require('path');
 const fs = require('fs').promises;
 const { Op } = require('sequelize');
-const OrderDocument = require('../models/OrderDocument');
-const { getSeller } = require('../constants/sellers');
+const OrderDocument = require('../../../models/OrderDocument');
+const { getSeller } = require('../../../constants/sellers');
 
-const UPLOAD_ROOT = path.join(__dirname, '../uploads/order-documents');
+const UPLOAD_ROOT = path.join(__dirname, '../../../uploads/order-documents');
 
 async function ensureDir(dir) {
     await fs.mkdir(dir, { recursive: true });

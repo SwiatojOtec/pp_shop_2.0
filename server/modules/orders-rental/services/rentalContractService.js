@@ -1,9 +1,9 @@
 const path = require('path');
-const { getSeller, resolveSellerId } = require('../constants/sellers');
-const { normalizeUaPhone } = require('../utils/phoneUtils');
-const { generatePdfFromTemplate } = require('../utils/rentalDocxPdf');
+const { getSeller, resolveSellerId } = require('../../../constants/sellers');
+const { normalizeUaPhone } = require('../../../utils/phoneUtils');
+const { generatePdfFromTemplate } = require('../../../utils/rentalDocxPdf');
 
-const TEMPLATE_PATH = path.join(__dirname, '../templates/rental-contract-fop-individual.docx');
+const TEMPLATE_PATH = path.join(__dirname, '../../../templates/rental-contract-fop-individual.docx');
 
 const UK_MONTHS_GENITIVE = [
     'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',

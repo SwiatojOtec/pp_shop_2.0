@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { generateInvoice } = require('../services/invoiceService');
+const { generateInvoice } = require('../modules/orders-rental/services/invoiceService');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const { Op } = require('sequelize');

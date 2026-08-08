@@ -1,10 +1,10 @@
 const PDFDocument = require('pdfkit-table');
 const fs = require('fs');
 const path = require('path');
-const Product = require('../models/Product');
-const RentalApplication = require('../models/RentalApplication');
-const { numberToWordsUA } = require('../utils/numberToWordsUA');
-const { getSeller, formatSupplierBlock } = require('../constants/sellers');
+const Product = require('../../../models/Product');
+const RentalApplication = require('../../../models/RentalApplication');
+const { numberToWordsUA } = require('../../../utils/numberToWordsUA');
+const { getSeller, formatSupplierBlock } = require('../../../constants/sellers');
 const {
     calcOrderAmounts,
     calcDepositInvoiceAmounts,
@@ -13,7 +13,7 @@ const {
     sellerAppliesVat,
     roundMoney,
     parseDiscountPercent,
-} = require('../utils/orderAmounts');
+} = require('../../../utils/orderAmounts');
 
 const RENT_INVOICE_NAME_PREFIX = 'Надання в оренду будiвельних машин i устатковання. ';
 const DEPOSIT_INVOICE_NAME_PREFIX = 'Застава за оренду обладнання. ';
@@ -69,8 +69,8 @@ function renderInvoicePdf({
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-            const fontPath = path.join(__dirname, '../fonts/Roboto-Regular.ttf');
-            const fontBoldPath = path.join(__dirname, '../fonts/Roboto-Bold.ttf');
+            const fontPath = path.join(__dirname, '../../../fonts/Roboto-Regular.ttf');
+            const fontBoldPath = path.join(__dirname, '../../../fonts/Roboto-Bold.ttf');
 
             if (fs.existsSync(fontPath)) {
                 doc.font(fontPath);

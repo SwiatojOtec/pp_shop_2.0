@@ -1,13 +1,13 @@
 const { Op } = require('sequelize');
-const sequelize = require('../config/db');
-const Order = require('../models/Order');
-const Client = require('../models/Client');
-const Product = require('../models/Product');
-const RentalApplication = require('../models/RentalApplication');
-const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../constants/rentalDefaults');
-const { recalculateProductQuantity } = require('./inventoryService');
-const { parseDiscountPercent } = require('../utils/orderAmounts');
-const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../utils/rentPricing');
+const sequelize = require('../../../config/db');
+const Order = require('../../../models/Order');
+const Client = require('../../../models/Client');
+const Product = require('../../../models/Product');
+const RentalApplication = require('../../../models/RentalApplication');
+const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
+const { recalculateProductQuantity } = require('../../../services/inventoryService');
+const { parseDiscountPercent } = require('../../../utils/orderAmounts');
+const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 
 async function generateAppNumber() {
     const year = new Date().getFullYear();

@@ -8,7 +8,7 @@ require('./utils/telegram');
 // Ініціалізація окремого бота для оренди (обмежені права)
 require('./utils/telegramRent');
 const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
+const orderRoutes = require('./modules/orders-rental/routes/orderRoutes');
 const currencyRoutes = require('./routes/currencyRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const brandRoutes = require('./routes/brandRoutes');
@@ -17,7 +17,7 @@ const contactRoutes = require('./routes/contactRoutes');
 const rentCategoryRoutes = require('./routes/rentCategoryRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-const rentalApplicationRoutes = require('./routes/rentalApplicationRoutes');
+const rentalApplicationRoutes = require('./modules/orders-rental/routes/rentalApplicationRoutes');
 const timesheetRoutes = require('./routes/timesheetRoutes');
 const subdivisionRoutes = require('./routes/subdivisionRoutes');
 const clientRoutes = require('./routes/clientRoutes');
