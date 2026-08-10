@@ -15,6 +15,7 @@ const {
     deleteOrderDocument,
     getNextDailyDocumentSequence,
     formatDailyDocumentNumber,
+    reserveRentalActNumber,
 } = require('../services/orderDocumentService');
 const { createOrGetRentalApplicationFromOrder } = require('../services/orderRentalService');
 const {
@@ -442,6 +443,30 @@ async function deleteDocument(req, res) {
     }
 }
 
+async function getNextRentalActNumber(req, res) {
+    try {
+        const orderId = parseInt(req.params.id, 10);
+        if (!Number.isFinite(orderId)) {
+            return res.status(400).json({ message: 'Некоректний id замовлення' });
+        }
+
+        const order = await Order.findByPk(orderId);
+        if (!order) return res.status(404).json({ message: 'Замовлення не знайдено' });
+
+        const type = String(req.body?.type || req.query?.type || '').trim();
+        const allowedTypes = new Set(['rental_application', 'rental_return_act']);
+        if (!allowedTypes.has(type)) {
+            return res.status(400).json({ message: 'Некоректний тип документа' });
+        }
+
+        const { actNumber, actDate } = await reserveRentalActNumber(new Date());
+
+        res.json({ actNumber, actDate: actDate.toISOString() });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+}
+
 async function uploadRentalApplicationDocument(req, res) {
     try {
         const orderId = parseInt(req.params.id, 10);
@@ -592,6 +617,7 @@ module.exports = {
     createRentalProtocolDocument,
     getDocumentFile,
     deleteDocument,
+    getNextRentalActNumber,
     uploadRentalApplicationDocument,
     uploadRentalReturnActDocument,
     createRentalApplicationFromOrder,

@@ -59,6 +59,43 @@ async function getNextDailyDocumentSequence({ date = new Date(), types = [] } = 
     return count + 1;
 }
 
+function buildDayKey(date = new Date()) {
+    const dt = date instanceof Date ? date : new Date(date);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Atomically reserves the next daily number for rental acts (handover + return).
+ * Shared across all orders — 100826/1, then 100826/2, etc.
+ */
+async function reserveRentalActNumber(date = new Date()) {
+    const dt = date instanceof Date ? date : new Date(date);
+    const dayKey = buildDayKey(dt);
+    const scope = 'rental_act';
+    const sequelize = OrderDocument.sequelize;
+
+    const sequence = await sequelize.transaction(async (transaction) => {
+        const [rows] = await sequelize.query(
+            `INSERT INTO "DocumentDailyCounters" (scope, day_key, last_sequence)
+             VALUES (:scope, :dayKey, 1)
+             ON CONFLICT (scope, day_key)
+             DO UPDATE SET last_sequence = "DocumentDailyCounters".last_sequence + 1
+             RETURNING last_sequence`,
+            {
+                replacements: { scope, dayKey },
+                transaction,
+            }
+        );
+        return Number(rows?.[0]?.last_sequence) || 1;
+    });
+
+    return {
+        sequence,
+        actNumber: formatDailyDocumentNumber(dt, sequence),
+        actDate: dt,
+    };
+}
+
 function buildDepositInvoiceFileName(orderNumber) {
     const safe = String(orderNumber || 'order').replace(/\//g, '_');
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -274,4 +311,5 @@ module.exports = {
     deleteOrderDocuments,
     getNextDailyDocumentSequence,
     formatDailyDocumentNumber,
+    reserveRentalActNumber,
 };

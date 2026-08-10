@@ -29,10 +29,12 @@ export const emptyItem = () => ({
     rentPriceTiers: null,
 });
 
+/** Inclusive calendar days: 11.08 → 15.08 = 5 діб (both ends count). */
 export const calcDays = (from, to) => {
     if (!from || !to) return 0;
-    const d = Math.ceil((new Date(to) - new Date(from)) / 86400000);
-    return d > 0 ? d : 0;
+    const ms = new Date(to) - new Date(from);
+    if (Number.isNaN(ms) || ms < 0) return 0;
+    return Math.floor(ms / 86400000) + 1;
 };
 
 export function recalcLineTotals(item) {
@@ -82,17 +84,22 @@ export async function enrichApplicationItem(rawItem) {
 }
 
 export function resolveApplicationDiscount(data) {
-    const saved = parseDiscountPercent(data?.discountValue);
-    if (saved > 0) {
+    // A linked order owns the deal's discount, so mirror it even when the
+    // application still carries an older value of its own.
+    if (data?.linkedOrder) {
+        const orderDiscount = parseDiscountPercent(data.linkedOrder.discount);
         return {
-            discountType: data.discountType === 'percent' ? 'percent' : 'fixed',
-            discountValue: String(saved),
+            discountType: 'percent',
+            discountValue: orderDiscount > 0 ? String(orderDiscount) : '',
         };
     }
 
-    const orderDiscount = parseDiscountPercent(data?.linkedOrder?.discount);
-    if (orderDiscount > 0) {
-        return { discountType: 'percent', discountValue: String(orderDiscount) };
+    const savedType = data?.discountType === 'percent' ? 'percent' : 'fixed';
+    const saved = savedType === 'percent'
+        ? parseDiscountPercent(data?.discountValue)
+        : Math.max(0, Number(data?.discountValue) || 0);
+    if (saved > 0) {
+        return { discountType: savedType, discountValue: String(saved) };
     }
 
     const clientDiscount = parseDiscountPercent(data?.clientDiscount);

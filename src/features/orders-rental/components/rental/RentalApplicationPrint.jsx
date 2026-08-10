@@ -7,6 +7,7 @@ import {
     resolveMinRentDays,
     discountPctLabel as buildDiscountPctLabel,
 } from '../../model/rentalDocFormat';
+import { calcDays } from '../../model/rentalItems';
 import '../../styles/RentalApplicationPrint.css';
 
 const fmtDate = (d) => fmtDateShared(d, '___/___/______');
@@ -24,6 +25,8 @@ const RentalApplicationPrint = React.forwardRef(({
     discountAmount = 0,
     totalRentalAfterDiscount,
     contractRef,
+    actNumber,
+    actDate,
 }, ref) => {
     const refData = contractRef || buildRentalActContractRef(null, { applicationNumber });
     const safeDiscountAmount = Math.max(0, Number(discountAmount || 0));
@@ -35,7 +38,8 @@ const RentalApplicationPrint = React.forwardRef(({
             : Math.max(safeTotalRental - safeDiscountAmount, 0);
     const grandTotal = safeTotalRentalAfterDiscount + safeTotalDeposit;
     const discountPctLabel = buildDiscountPctLabel(discountType, discountValue);
-    const titleDate = fmtFormalUaDate(items?.[0]?.rentFrom);
+    const titleDate = fmtFormalUaDate(actDate || new Date());
+    const actNo = actNumber || '_____';
     const minDays = resolveMinRentDays(items);
 
     return (
@@ -48,7 +52,7 @@ const RentalApplicationPrint = React.forwardRef(({
                     ))}
                 </div>
                 <h2 className="print-title">
-                    Специфікація-Акт прийому-передачі № _____ від  {titleDate} року.
+                    Специфікація-Акт прийому-передачі № {actNo} від  {titleDate} року.
                 </h2>
             </div>
 
@@ -145,7 +149,9 @@ const RentalApplicationPrint = React.forwardRef(({
                                 <td className="td-right">{fmt(item.depositAmount)}</td>
                                 <td className="td-center">{fmtDate(item.rentFrom)}</td>
                                 <td className="td-center">{fmtDate(item.rentTo)}</td>
-                                <td className="td-center">{item.days || '—'}</td>
+                                <td className="td-center">
+                                    {calcDays(item.rentFrom, item.rentTo) || item.days || '—'}
+                                </td>
                                 <td className="td-right">{fmt(item.pricePerDay)}</td>
                                 <td className="td-right bold">{fmt(item.totalRental)}</td>
                             </tr>

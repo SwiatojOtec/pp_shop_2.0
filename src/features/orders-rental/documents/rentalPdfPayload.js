@@ -1,11 +1,16 @@
 import { buildRentalActContractRef } from './rentalContractRef';
 import { computeRentalTotals } from '../model/rentalTotals';
+import { recalcLineTotals } from '../model/rentalItems';
 import { DEFAULT_SELLER_ID, getRentalLessor, RENTAL_LESSOR } from '../../../constants/sellers';
 
 export { RENTAL_LESSOR };
 
 export function buildRentalPdfPayload(application, order = null) {
-    const items = Array.isArray(application?.items) ? application.items : [];
+    const rawItems = Array.isArray(application?.items) ? application.items : [];
+    // Always derive days from rentFrom/rentTo (inclusive) so PDF matches the selected period.
+    const items = rawItems.map((item) => (
+        item?.rentFrom && item?.rentTo ? recalcLineTotals(item) : item
+    ));
     const discountType = application?.discountType || 'fixed';
     const {
         totalRental,
@@ -40,6 +45,7 @@ export function buildRentalPdfPayload(application, order = null) {
         discountAmount,
         totalRentalAfterDiscount,
         contractRef: buildRentalActContractRef(order, application),
+        orderId: order?.id || application?.linkedOrder?.id || application?.orderId || null,
     };
 }
 

@@ -402,14 +402,41 @@
 }
 
 .order-item-row--rent {
-    grid-template-columns: minmax(0, 1fr) 190px 110px 40px;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, auto) 110px 40px;
 }
 
 .order-item-row__measures {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    align-items: flex-end;
+    gap: 8px;
     flex-wrap: wrap;
+}
+
+.order-item-row__date {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.order-item-row__date label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.order-item-row__date input[type="date"] {
+    width: 138px !important;
+    padding: 7px 8px !important;
+    font-size: 0.8rem !important;
+}
+
+.order-item-row__days-hint {
+    font-size: 0.78rem;
+    color: #6b7280;
+    white-space: nowrap;
+    padding-bottom: 8px;
 }
 
 .order-item-row__name {

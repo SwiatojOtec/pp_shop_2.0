@@ -87,6 +87,8 @@ export const ordersApi = {
     update: (id, data) => apiPut(`/api/orders/${id}`, data),
     remove: (id) => apiDelete(`/api/orders/${id}`),
     listDocuments: (id) => apiGet(`/api/orders/${id}/documents`),
+    getNextRentalActNumber: (orderId, type) =>
+        apiPost(`/api/orders/${orderId}/documents/rental-act-number`, { type }),
     generateInvoiceDocument: (id, data) => apiPost(`/api/orders/${id}/documents/invoice`, data),
     generateDepositInvoiceDocument: (id, data) => apiPost(`/api/orders/${id}/documents/deposit-invoice`, data),
     removeDocument: (orderId, docId) => apiDelete(`/api/orders/${orderId}/documents/${docId}`),

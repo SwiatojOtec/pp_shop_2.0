@@ -412,6 +412,14 @@
     padding-top: 4px;
 }
 .total-row--grand strong { color: var(--admin-accent); font-size: 1.15rem; }
+.rental-discount-locked {
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
 
 /* Upsell panel */
 .upsell-panel {

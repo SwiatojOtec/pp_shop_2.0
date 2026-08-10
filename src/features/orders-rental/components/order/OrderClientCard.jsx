@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { User, UserCheck, UserPlus, Loader2 } from 'lucide-react';
+import { User, UserCheck, UserPlus, Loader2, Plus, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { isValidUaPhone, normalizeUaPhone } from '../../../../utils/phoneUtils';
 
@@ -13,6 +13,12 @@ export default function OrderClientCard({
     addingClient,
     onLinkClient,
     onAddClient,
+    hasRent = false,
+    rentalExtras = null,
+    onRentalExtraChange,
+    onResponsibleChange,
+    onAddResponsible,
+    onRemoveResponsible,
 }) {
     function renderClientDbStatus() {
         const phone = normalizeUaPhone(draft?.customerPhone || '');
@@ -73,11 +79,14 @@ export default function OrderClientCard({
         );
     }
 
+    const extras = rentalExtras || {};
+    const responsible = Array.isArray(extras.responsible) ? extras.responsible : [];
+
     return (
         <div className="od-card od-card--client">
             <h2 className="od-card__title">
                 <User size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                Клієнт
+                {hasRent ? 'Клієнт / Орендар' : 'Клієнт'}
             </h2>
             <div className="order-detail-grid2">
                 <div className="form-group">
@@ -105,7 +114,7 @@ export default function OrderClientCard({
                     />
                 </div>
                 <div className="form-group form-group--full">
-                    <label>Адреса доставки</label>
+                    <label>Адреса доставки / проживання</label>
                     <input
                         type="text"
                         placeholder="Вкажіть адресу або «Самовивіз»"
@@ -113,7 +122,63 @@ export default function OrderClientCard({
                         onChange={(e) => setField('address', e.target.value)}
                     />
                 </div>
+
+                {hasRent && onRentalExtraChange && (
+                    <>
+                        <div className="form-group">
+                            <label>Паспорт / ID</label>
+                            <input
+                                type="text"
+                                placeholder="Серія, номер або ID-картка"
+                                value={extras.passport || ''}
+                                onChange={(e) => onRentalExtraChange('passport', e.target.value)}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Адреса майданчика</label>
+                            <input
+                                type="text"
+                                placeholder="Адреса будівельного майданчика"
+                                value={extras.siteAddress || ''}
+                                onChange={(e) => onRentalExtraChange('siteAddress', e.target.value)}
+                            />
+                        </div>
+                    </>
+                )}
             </div>
+
+            {hasRent && onAddResponsible && (
+                <div className="od-responsible">
+                    <div className="od-responsible__label">Відповідальні особи</div>
+                    {responsible.map((person, index) => (
+                        <div key={index} className="od-responsible__row">
+                            <input
+                                value={person.name || ''}
+                                onChange={(e) => onResponsibleChange(index, 'name', e.target.value)}
+                                placeholder="П.І.Б."
+                            />
+                            <input
+                                value={person.phone || ''}
+                                onChange={(e) => onResponsibleChange(index, 'phone', e.target.value)}
+                                onBlur={(e) => onResponsibleChange(index, 'phone', normalizeUaPhone(e.target.value))}
+                                placeholder="380670064044"
+                            />
+                            <button
+                                type="button"
+                                className="od-responsible__remove"
+                                onClick={() => onRemoveResponsible(index)}
+                                title="Прибрати"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ))}
+                    <button type="button" className="od-responsible__add" onClick={onAddResponsible}>
+                        <Plus size={13} /> Додати відповідальну особу
+                    </button>
+                </div>
+            )}
+
             {renderClientDbStatus()}
         </div>
     );

@@ -11,6 +11,19 @@ function roundMoney(value) {
     return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function calcInclusiveDays(from, to) {
+    if (!from || !to) return 0;
+    const ms = new Date(to) - new Date(from);
+    if (Number.isNaN(ms) || ms < 0) return 0;
+    return Math.floor(ms / 86400000) + 1;
+}
+
+function resolveOrderItemRentDays(item) {
+    const fromDates = calcInclusiveDays(item?.rentFrom, item?.rentTo);
+    if (fromDates > 0) return fromDates;
+    return Math.max(1, Number(item?.rentDays) || 1);
+}
+
 export function parseDiscountPercent(value) {
     if (value == null || value === '') return 0;
     if (typeof value === 'number') {
@@ -43,13 +56,13 @@ function isRentBillingItem(item, rentProductIds) {
 
 function resolveOrderItemRentPricePerDay(orderItem) {
     const catalogPrice = parseFloat(orderItem?.catalogPrice ?? orderItem?.price) || 0;
-    const days = Number(orderItem?.rentDays) || 1;
+    const days = resolveOrderItemRentDays(orderItem);
     const tiers = coerceDbRentPriceTiers(orderItem?.rentPriceTiers);
     return getRentPricePerDayFromTiers(tiers, catalogPrice, days);
 }
 
 function resolveRentLineNetTotal(orderItem, appLine) {
-    const days = Number(orderItem?.rentDays) || Number(appLine?.days) || 0;
+    const days = resolveOrderItemRentDays(orderItem) || Number(appLine?.days) || 0;
     const qty = Number(orderItem?.quantity) || Number(appLine?.quantity) || 1;
     const pricePerDay = resolveOrderItemRentPricePerDay(orderItem);
 
@@ -133,7 +146,7 @@ export function calcLineDisplayAmounts(item, sellerId, billingOptions = {}) {
 
     if (isRentBillingItem(item, billingOptions.rentProductIds)) {
         const appLine = rentalAppIndex.get(Number(item?.id));
-        const days = Number(item.rentDays) || Number(appLine?.days) || 0;
+        const days = resolveOrderItemRentDays(item) || Number(appLine?.days) || 0;
         const qty = Number(item.quantity) || Number(appLine?.quantity) || 1;
         const netLine = resolveRentLineNetTotal(item, appLine);
 
@@ -144,6 +157,8 @@ export function calcLineDisplayAmounts(item, sellerId, billingOptions = {}) {
             return {
                 quantity: qty,
                 rentDays: days,
+                rentFrom: item.rentFrom || '',
+                rentTo: item.rentTo || '',
                 isRentLine: true,
                 unit: 'шт',
                 lineTotal,

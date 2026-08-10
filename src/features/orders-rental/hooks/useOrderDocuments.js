@@ -98,40 +98,47 @@ export function useOrderDocuments({
         }
     }
 
-    async function loadLinkedRentalApplication() {
-        let applicationId = order.rentalApplicationId;
-        if (!applicationId) {
-            const { application: createdApp } = await ordersApi.createOrOpenRentalApplication(order.id);
-            applicationId = createdApp.id;
-        }
-
-        const application = await rentalApplicationsApi.get(applicationId);
+    /**
+     * The order is saved first because the server mirrors its «Знижка, %» onto the
+     * linked application, and every rental document is built from that application.
+     */
+    async function syncLinkedRentalApplication() {
+        const savedOrder = (await persistDraft()) || order;
+        const { application: linked } = await ordersApi.createOrOpenRentalApplication(savedOrder.id);
+        const application = await rentalApplicationsApi.get(linked.id);
 
         setOrder((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
         setDraft((prev) => (prev ? { ...prev, rentalApplicationId: application.id } : prev));
         setLinkedRentalApp(application);
 
+        return { savedOrder, application };
+    }
+
+    async function loadLinkedRentalApplication() {
+        const { application } = await syncLinkedRentalApplication();
         return application;
     }
 
     async function generateRentalPdfDocument({ variant, saveApi, titlePrefix }) {
-        const application = await loadLinkedRentalApplication();
-        const pdfPayload = buildRentalPdfPayload(application, order);
-        const { blob, filename } = await generateRentalPdf(pdfPayload, {
+        const { savedOrder, application } = await syncLinkedRentalApplication();
+        const pdfPayload = buildRentalPdfPayload(application, savedOrder);
+        const { blob, filename, actNumber } = await generateRentalPdf(pdfPayload, {
             download: false,
             returnBlob: true,
+            orderId: savedOrder.id,
             ...(variant ? { variant } : {}),
         });
 
         const contentBase64 = await blobToBase64(blob);
-        const { document } = await saveApi(order.id, {
+        const actLabel = actNumber ? ` · ${actNumber}` : '';
+        const { document } = await saveApi(savedOrder.id, {
             contentBase64,
             fileName: filename,
-            title: `${titlePrefix} · ${application.applicationNumber || application.id}`,
+            title: `${titlePrefix} · ${application.applicationNumber || application.id}${actLabel}`,
         });
 
         setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
-        await ordersApi.downloadDocument(order.id, document.id, document.fileName);
+        await ordersApi.downloadDocument(savedOrder.id, document.id, document.fileName);
     }
 
     async function handleGenerateRentalDocument() {

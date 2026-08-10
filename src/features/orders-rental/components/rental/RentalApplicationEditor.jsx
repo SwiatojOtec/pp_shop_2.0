@@ -21,15 +21,37 @@ export default function RentalApplicationEditor({
     id,
     embedded = false,
     hideHeader = false,
+    hideToolbarSave = false,
     hideDocumentTab = false,
+    hidePartiesTab = false,
+    enrichmentOnly = false,
     onSaved,
     sellerId: sellerIdProp,
+    orderDiscountPercent = null,
+    orderClient = null,
+    orderItems = null,
+    rentProductIds = null,
+    products = null,
+    onTotalsChange = null,
+    onRegisterSave,
 }) {
     const isNew = !id || id === 'new';
     const printRef = useRef();
-    const [tab, setTab] = useState('parties');
+    const [tab, setTab] = useState(hidePartiesTab ? 'items' : 'parties');
+    const activeTab = hidePartiesTab && tab === 'parties'
+        ? 'items'
+        : (hideDocumentTab && tab === 'document' ? (hidePartiesTab ? 'items' : 'parties') : tab);
 
-    const app = useRentalApplication(id, isNew, { embedded, onSaved });
+    const app = useRentalApplication(id, isNew, {
+        embedded,
+        onSaved,
+        orderDiscountPercent,
+        orderClient,
+        orderItems,
+        rentProductIds,
+        products,
+        onTotalsChange,
+    });
     const totals = useRentalTotals(app.items, app.discountType, app.discountValue);
     const search = useProductSearch(app.items, app.setItems);
 
@@ -37,10 +59,10 @@ export default function RentalApplicationEditor({
     const lessor = useMemo(() => getRentalLessor(sellerId), [sellerId]);
 
     useEffect(() => {
-        if (hideDocumentTab && tab === 'document') {
-            setTab('parties');
-        }
-    }, [hideDocumentTab, tab]);
+        if (!onRegisterSave) return undefined;
+        onRegisterSave(app.handleSave);
+        return () => onRegisterSave(null);
+    }, [onRegisterSave, app.handleSave]);
 
     const buildCurrentApplicationPayload = useCallback(() => buildRentalPdfPayload({
         applicationNumber: app.applicationNumber,
@@ -67,19 +89,19 @@ export default function RentalApplicationEditor({
 
     const handleClientChange = useCallback((field, value) => {
         app.setClient(prev => ({ ...prev, [field]: value }));
-    }, [app.setClient]);
+    }, [app]);
 
     const handleResponsibleChange = useCallback((index, field, value) => {
         app.setResponsible(prev => prev.map((p, pi) => pi === index ? { ...p, [field]: value } : p));
-    }, [app.setResponsible]);
+    }, [app]);
 
     const handleAddResponsible = useCallback(() => {
         app.setResponsible(prev => [...prev, { name: '', phone: '' }]);
-    }, [app.setResponsible]);
+    }, [app]);
 
     const handleRemoveResponsible = useCallback((index) => {
         app.setResponsible(prev => prev.filter((_, pi) => pi !== index));
-    }, [app.setResponsible]);
+    }, [app]);
 
     if (app.loading) {
         return <div className="deal-workspace-loading">Завантаження заявки...</div>;
@@ -113,27 +135,30 @@ export default function RentalApplicationEditor({
                                 <option key={value} value={value}>{label}</option>
                             ))}
                         </select>
-                        <button
-                            type="button"
-                            onClick={app.handleSave}
-                            disabled={app.saving}
-                            className="btn btn-primary"
-                        >
-                            <Save size={16} /> {app.saving ? 'Збереження...' : 'Зберегти'}
-                        </button>
+                        {!hideToolbarSave && (
+                            <button
+                                type="button"
+                                onClick={app.handleSave}
+                                disabled={app.saving}
+                                className="btn btn-primary"
+                            >
+                                <Save size={16} /> {app.saving ? 'Збереження...' : 'Зберегти'}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
 
             <RentalFormTabs
-                tab={tab}
+                tab={activeTab}
                 onTabChange={setTab}
                 itemsCount={app.items.length}
                 hideDocumentTab={hideDocumentTab}
+                hidePartiesTab={hidePartiesTab}
             />
 
             <div className="rental-form-body">
-                {tab === 'parties' && (
+                {activeTab === 'parties' && !hidePartiesTab && (
                     <RentalPartiesSection
                         clients={app.clients}
                         selectedClientId={app.selectedClientId}
@@ -148,7 +173,7 @@ export default function RentalApplicationEditor({
                     />
                 )}
 
-                {tab === 'items' && (
+                {activeTab === 'items' && (
                     <RentalItemsSection
                         items={app.items}
                         searchQuery={search.searchQuery}
@@ -164,10 +189,12 @@ export default function RentalApplicationEditor({
                         discountValue={app.discountValue}
                         onDiscountTypeChange={app.setDiscountType}
                         onDiscountValueChange={app.setDiscountValue}
+                        discountLocked={app.discountFromOrder || !!app.linkedOrder}
+                        enrichmentOnly={enrichmentOnly}
                     />
                 )}
 
-                {tab === 'document' && !hideDocumentTab && (
+                {activeTab === 'document' && !hideDocumentTab && (
                     <RentalDocumentTab
                         applicationNumber={app.applicationNumber}
                         client={app.client}
@@ -177,21 +204,28 @@ export default function RentalApplicationEditor({
                         grandTotal={totals.grandTotal}
                         notes={app.notes}
                         onNotesChange={app.setNotes}
-                        onDownloadApplication={() => generateRentalPdf(buildCurrentApplicationPayload())}
-                        onDownloadReturnAct={() => generateRentalPdf(buildCurrentApplicationPayload(), { variant: 'return_inspection' })}
+                        onDownloadApplication={() => generateRentalPdf(buildCurrentApplicationPayload(), {
+                            orderId: app.linkedOrder?.id,
+                        })}
+                        onDownloadReturnAct={() => generateRentalPdf(buildCurrentApplicationPayload(), {
+                            variant: 'return_inspection',
+                            orderId: app.linkedOrder?.id,
+                        })}
                         onPrint={handlePrint}
                     />
                 )}
             </div>
 
-            <UpsellPanel
-                visible={search.upsellVisible}
-                productName={search.upsellProductName}
-                items={app.items}
-                upsellItems={search.upsellItems}
-                onClose={() => search.setUpsellVisible(false)}
-                onAddProduct={search.addUpsellProduct}
-            />
+            {!enrichmentOnly && (
+                <UpsellPanel
+                    visible={search.upsellVisible}
+                    productName={search.upsellProductName}
+                    items={app.items}
+                    upsellItems={search.upsellItems}
+                    onClose={() => search.setUpsellVisible(false)}
+                    onAddProduct={search.addUpsellProduct}
+                />
+            )}
 
             {!hideDocumentTab && (
                 <div style={{ display: 'none' }}>

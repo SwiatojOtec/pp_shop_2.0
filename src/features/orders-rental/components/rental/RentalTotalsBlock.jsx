@@ -8,6 +8,7 @@ export default function RentalTotalsBlock({
     totalRentalAfterDiscount,
     totalDeposit,
     grandTotal,
+    discountLocked = false,
 }) {
     return (
         <div className="rental-footer-grid">
@@ -18,26 +19,32 @@ export default function RentalTotalsBlock({
                 </div>
                 <div className="total-row" style={{ gap: '10px', flexWrap: 'wrap' }}>
                     <span>Знижка:</span>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <select
-                            value={discountType}
-                            onChange={e => onDiscountTypeChange(e.target.value)}
-                            style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
-                        >
-                            <option value="fixed">₴</option>
-                            <option value="percent">%</option>
-                        </select>
-                        <input
-                            type="number"
-                            min="0"
-                            max={discountType === 'percent' ? 100 : undefined}
-                            step="0.01"
-                            value={discountValue}
-                            onChange={e => onDiscountValueChange(e.target.value)}
-                            placeholder={discountType === 'percent' ? '0-100' : '0.00'}
-                            style={{ width: '100px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
-                        />
-                    </div>
+                    {discountLocked ? (
+                        <span className="rental-discount-locked">
+                            {Number(discountValue || 0).toFixed(0)}% · із замовлення
+                        </span>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <select
+                                value={discountType}
+                                onChange={e => onDiscountTypeChange(e.target.value)}
+                                style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            >
+                                <option value="fixed">₴</option>
+                                <option value="percent">%</option>
+                            </select>
+                            <input
+                                type="number"
+                                min="0"
+                                max={discountType === 'percent' ? 100 : undefined}
+                                step="0.01"
+                                value={discountValue}
+                                onChange={e => onDiscountValueChange(e.target.value)}
+                                placeholder={discountType === 'percent' ? '0-100' : '0.00'}
+                                style={{ width: '100px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            />
+                        </div>
+                    )}
                     <strong style={{ marginLeft: 'auto', color: '#b91c1c' }}>
                         -{discountAmount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
                     </strong>

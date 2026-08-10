@@ -8,6 +8,8 @@ import {
     resolveMinRentDays,
     discountPctLabel as buildDiscountPctLabel,
 } from '../model/rentalDocFormat';
+import { calcDays } from '../model/rentalItems';
+import { resolveRentalActMeta } from './rentalActMeta';
 
 const PAGE_BOTTOM = 205;
 const PAGE_RIGHT = 292;
@@ -33,15 +35,15 @@ const HANDOVER_LEGAL_TEXT = [
 
 export const RENTAL_PDF_VARIANTS = {
     handover: {
-        title: (formalDate) => `Специфікація-Акт прийому-передачі № _____ від  ${formalDate} року.`,
-        titleDate: (items) => items[0]?.rentFrom,
+        title: (actNumber, formalDate) =>
+            `Специфікація-Акт прийому-передачі № ${actNumber} від  ${formalDate} року.`,
         filename: (applicationNumber) => `zaiavka-${applicationNumber || 'new'}.pdf`,
         zeroAmounts: false,
         isHandover: true,
     },
     return_inspection: {
-        title: (date) => `АКТ ПОВЕРНЕННЯ-ОГЛЯДУ ТЕХНІЧНОГО СТАНУ №_____ від ${date} року.`,
-        titleDate: (items) => items[0]?.rentTo || items[0]?.rentFrom,
+        title: (actNumber, date) =>
+            `АКТ ПОВЕРНЕННЯ-ОГЛЯДУ ТЕХНІЧНОГО СТАНУ №${actNumber} від ${date} року.`,
         filename: (applicationNumber) => `akt-povernennia-${applicationNumber || 'new'}.pdf`,
         zeroAmounts: true,
         isHandover: false,
@@ -68,9 +70,24 @@ export const generateRentalPdf = async ({
     discountAmount = 0,
     totalRentalAfterDiscount,
     contractRef,
+    actNumber: payloadActNumber,
+    actDate: payloadActDate,
+    orderId: payloadOrderId,
 }, options = {}) => {
     const variantKey = options.variant === 'return_inspection' ? 'return_inspection' : 'handover';
     const variant = RENTAL_PDF_VARIANTS[variantKey];
+
+    let actNumber = options.actNumber || payloadActNumber;
+    let actDate = options.actDate || payloadActDate;
+    if (!actNumber || !actDate) {
+        const meta = await resolveRentalActMeta({
+            orderId: options.orderId || payloadOrderId,
+            variant: variantKey,
+        });
+        actNumber = actNumber || meta.actNumber;
+        actDate = actDate || meta.actDate;
+    }
+    actDate = actDate instanceof Date ? actDate : new Date(actDate);
     const zeroAmounts = variant.zeroAmounts;
     const isHandover = !!variant.isHandover;
     const kitRows = countKitRows(items);
@@ -106,10 +123,9 @@ export const generateRentalPdf = async ({
     doc.setFontSize(compact ? 9.5 : 10.5);
     doc.setTextColor(0, 0, 0);
     doc.setFont(fontName, 'bold');
-    const titleDateRaw = variant.titleDate(items);
     const titleText = isHandover
-        ? variant.title(fmtFormalUaDate(titleDateRaw))
-        : variant.title(fmtDate(titleDateRaw));
+        ? variant.title(actNumber, fmtFormalUaDate(actDate))
+        : variant.title(actNumber, fmtDate(actDate));
     doc.text(titleText, 148.5, 16, { align: 'center' });
     doc.setFont(fontName, 'normal');
 
@@ -203,7 +219,10 @@ export const generateRentalPdf = async ({
             { content: fmtMoney(item.depositAmount, zeroAmounts), styles: { halign: 'right' } },
             { content: fmtDate(item.rentFrom), styles: { halign: 'center' } },
             { content: fmtDate(item.rentTo), styles: { halign: 'center' } },
-            { content: String(item.days || 0), styles: { halign: 'center' } },
+            {
+                content: String(calcDays(item.rentFrom, item.rentTo) || item.days || 0),
+                styles: { halign: 'center' },
+            },
             { content: fmtMoney(item.pricePerDay, zeroAmounts), styles: { halign: 'right' } },
             {
                 content: fmtMoney(item.totalRental, zeroAmounts),
@@ -400,6 +419,6 @@ export const generateRentalPdf = async ({
     }
 
     if (returnBlob) {
-        return { blob: doc.output('blob'), filename };
+        return { blob: doc.output('blob'), filename, actNumber, actDate };
     }
 };

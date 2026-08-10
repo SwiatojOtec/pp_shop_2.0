@@ -1,4 +1,5 @@
 import { formatContractDate } from '../documents/rentalContractRef';
+import { calcDays } from './rentalItems';
 
 /** Money for on-screen / print preview (locale string). */
 export function fmtPrintMoney(n) {
@@ -23,9 +24,19 @@ export function fmtFormalUaDate(d) {
     return `«${day}» ${month} ${year}`;
 }
 
+/** DDMMYY/N — same format as server `formatDailyDocumentNumber`. */
+export function formatDailyDocumentNumber(date = new Date(), sequence = 1) {
+    const dt = date instanceof Date ? date : new Date(date);
+    const stamp = `${String(dt.getDate()).padStart(2, '0')}${String(dt.getMonth() + 1).padStart(2, '0')}${String(dt.getFullYear()).slice(-2)}`;
+    return `${stamp}/${Math.max(1, Number(sequence) || 1)}`;
+}
+
 export function resolveMinRentDays(items = []) {
     const days = (items || [])
-        .map((item) => Number(item?.days) || 0)
+        .map((item) => {
+            const fromDates = calcDays(item?.rentFrom, item?.rentTo);
+            return fromDates > 0 ? fromDates : (Number(item?.days) || 0);
+        })
         .filter((n) => n > 0);
     if (!days.length) return '____';
     return String(Math.max(...days));

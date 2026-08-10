@@ -5,20 +5,39 @@ import {
 } from '../../../../constants/technicalConditions';
 import RentalKitItemsList from './RentalKitItemsList';
 
-export default function RentalItemCard({ item, index, onUpdate, onRemove, onRemoveKitItem }) {
+export default function RentalItemCard({
+    item,
+    index,
+    onUpdate,
+    onRemove,
+    onRemoveKitItem,
+    enrichmentOnly = false,
+}) {
     return (
         <div className="rental-item-card">
             <div className="item-card-header">
                 <span className="item-num">{index + 1}</span>
-                <input
-                    className="item-name-input"
-                    value={item.name}
-                    onChange={e => onUpdate('name', e.target.value)}
-                    placeholder="Назва інструменту"
-                />
-                <button onClick={onRemove} className="remove-item-btn" title="Видалити">
-                    <Trash2 size={16} />
-                </button>
+                {enrichmentOnly ? (
+                    <div className="item-name-static">
+                        <strong>{item.name || 'Без назви'}</strong>
+                        <span>
+                            {item.quantity || 1} {item.unit || 'шт'}
+                            {item.days > 0 ? ` · ${item.days} діб` : ''}
+                        </span>
+                    </div>
+                ) : (
+                    <input
+                        className="item-name-input"
+                        value={item.name}
+                        onChange={e => onUpdate('name', e.target.value)}
+                        placeholder="Назва інструменту"
+                    />
+                )}
+                {!enrichmentOnly && (
+                    <button onClick={onRemove} className="remove-item-btn" title="Видалити">
+                        <Trash2 size={16} />
+                    </button>
+                )}
             </div>
 
             <div className="item-fields-grid">
@@ -42,14 +61,18 @@ export default function RentalItemCard({ item, index, onUpdate, onRemove, onRemo
                         )}
                     </select>
                 </div>
-                <div className="item-field">
-                    <label>Од. виміру</label>
-                    <input value={item.unit} onChange={e => onUpdate('unit', e.target.value)} />
-                </div>
-                <div className="item-field">
-                    <label>Кількість</label>
-                    <input type="number" min="1" value={item.quantity} onChange={e => onUpdate('quantity', e.target.value)} />
-                </div>
+                {!enrichmentOnly && (
+                    <>
+                        <div className="item-field">
+                            <label>Од. виміру</label>
+                            <input value={item.unit} onChange={e => onUpdate('unit', e.target.value)} />
+                        </div>
+                        <div className="item-field">
+                            <label>Кількість</label>
+                            <input type="number" min="1" value={item.quantity} onChange={e => onUpdate('quantity', e.target.value)} />
+                        </div>
+                    </>
+                )}
                 <div className="item-field">
                     <label>Вага заг., кг</label>
                     <input type="number" step="0.01" value={item.weightTotal} onChange={e => onUpdate('weightTotal', e.target.value)} placeholder="0.00" />
@@ -66,26 +89,41 @@ export default function RentalItemCard({ item, index, onUpdate, onRemove, onRemo
                     <label>Застава, ₴</label>
                     <input value={item.depositAmount} readOnly className="readonly-field" />
                 </div>
-                <div className="item-field">
-                    <label>Оренда з</label>
-                    <input type="date" value={item.rentFrom} onChange={e => onUpdate('rentFrom', e.target.value)} />
-                </div>
-                <div className="item-field">
-                    <label>Оренда по</label>
-                    <input type="date" value={item.rentTo} onChange={e => onUpdate('rentTo', e.target.value)} />
-                </div>
-                <div className="item-field item-field--highlight">
-                    <label>Діб</label>
-                    <input value={item.days || 0} readOnly className="readonly-field" />
-                </div>
-                <div className="item-field">
-                    <label>Тариф, ₴/доба</label>
-                    <input type="number" step="0.01" value={item.pricePerDay} onChange={e => onUpdate('pricePerDay', e.target.value)} placeholder="0.00" />
-                </div>
-                <div className="item-field item-field--total">
-                    <label>Сума оренди, ₴</label>
-                    <input value={item.totalRental || '0.00'} readOnly className="readonly-field total-field" />
-                </div>
+                {enrichmentOnly ? (
+                    <>
+                        <div className="item-field item-field--highlight">
+                            <label>Діб</label>
+                            <input value={item.days || 0} readOnly className="readonly-field" />
+                        </div>
+                        <div className="item-field item-field--total">
+                            <label>Сума оренди, ₴</label>
+                            <input value={item.totalRental || '0.00'} readOnly className="readonly-field total-field" />
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="item-field">
+                            <label>Оренда з</label>
+                            <input type="date" value={item.rentFrom} onChange={e => onUpdate('rentFrom', e.target.value)} />
+                        </div>
+                        <div className="item-field">
+                            <label>Оренда по</label>
+                            <input type="date" value={item.rentTo} onChange={e => onUpdate('rentTo', e.target.value)} />
+                        </div>
+                        <div className="item-field item-field--highlight">
+                            <label>Діб</label>
+                            <input value={item.days || 0} readOnly className="readonly-field" />
+                        </div>
+                        <div className="item-field">
+                            <label>Тариф, ₴/доба</label>
+                            <input type="number" step="0.01" value={item.pricePerDay} onChange={e => onUpdate('pricePerDay', e.target.value)} placeholder="0.00" />
+                        </div>
+                        <div className="item-field item-field--total">
+                            <label>Сума оренди, ₴</label>
+                            <input value={item.totalRental || '0.00'} readOnly className="readonly-field total-field" />
+                        </div>
+                    </>
+                )}
             </div>
 
             <RentalKitItemsList

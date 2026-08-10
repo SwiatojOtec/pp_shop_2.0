@@ -15,6 +15,8 @@ router.get('/', authMiddleware, requireRole(ORDER_ROLES), orderController.getAll
 
 router.get('/:id/documents', authMiddleware, requireRole(ORDER_ROLES), orderController.listDocuments);
 
+router.post('/:id/documents/rental-act-number', authMiddleware, requireRole(ORDER_ROLES), orderController.getNextRentalActNumber);
+
 router.post('/:id/documents/invoice', authMiddleware, requireRole(ORDER_ROLES), orderController.createInvoiceDocument);
 
 router.post('/:id/documents/deposit-invoice', authMiddleware, requireRole(ORDER_ROLES), orderController.createDepositInvoiceDocument);

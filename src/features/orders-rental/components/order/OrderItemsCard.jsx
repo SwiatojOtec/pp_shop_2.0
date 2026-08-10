@@ -1,7 +1,6 @@
-import { useNavigate } from 'react-router-dom';
-import { Package, Search, X, Save } from 'lucide-react';
-import { Button } from '../../../../components/ui/button';
+import { Package, Search, X } from 'lucide-react';
 import { calcLineDisplayAmounts, parseDiscountPercent } from '../../amounts/orderAmounts';
+import { calcDays } from '../../model/rentalItems';
 
 export default function OrderItemsCard({
     draft,
@@ -14,12 +13,8 @@ export default function OrderItemsCard({
     onAddItem,
     onRemoveItem,
     onUpdateQty,
-    onUpdateRentDays,
-    saving,
-    onSave,
+    onUpdateRentDates,
 }) {
-    const navigate = useNavigate();
-
     return (
         <div className="od-card od-card--products">
             <h2 className="od-card__title">
@@ -31,6 +26,7 @@ export default function OrderItemsCard({
                 {draft.items.map((item, idx) => {
                     const isRentLine = item.isRent || rentProductIds.has(item.id);
                     const line = calcLineDisplayAmounts(item, draft.sellerId, billingOptions);
+                    const days = calcDays(item.rentFrom, item.rentTo);
                     return (
                         <div key={idx} className={`order-item-row${isRentLine ? ' order-item-row--rent' : ''}`}>
                             <span className="order-item-row__name">{item.name}</span>
@@ -46,16 +42,31 @@ export default function OrderItemsCard({
                                         />
                                         <span className="order-item-row__unit">шт</span>
                                     </div>
-                                    <div className="order-item-row__qty">
+                                    <div className="order-item-row__date">
+                                        <label>з</label>
                                         <input
-                                            type="number"
-                                            min="1"
-                                            step="1"
-                                            value={line.rentDays ?? item.rentDays ?? 1}
-                                            onChange={(e) => onUpdateRentDays(idx, e.target.value)}
+                                            type="date"
+                                            value={item.rentFrom || ''}
+                                            onChange={(e) => onUpdateRentDates(idx, {
+                                                rentFrom: e.target.value,
+                                                rentTo: item.rentTo || '',
+                                            })}
                                         />
-                                        <span className="order-item-row__unit">діб</span>
                                     </div>
+                                    <div className="order-item-row__date">
+                                        <label>по</label>
+                                        <input
+                                            type="date"
+                                            value={item.rentTo || ''}
+                                            onChange={(e) => onUpdateRentDates(idx, {
+                                                rentFrom: item.rentFrom || '',
+                                                rentTo: e.target.value,
+                                            })}
+                                        />
+                                    </div>
+                                    {days > 0 && (
+                                        <span className="order-item-row__days-hint">{days} діб</span>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="order-item-row__qty">
@@ -144,14 +155,6 @@ export default function OrderItemsCard({
                             </span>
                         )}
                     </div>
-                </div>
-                <div className="od-footer-bar__actions">
-                    <Button variant="secondary" size="sm" onClick={() => navigate('/admin/orders')}>
-                        До списку
-                    </Button>
-                    <Button size="sm" onClick={onSave} disabled={saving}>
-                        <Save size={14} /> {saving ? 'Збереження...' : 'Зберегти'}
-                    </Button>
                 </div>
             </div>
         </div>

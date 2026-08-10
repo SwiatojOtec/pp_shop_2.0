@@ -59,5 +59,5 @@ export function orderHasShopItems(order, rentProductIds) {
 }
 
 export function orderHasRentItems(order, rentProductIds) {
-    return (order.items || []).some((i) => rentProductIds.has(i.id));
+    return (order.items || []).some((i) => i.isRent || rentProductIds.has(i.id));
 }

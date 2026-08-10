@@ -1,9 +1,17 @@
-export default function RentalFormTabs({ tab, onTabChange, itemsCount, hideDocumentTab = false }) {
+export default function RentalFormTabs({
+    tab,
+    onTabChange,
+    itemsCount,
+    hideDocumentTab = false,
+    hidePartiesTab = false,
+}) {
     const tabs = [
-        { key: 'parties',  label: 'Сторони' },
-        { key: 'items',    label: `Позиції (${itemsCount})` },
+        ...(!hidePartiesTab ? [{ key: 'parties', label: 'Сторони' }] : []),
+        { key: 'items', label: hidePartiesTab ? `Деталі оренди (${itemsCount})` : `Позиції (${itemsCount})` },
         ...(hideDocumentTab ? [] : [{ key: 'document', label: 'Документ' }]),
     ];
+
+    if (tabs.length <= 1) return null;
 
     return (
         <div className="rental-tabs-nav">

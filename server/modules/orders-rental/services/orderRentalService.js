@@ -1,15 +1,30 @@
 const sequelize = require('../../../config/db');
 const Order = require('../../../models/Order');
-const Client = require('../../../models/Client');
 const Product = require('../../../models/Product');
 const RentalApplication = require('../../../models/RentalApplication');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { recalculateProductQuantity } = require('../../../services/inventoryService');
-const { parseDiscountPercent } = require('../../../utils/orderAmounts');
+const { parseDiscountPercent, roundMoney } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { generateAppNumber } = require('../utils/orderNumbering');
 
-function buildRentItemsFromOrder(order, productsById) {
+/** Inclusive calendar days: 11.08 → 15.08 = 5. */
+function calcInclusiveDays(from, to) {
+    if (!from || !to) return 0;
+    const ms = new Date(to) - new Date(from);
+    if (Number.isNaN(ms) || ms < 0) return 0;
+    return Math.floor(ms / 86400000) + 1;
+}
+
+function buildRentItemsFromOrder(order, productsById, previousItems = []) {
+    const previousByProduct = new Map();
+    for (const item of previousItems || []) {
+        const pid = Number(item.productId);
+        if (Number.isFinite(pid) && pid > 0 && !previousByProduct.has(pid)) {
+            previousByProduct.set(pid, item);
+        }
+    }
+
     const items = Array.isArray(order.items) ? order.items : [];
     return items
         .filter((line) => {
@@ -18,50 +33,102 @@ function buildRentItemsFromOrder(order, productsById) {
         })
         .map((line) => {
             const product = productsById.get(line.id) || {};
+            const prev = previousByProduct.get(Number(line.id)) || {};
             const qty = Number(line.quantity) || 1;
-            const replacementCost = parseFloat(product.replacementCost || 0);
-            const catalogPrice = parseFloat(product.price || 0) || 0;
-            const rentPriceTiers = coerceDbRentPriceTiers(product.rentPriceTiers);
-            const rentDays = Math.max(1, Number(line.rentDays) || 1);
-            const pricePerDay = getRentPricePerDayFromTiers(rentPriceTiers, catalogPrice, rentDays);
+            const replacementCost = parseFloat(
+                prev.replacementCostPerUnit != null && prev.replacementCostPerUnit !== ''
+                    ? prev.replacementCostPerUnit
+                    : (product.replacementCost || 0)
+            ) || 0;
+            const catalogPrice = parseFloat(product.price || prev.catalogPrice || 0) || 0;
+            const rentPriceTiers = coerceDbRentPriceTiers(prev.rentPriceTiers || product.rentPriceTiers);
+            const rentFrom = line.rentFrom || prev.rentFrom || '';
+            const rentTo = line.rentTo || prev.rentTo || '';
+            const dateDays = calcInclusiveDays(rentFrom, rentTo);
+            const rentDays = dateDays > 0
+                ? dateDays
+                : Math.max(1, Number(line.rentDays) || Number(prev.days) || 1);
+            const pricePerDay = getRentPricePerDayFromTiers(
+                rentPriceTiers,
+                catalogPrice || (parseFloat(prev.pricePerDay) || 0),
+                rentDays
+            );
+            const depositPercent = parseFloat(
+                prev.depositPercent != null && prev.depositPercent !== ''
+                    ? prev.depositPercent
+                    : DEFAULT_RENTAL_DEPOSIT_PERCENT
+            ) || DEFAULT_RENTAL_DEPOSIT_PERCENT;
+
             return {
                 productId: line.id,
-                name: line.name || product.name || '',
-                serialNumber: product.serialNumber || '',
-                inventoryNumber: product.inventoryNumber || '',
-                technicalCondition: product.technicalCondition || '',
-                unit: line.unit || product.unit || 'С€С‚',
+                name: line.name || product.name || prev.name || '',
+                serialNumber: prev.serialNumber || product.serialNumber || '',
+                inventoryNumber: prev.inventoryNumber || product.inventoryNumber || '',
+                technicalCondition: prev.technicalCondition || product.technicalCondition || '',
+                unit: line.unit || product.unit || prev.unit || 'шт',
                 quantity: qty,
-                weightTotal: product.weightTotal || '',
+                weightTotal: prev.weightTotal || product.weightTotal || '',
                 replacementCostPerUnit: replacementCost,
                 replacementCostTotal: replacementCost * qty,
-                depositPercent: DEFAULT_RENTAL_DEPOSIT_PERCENT,
-                depositAmount: (
-                    replacementCost * qty * (DEFAULT_RENTAL_DEPOSIT_PERCENT / 100)
-                ).toFixed(2),
+                depositPercent,
+                depositAmount: (replacementCost * qty * (depositPercent / 100)).toFixed(2),
                 catalogPrice,
                 rentPriceTiers,
-                pricePerDay,
-                rentFrom: '',
-                rentTo: '',
+                pricePerDay: prev.pricePerDay != null && prev.pricePerDay !== ''
+                    ? prev.pricePerDay
+                    : pricePerDay,
+                rentFrom,
+                rentTo,
                 days: rentDays,
-                totalRental: (rentDays * pricePerDay * qty).toFixed(2),
-                kitItems: Array.isArray(product.kitItems) ? product.kitItems : [],
+                totalRental: (rentDays * (
+                    parseFloat(prev.pricePerDay != null && prev.pricePerDay !== '' ? prev.pricePerDay : pricePerDay) || 0
+                ) * qty).toFixed(2),
+                kitItems: Array.isArray(prev.kitItems)
+                    ? prev.kitItems
+                    : (Array.isArray(product.kitItems) ? product.kitItems : []),
             };
         });
 }
 
-async function resolveApplicationDiscount(order, transaction) {
-    let discount = parseDiscountPercent(order.discount);
-    if (discount > 0) return discount;
+/**
+ * Mirror order commerce (client, qty, discount) onto the linked application while
+ * preserving rental enrichment (serials, kit, custom deposit %).
+ */
+async function syncApplicationWithOrder(application, order, transaction) {
+    const itemIds = [...new Set(
+        (order.items || []).map((line) => line.id).filter(Boolean)
+    )];
+    const products = itemIds.length
+        ? await Product.findAll({ where: { id: itemIds, isRent: true }, transaction })
+        : [];
+    const productsById = new Map(products.map((p) => [p.id, p]));
+    const rentItems = buildRentItemsFromOrder(order, productsById, application.items || []);
 
-    if (order.clientId) {
-        const client = await Client.findByPk(order.clientId, { transaction });
-        if (client) {
-            discount = parseDiscountPercent(client.discountPercent);
-        }
-    }
-    return discount;
+    const orderDiscount = parseDiscountPercent(order.discount);
+    const totalRental = roundMoney(
+        rentItems.reduce((sum, line) => sum + (parseFloat(line.totalRental) || 0), 0)
+    );
+    const totalDeposit = roundMoney(
+        rentItems.reduce((sum, line) => sum + (parseFloat(line.depositAmount) || 0), 0)
+    );
+    const discountAmount = roundMoney(Math.min((totalRental * orderDiscount) / 100, totalRental));
+    const totalAmount = roundMoney(Math.max(totalRental - discountAmount, 0));
+
+    await application.update({
+        clientName: order.customerName || application.clientName || '',
+        clientPhone: order.customerPhone || application.clientPhone || '',
+        clientEmail: order.customerEmail || application.clientEmail || null,
+        clientAddress: order.address || application.clientAddress || '',
+        clientId: order.clientId || application.clientId || null,
+        items: rentItems,
+        depositAmount: totalDeposit,
+        discountType: 'percent',
+        discountValue: orderDiscount,
+        discountAmount,
+        totalAmount,
+    }, { transaction });
+
+    return application;
 }
 
 async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) {
@@ -71,7 +138,7 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
             lock: transaction.LOCK.UPDATE,
         });
         if (!order) {
-            const err = new Error('Р—Р°РјРѕРІР»РµРЅРЅСЏ РЅРµ Р·РЅР°Р№РґРµРЅРѕ');
+            const err = new Error('Замовлення не знайдено');
             err.status = 404;
             throw err;
         }
@@ -79,6 +146,7 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
         if (order.rentalApplicationId) {
             const existing = await RentalApplication.findByPk(order.rentalApplicationId, { transaction });
             if (existing) {
+                await syncApplicationWithOrder(existing, order, transaction);
                 return { application: existing, created: false };
             }
             await order.update({ rentalApplicationId: null }, { transaction });
@@ -94,14 +162,19 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
         const rentItems = buildRentItemsFromOrder(order, productsById);
 
         if (!rentItems.length) {
-            const err = new Error('РЈ Р·Р°РјРѕРІР»РµРЅРЅС– РЅРµРјР°С” РїРѕР·РёС†С–Р№ РѕСЂРµРЅРґРё');
+            const err = new Error('У замовленні немає позицій оренди');
             err.status = 400;
             throw err;
         }
 
         const totalDeposit = rentItems.reduce((sum, line) => sum + parseFloat(line.depositAmount || 0), 0);
         const applicationNumber = await generateAppNumber();
-        const discountPercent = await resolveApplicationDiscount(order, transaction);
+        const discountPercent = parseDiscountPercent(order.discount);
+
+        const totalRental = roundMoney(
+            rentItems.reduce((sum, line) => sum + (parseFloat(line.totalRental) || 0), 0)
+        );
+        const discountAmount = roundMoney(Math.min((totalRental * discountPercent) / 100, totalRental));
 
         const application = await RentalApplication.create({
             applicationNumber,
@@ -112,11 +185,11 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
             clientId: order.clientId || null,
             status: 'draft',
             items: rentItems,
-            totalAmount: 0,
+            totalAmount: roundMoney(Math.max(totalRental - discountAmount, 0)),
             depositAmount: totalDeposit.toFixed(2),
-            discountType: discountPercent > 0 ? 'percent' : 'fixed',
+            discountType: 'percent',
             discountValue: discountPercent,
-            discountAmount: 0,
+            discountAmount,
             createdBy,
         }, { transaction });
 

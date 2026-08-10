@@ -10,9 +10,19 @@ import {
     resolveApplicationDiscount,
 } from '../model/rentalItems';
 import { computeRentalTotals } from '../model/rentalTotals';
+import { mergeOrderLinesIntoRentalItems } from '../model/dealRentalSync';
 
 export function useRentalApplication(id, isNew, options = {}) {
-    const { embedded = false, onSaved } = options;
+    const {
+        embedded = false,
+        onSaved,
+        orderDiscountPercent = null,
+        orderClient = null,
+        orderItems = null,
+        rentProductIds = null,
+        products = null,
+        onTotalsChange = null,
+    } = options;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -29,6 +39,31 @@ export function useRentalApplication(id, isNew, options = {}) {
     const [responsible, setResponsible] = useState([]);
     const [items, setItems] = useState([emptyItem()]);
     const [linkedOrder, setLinkedOrder] = useState(null);
+    const [itemsReady, setItemsReady] = useState(isNew);
+
+    // When rendered next to its order, the order's live «Знижка, %» wins over the
+    // value stored on the application, so both always describe the same deal.
+    const discountFromOrder = orderDiscountPercent != null;
+    const effectiveDiscountType = discountFromOrder ? 'percent' : discountType;
+    const effectiveDiscountValue = discountFromOrder
+        ? (parseDiscountPercent(orderDiscountPercent) > 0 ? String(parseDiscountPercent(orderDiscountPercent)) : '')
+        : discountValue;
+
+    // Embedded deal page owns client fields; mirror them into application state for save/PDF.
+    const effectiveClient = orderClient ? {
+        name: orderClient.name || '',
+        phone: orderClient.phone || '',
+        email: orderClient.email || '',
+        passport: orderClient.passport || '',
+        address: orderClient.address || '',
+        siteAddress: orderClient.siteAddress || '',
+    } : client;
+    const effectiveResponsible = orderClient?.responsible != null
+        ? orderClient.responsible
+        : responsible;
+    const effectiveClientId = orderClient?.clientId != null
+        ? (orderClient.clientId ? String(orderClient.clientId) : '')
+        : selectedClientId;
 
     const applyClient = useCallback((picked) => {
         if (!picked) return;
@@ -41,10 +76,12 @@ export function useRentalApplication(id, isNew, options = {}) {
             address: picked.address || '',
             siteAddress: picked.siteAddress || '',
         });
+        // With a linked order the discount comes from the order, not from the client card.
+        if (linkedOrder || discountFromOrder) return;
         const discountPercent = parseDiscountPercent(picked.discountPercent);
         setDiscountType('percent');
         setDiscountValue(discountPercent > 0 ? String(discountPercent) : '');
-    }, []);
+    }, [linkedOrder, discountFromOrder]);
 
     const handleClientSelect = useCallback((value) => {
         setSelectedClientId(value);
@@ -102,6 +139,7 @@ export function useRentalApplication(id, isNew, options = {}) {
                 const enrichedItems = await Promise.all(rawItems.map((item) => enrichApplicationItem(item)));
                 if (!cancelled) {
                     setItems(enrichedItems);
+                    setItemsReady(true);
                 }
             } catch {
                 // ignore
@@ -113,13 +151,25 @@ export function useRentalApplication(id, isNew, options = {}) {
         return () => { cancelled = true; };
     }, [id, isNew]);
 
+    // Order lines own qty/product identity; application lines keep enrichment only.
+    useEffect(() => {
+        if (!embedded || !itemsReady || !orderItems || !rentProductIds) return;
+        setItems((prev) => mergeOrderLinesIntoRentalItems(
+            orderItems,
+            rentProductIds,
+            prev,
+            products
+        ));
+    }, [embedded, itemsReady, orderItems, rentProductIds, products]);
+
+    useEffect(() => {
+        if (!onTotalsChange) return;
+        const totals = computeRentalTotals(items, effectiveDiscountType, effectiveDiscountValue);
+        onTotalsChange(totals);
+    }, [items, effectiveDiscountType, effectiveDiscountValue, onTotalsChange]);
+
     const updateItem = useCallback((key, field, value) => {
         setItems(prev => prev.map(item => {
-            if ((field === 'rentFrom' || field === 'rentTo') && item._key !== key) {
-                const merged = { ...item, [field]: value };
-                return recalcLineTotals(merged);
-            }
-
             if (item._key !== key) return item;
 
             const updated = { ...item, [field]: value };
@@ -177,28 +227,32 @@ export function useRentalApplication(id, isNew, options = {}) {
             totalDeposit,
             parsedDiscount,
             discountAmount,
-        } = computeRentalTotals(items, discountType, discountValue);
+        } = computeRentalTotals(items, effectiveDiscountType, effectiveDiscountValue);
 
         const payload = {
             status,
             notes,
-            clientName: client.name,
-            clientPhone: normalizeUaPhone(client.phone),
-            clientEmail: client.email,
-            clientPassport: client.passport,
-            clientAddress: client.address,
-            clientSiteAddress: client.siteAddress,
-            clientId: selectedClientId ? Number(selectedClientId) : null,
-            responsible: responsible.map((person) => ({
+            clientName: effectiveClient.name,
+            clientPhone: normalizeUaPhone(effectiveClient.phone),
+            clientEmail: effectiveClient.email,
+            clientPassport: effectiveClient.passport,
+            clientAddress: effectiveClient.address,
+            clientSiteAddress: effectiveClient.siteAddress,
+            clientId: effectiveClientId ? Number(effectiveClientId) : null,
+            responsible: (effectiveResponsible || []).map((person) => ({
                 ...person,
                 phone: normalizeUaPhone(person.phone),
             })),
             rentFrom: items[0]?.rentFrom || null,
             rentTo: items[0]?.rentTo || null,
-            items: items.map(({ _key, ...i }) => i),
+            items: items.map((row) => {
+                const { _key, ...rest } = row;
+                void _key;
+                return rest;
+            }),
             totalAmount: totalRentalAfterDiscount.toFixed(2),
             depositAmount: totalDeposit.toFixed(2),
-            discountType,
+            discountType: effectiveDiscountType,
             discountValue: parsedDiscount.toFixed(2),
             discountAmount: discountAmount.toFixed(2),
         };
@@ -230,7 +284,7 @@ export function useRentalApplication(id, isNew, options = {}) {
         } finally {
             setSaving(false);
         }
-    }, [status, notes, client, selectedClientId, responsible, items, isNew, id, navigate, discountType, discountValue, embedded, onSaved]);
+    }, [status, notes, effectiveClient, effectiveClientId, effectiveResponsible, items, isNew, id, navigate, effectiveDiscountType, effectiveDiscountValue, embedded, onSaved]);
 
     return {
         loading,
@@ -240,15 +294,16 @@ export function useRentalApplication(id, isNew, options = {}) {
         setStatus,
         notes,
         setNotes,
-        discountType,
+        discountType: effectiveDiscountType,
         setDiscountType,
-        discountValue,
+        discountValue: effectiveDiscountValue,
         setDiscountValue,
+        discountFromOrder,
         clients,
-        selectedClientId,
-        client,
+        selectedClientId: effectiveClientId,
+        client: effectiveClient,
         setClient,
-        responsible,
+        responsible: effectiveResponsible,
         setResponsible,
         items,
         setItems,

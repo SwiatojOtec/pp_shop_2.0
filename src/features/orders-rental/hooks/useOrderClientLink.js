@@ -12,6 +12,7 @@ export function useOrderClientLink({
     products,
     rentProductIds,
     billingOptions,
+    onPersisted,
 }) {
     const [linkedClient, setLinkedClient] = useState(null);
     const [phoneMatch, setPhoneMatch] = useState(null);
@@ -77,6 +78,7 @@ export function useOrderClientLink({
             });
             setLinkedClient(client);
             setPhoneMatch(null);
+            onPersisted?.();
         } catch (err) {
             alert(err.message || 'Не вдалося прив\'язати клієнта');
         } finally {

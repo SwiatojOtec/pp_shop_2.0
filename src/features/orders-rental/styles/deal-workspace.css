@@ -1,5 +1,68 @@
-.deal-workspace-tabs {
-    margin-bottom: 20px;
+/* Rental block sits inline on the deal page, collapsed until there is a заявка. */
+.deal-section {
+    background: #fff;
+    border: 1px solid var(--admin-border, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.deal-section__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 22px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+.deal-section__head:disabled {
+    cursor: progress;
+}
+
+.deal-section__head:hover:not(:disabled) {
+    background: #fafafa;
+}
+
+.deal-section__icon {
+    color: #9ca3af;
+    flex-shrink: 0;
+}
+
+.deal-section__title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+}
+
+.deal-section__hint {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.86rem;
+    color: #6b7280;
+}
+
+.deal-section__chevron {
+    flex-shrink: 0;
+    color: #9ca3af;
+    transition: transform 0.15s;
+}
+
+.deal-section__chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.deal-section__body {
+    padding: 4px 22px 20px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.deal-section__body.is-collapsed {
+    display: none;
 }
 
 .deal-workspace-empty {
@@ -48,4 +111,29 @@
     gap: 10px;
     align-items: center;
     flex-wrap: wrap;
+}
+
+.rental-enrichment-hint {
+    margin: 0 0 14px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: #6b7280;
+}
+
+.item-name-static {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item-name-static strong {
+    font-size: 0.95rem;
+    color: #111827;
+}
+
+.item-name-static span {
+    font-size: 0.78rem;
+    color: #6b7280;
 }

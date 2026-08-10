@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ordersApi } from '../../../services/api';
 import { resolveSellerId } from '../../../constants/sellers';
 import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
 import { buildOrderItemFromProduct, enrichOrderItemsFromProducts } from '../model/orderItems';
+import { calcDays } from '../model/rentalItems';
 
 export function useOrderDraftEditor({
     draft,
@@ -14,9 +15,14 @@ export function useOrderDraftEditor({
     billingOptions,
 }) {
     const [saving, setSaving] = useState(false);
+    const [dirty, setDirty] = useState(false);
     const [productSearch, setProductSearch] = useState('');
 
+    const markSaved = useCallback(() => setDirty(false), []);
+    const markDirty = useCallback(() => setDirty(true), []);
+
     function setField(field, value) {
+        setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
             const next = {
@@ -49,10 +55,12 @@ export function useOrderDraftEditor({
                 rentProductIds
             ),
         });
+        setDirty(false);
         return updated;
     }
 
     function addItem(product) {
+        setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
             const items = [...prev.items, buildOrderItemFromProduct(product)];
@@ -62,6 +70,7 @@ export function useOrderDraftEditor({
     }
 
     function removeItem(idx) {
+        setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
             const items = prev.items.filter((_, i) => i !== idx);
@@ -70,6 +79,7 @@ export function useOrderDraftEditor({
     }
 
     function updateQty(idx, qty) {
+        setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
             const items = prev.items.map((item, i) =>
@@ -79,12 +89,22 @@ export function useOrderDraftEditor({
         });
     }
 
-    function updateRentDays(idx, days) {
+    function updateRentDates(idx, { rentFrom, rentTo }) {
+        setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
-            const items = prev.items.map((item, i) =>
-                i === idx ? { ...item, rentDays: Math.max(1, parseFloat(days) || 1) } : item
-            );
+            const items = prev.items.map((item, i) => {
+                if (i !== idx) return item;
+                const nextFrom = rentFrom !== undefined ? rentFrom : (item.rentFrom || '');
+                const nextTo = rentTo !== undefined ? rentTo : (item.rentTo || '');
+                const days = calcDays(nextFrom, nextTo);
+                return {
+                    ...item,
+                    rentFrom: nextFrom,
+                    rentTo: nextTo,
+                    rentDays: days > 0 ? days : Math.max(1, Number(item.rentDays) || 1),
+                };
+            });
             return withOrderTotal({ ...prev, items }, billingOptions);
         });
     }
@@ -110,6 +130,9 @@ export function useOrderDraftEditor({
 
     return {
         saving,
+        dirty,
+        markSaved,
+        markDirty,
         productSearch,
         setProductSearch,
         setField,
@@ -117,7 +140,7 @@ export function useOrderDraftEditor({
         addItem,
         removeItem,
         updateQty,
-        updateRentDays,
+        updateRentDates,
         handleSave,
         suggestedProducts,
     };
