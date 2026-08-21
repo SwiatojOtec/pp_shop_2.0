@@ -38,16 +38,38 @@ export function useOrderDraftEditor({
 
     async function persistDraft() {
         if (!draft) return null;
+        const rentStartTime = (() => {
+            const raw = String(draft.rentStartTime || '').trim();
+            const m = raw.match(/^(\d{1,2}):(\d{2})/);
+            if (!m) return null;
+            const h = Number(m[1]);
+            const min = Number(m[2]);
+            if (!Number.isFinite(h) || !Number.isFinite(min) || h > 23 || min > 59) return null;
+            return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        })();
+
         const payload = withOrderTotal({
-            ...draft,
+            customerName: draft.customerName,
             customerPhone: normalizeUaPhone(draft.customerPhone),
-            sellerId: resolveSellerId(draft.sellerId),
+            customerEmail: draft.customerEmail || null,
+            address: draft.address || null,
+            deliveryMethod: draft.deliveryMethod,
+            paymentMethod: draft.paymentMethod,
+            items: draft.items,
+            totalAmount: draft.totalAmount,
             discount: parseDiscountPercent(draft.discount),
+            clientId: draft.clientId || null,
+            status: draft.status,
+            sellerId: resolveSellerId(draft.sellerId),
+            rentalApplicationId: draft.rentalApplicationId || null,
+            rentStartTime,
         }, billingOptions);
+
         const updated = await ordersApi.update(draft.id, payload);
         setOrder(updated);
         setDraft({
             ...updated,
+            rentStartTime: updated.rentStartTime || rentStartTime || null,
             discount: parseDiscountPercent(updated.discount),
             items: enrichOrderItemsFromProducts(
                 updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
@@ -56,7 +78,7 @@ export function useOrderDraftEditor({
             ),
         });
         setDirty(false);
-        return updated;
+        return { ...updated, rentStartTime: updated.rentStartTime || rentStartTime || null };
     }
 
     function addItem(product) {

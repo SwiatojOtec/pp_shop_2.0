@@ -346,6 +346,7 @@ export default function DealWorkspace() {
                             enrichmentOnly
                             sellerId={draft.sellerId}
                             orderDiscountPercent={parseDiscountPercent(draft.discount)}
+                            orderRentStartTime={draft.rentStartTime || ''}
                             orderClient={orderClient}
                             orderItems={draft.items}
                             rentProductIds={rentProductIds}

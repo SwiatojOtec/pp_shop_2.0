@@ -64,6 +64,11 @@ const Order = sequelize.define('Order', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    /** HH:MM — час початку/кінця оренди для документів (однаковий для «з» і «по»). */
+    rentStartTime: {
+        type: DataTypes.STRING(8),
+        allowNull: true,
+    },
 }, { timestamps: true });
 
 module.exports = Order;

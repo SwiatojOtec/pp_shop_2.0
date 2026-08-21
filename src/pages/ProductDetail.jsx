@@ -74,7 +74,7 @@ export default function ProductDetail() {
     const [activeImg, setActiveImg] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [m2Value, setM2Value] = useState('');
-    const [activeTab, setActiveTab] = useState('desc');
+    const [activeTab, setActiveTab] = useState('specs');
 
     // Window Sill Calculator State
     const [sillWidth, setSillWidth] = useState('');
@@ -360,7 +360,9 @@ export default function ProductDetail() {
                         </div>
                     </div>
 
-                    <div className="rent-product-grid">
+                    <div className="rent-product-layout">
+                        <div className="rent-main-col">
+                            <div className="rent-top-row">
                         {/* LEFT: image */}
                         <div className="rent-gallery">
                             <div className="rent-main-image-wrap">
@@ -429,58 +431,10 @@ export default function ProductDetail() {
                                     ))}
                                 </div>
                             )}
-                            {relatedItems.length > 0 && (
-                                <div className="rent-related-block">
-                                    <div className="rent-related-title">З цим товаром також беруть:</div>
-                                    {relatedItems.map(item => (
-                                        <Link key={item.id} to={`/orenda/${item.slug}`} className="rent-related-item">
-                                            <img src={item.image} alt={item.name} className="rent-related-img" />
-                                            <div className="rent-related-info">
-                                                <span className="rent-related-name">{item.name}</span>
-                                                <span className="rent-related-price">{formatRentCatalogPriceCaption(item)}</span>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
-                        {/* MIDDLE: specs + description */}
-                        <div className="rent-specs-col">
-                            {product.specs && Object.keys(product.specs).length > 0 && (
-                                <div className="rent-specs-table">
-                                    <div className="rent-specs-header">Технічні характеристики</div>
-                                    {Object.entries(product.specs).map(([label, value], i) => (
-                                        <div key={i} className="rent-spec-row">
-                                            <span className="rent-spec-label">{label}</span>
-                                            <span className="rent-spec-value">{value}</span>
-                                        </div>
-                                    ))}
-                                    <div className="rent-spec-row">
-                                        <span className="rent-spec-label">Категорія</span>
-                                        <span className="rent-spec-value">{product.category}</span>
-                                    </div>
-                                    {product.brand && (
-                                        <div className="rent-spec-row">
-                                            <span className="rent-spec-label">Бренд</span>
-                                            <span className="rent-spec-value">{product.brand}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {product.desc && (
-                                <CollapsibleProductDescription
-                                    key={`rent-desc-${product.id}`}
-                                    text={product.desc}
-                                    wrapperClassName="rent-desc-block"
-                                    textClassName="rent-desc-text"
-                                />
-                            )}
-                        </div>
-
-                        {/* RIGHT: price + kit + buy */}
-                        <div className="rent-sidebar">
+                        {/* MIDDLE: price only */}
+                        <div className="rent-price-col">
                             <div className="rent-price-box">
                                 <div className="rent-price">
                                     {(() => {
@@ -569,6 +523,104 @@ export default function ProductDetail() {
                                     )}
                                 </div>
                             </div>
+                        </div>
+                            </div>
+
+                            <div className="product-tabs-section rent-product-tabs">
+                                <div className="tabs-header">
+                                    <button
+                                        type="button"
+                                        className={`tab-link ${activeTab === 'specs' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('specs')}
+                                    >
+                                        Характеристики
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`tab-link ${activeTab === 'desc' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('desc')}
+                                    >
+                                        Опис
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`tab-link ${activeTab === 'instruction' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('instruction')}
+                                    >
+                                        Інструкція
+                                    </button>
+                                </div>
+                                <div className="tab-content">
+                                    {activeTab === 'specs' && (
+                                        <div className="rent-specs-table">
+                                            {product.specs && Object.keys(product.specs).length > 0 ? (
+                                                Object.entries(product.specs).map(([label, value], i) => (
+                                                    <div key={i} className="rent-spec-row">
+                                                        <span className="rent-spec-label">{label}</span>
+                                                        <span className="rent-spec-value">{value}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="tab-empty">Характеристики не вказані.</p>
+                                            )}
+                                            <div className="rent-spec-row">
+                                                <span className="rent-spec-label">Категорія</span>
+                                                <span className="rent-spec-value">{product.category}</span>
+                                            </div>
+                                            {product.brand && (
+                                                <div className="rent-spec-row">
+                                                    <span className="rent-spec-label">Бренд</span>
+                                                    <span className="rent-spec-value">{product.brand}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {activeTab === 'desc' && (
+                                        product.desc ? (
+                                            <p className="rent-tab-text">{product.desc}</p>
+                                        ) : (
+                                            <p className="tab-empty">Опис відсутній.</p>
+                                        )
+                                    )}
+                                    {activeTab === 'instruction' && (
+                                        product.instruction ? (
+                                            <p className="rent-tab-text">{product.instruction}</p>
+                                        ) : (
+                                            <p className="tab-empty">Інструкція з&apos;явиться незабаром.</p>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* RIGHT: related + kit + buy + phone */}
+                        <aside className="rent-sidebar">
+                            {relatedItems.length > 0 && (
+                                <div className="rent-related-block">
+                                    <div className="rent-related-title">З цим товаром також беруть:</div>
+                                    {relatedItems.map(item => (
+                                        <div key={item.id} className="rent-related-item">
+                                            <Link to={`/orenda/${item.slug}`} className="rent-related-link">
+                                                <img src={item.image} alt={item.name} className="rent-related-img" />
+                                                <div className="rent-related-info">
+                                                    <span className="rent-related-name">{item.name}</span>
+                                                    <span className="rent-related-price">{formatRentCatalogPriceCaption(item)}</span>
+                                                </div>
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                className="rent-related-add-btn"
+                                                title="Додати в кошик"
+                                                aria-label={`Додати ${item.name} в кошик`}
+                                                onClick={() => addToCartWithToast(item, 1, cartItems, addToCart, showToast)}
+                                            >
+                                                <ShoppingCart size={15} />
+                                                <span>В кошик</span>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {Array.isArray(product.kitItems) && product.kitItems.length > 0 && (
                                 <div className="kit-block">
@@ -614,7 +666,7 @@ export default function ProductDetail() {
                                 <Phone size={15} />
                                 067 006 40 44
                             </a>
-                        </div>
+                        </aside>
                     </div>
 
                     <ProductDetailRecoRails
@@ -961,11 +1013,14 @@ export default function ProductDetail() {
 
                 <div className="product-tabs-section">
                     <div className="tabs-header">
-                        <button className={`tab-link ${activeTab === 'desc' ? 'active' : ''}`} onClick={() => setActiveTab('desc')}>Опис</button>
                         <button className={`tab-link ${activeTab === 'specs' ? 'active' : ''}`} onClick={() => setActiveTab('specs')}>Характеристики</button>
+                        <button className={`tab-link ${activeTab === 'desc' ? 'active' : ''}`} onClick={() => setActiveTab('desc')}>Опис</button>
+                        <button className={`tab-link ${activeTab === 'instruction' ? 'active' : ''}`} onClick={() => setActiveTab('instruction')}>Інструкція</button>
                     </div>
                     <div className="tab-content">
-                        {activeTab === 'desc' && <p>{product.desc}</p>}
+                        {activeTab === 'desc' && (
+                            product.desc ? <p className="rent-tab-text">{product.desc}</p> : <p className="tab-empty">Опис відсутній.</p>
+                        )}
                         {activeTab === 'specs' && (
                             <div className="specs-grid">
                                 <div className="spec-item"><span className="spec-label">Категорія</span><span>{product.category}</span></div>
@@ -976,6 +1031,13 @@ export default function ProductDetail() {
                                     </div>
                                 ))}
                             </div>
+                        )}
+                        {activeTab === 'instruction' && (
+                            product.instruction ? (
+                                <p className="rent-tab-text">{product.instruction}</p>
+                            ) : (
+                                <p className="tab-empty">Інструкція з&apos;явиться незабаром.</p>
+                            )
                         )}
                     </div>
                 </div>

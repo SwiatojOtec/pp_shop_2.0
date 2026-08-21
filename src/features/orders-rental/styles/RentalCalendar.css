@@ -1,0 +1,398 @@
+.rental-calendar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.rental-calendar__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.rental-calendar__nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rental-calendar__nav-btn,
+.rental-calendar__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+}
+
+.rental-calendar__nav-btn:hover,
+.rental-calendar__icon-btn:hover {
+    background: #f9fafb;
+}
+
+.rental-calendar__month {
+    margin: 0;
+    min-width: 160px;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    color: #111827;
+}
+
+.rental-calendar__today-btn {
+    margin-left: 4px;
+    padding: 7px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+}
+
+.rental-calendar__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rental-calendar__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.rental-calendar__legend-item::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.rental-calendar__legend-item--hold::before { background: #2563eb; }
+.rental-calendar__legend-item--application::before { background: #059669; }
+.rental-calendar__legend-item--overdue::before { background: #dc2626; }
+
+.rental-calendar__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+    align-items: start;
+}
+
+.rental-calendar__grid-wrap {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.rental-calendar__loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 2;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.rental-calendar__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.rental-calendar__weekday {
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.rental-calendar__grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.rental-calendar__cell {
+    min-height: 96px;
+    padding: 8px;
+    border: none;
+    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fff;
+    text-align: left;
+    vertical-align: top;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rental-calendar__cell.is-empty {
+    background: #fafafa;
+    cursor: default;
+}
+
+.rental-calendar__cell:hover:not(.is-empty) {
+    background: #f8fafc;
+}
+
+.rental-calendar__cell.is-today .rental-calendar__day-num {
+    background: #111827;
+    color: #fff;
+}
+
+.rental-calendar__cell.is-selected {
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 2px #93c5fd;
+}
+
+.rental-calendar__day-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.rental-calendar__chips {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.rental-calendar__chip {
+    display: block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rental-calendar__chip--hold { background: #2563eb; }
+.rental-calendar__chip--application { background: #059669; }
+.rental-calendar__chip--overdue { background: #dc2626; }
+.rental-calendar__chip--more {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
+.rental-calendar__panel {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    min-height: 320px;
+}
+
+.rental-calendar__panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rental-calendar__panel-head h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.rental-calendar__new-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    padding: 7px 10px;
+}
+
+.rental-calendar__panel-hint {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.rental-calendar__form {
+    margin: 0 0 14px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f9fafb;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rental-calendar__form-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rental-calendar__form-head strong {
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.rental-calendar__form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.rental-calendar__form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+}
+
+.rental-calendar__form .form-group > label,
+.rental-calendar__form .form-group > span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #374151;
+}
+
+.rental-calendar__form input,
+.rental-calendar__form select,
+.rental-calendar__form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: #111827;
+    background: #fff;
+}
+
+.rental-calendar__form input::placeholder,
+.rental-calendar__form textarea::placeholder {
+    color: #9ca3af;
+}
+
+.rental-calendar__product-search {
+    position: relative;
+}
+
+.rental-calendar__picked {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #111827;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.rental-calendar__form-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.rental-calendar__event-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rental-calendar__event-card {
+    border: 1px solid #e5e7eb;
+    border-left-width: 4px;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fafafa;
+}
+
+.rental-calendar__event-card--hold { border-left-color: #2563eb; }
+.rental-calendar__event-card--application { border-left-color: #059669; }
+.rental-calendar__event-card--overdue { border-left-color: #dc2626; }
+
+.rental-calendar__event-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.rental-calendar__event-meta {
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.rental-calendar__event-note {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #374151;
+}
+
+.rental-calendar__event-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.rental-calendar__event-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+}
+
+.rental-calendar__error {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 1100px) {
+    .rental-calendar__layout {
+        grid-template-columns: 1fr;
+    }
+
+    .rental-calendar__cell {
+        min-height: 78px;
+    }
+}

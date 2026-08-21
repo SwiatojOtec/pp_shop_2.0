@@ -584,7 +584,35 @@ async function updateOrder(req, res) {
         if (updates.sellerId != null) {
             updates.sellerId = resolveSellerId(updates.sellerId);
         }
-        await order.update(updates);
+        if (updates.rentStartTime !== undefined) {
+            const raw = String(updates.rentStartTime || '').trim();
+            const m = raw.match(/^(\d{1,2}):(\d{2})/);
+            if (!raw || !m) {
+                updates.rentStartTime = null;
+            } else {
+                const h = Number(m[1]);
+                const min = Number(m[2]);
+                updates.rentStartTime = (Number.isFinite(h) && Number.isFinite(min) && h <= 23 && min <= 59)
+                    ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+                    : null;
+            }
+        }
+
+        // Only persist known Order columns (avoid wiping via junk from the draft dump).
+        const allowed = [
+            'customerName', 'customerPhone', 'customerEmail', 'address',
+            'deliveryMethod', 'paymentMethod', 'items', 'totalAmount',
+            'discount', 'clientId', 'status', 'sellerId', 'rentalApplicationId',
+            'rentStartTime',
+        ];
+        const patch = {};
+        for (const key of allowed) {
+            if (Object.prototype.hasOwnProperty.call(updates, key)) {
+                patch[key] = updates[key];
+            }
+        }
+        await order.update(patch);
+        await order.reload();
         res.json(order);
     } catch (err) {
         res.status(400).json({ message: err.message });

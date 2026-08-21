@@ -182,6 +182,17 @@ export const rentalApplicationsApi = {
     remove: (id) => apiDelete(`/api/rental-applications/${id}`),
 };
 
+export const rentalCalendarApi = {
+    events: (params) => apiGet('/api/rental-calendar/events', params),
+    listBookings: (params) => apiGet('/api/rental-calendar/bookings', params),
+    getBooking: (id) => apiGet(`/api/rental-calendar/bookings/${id}`),
+    createBooking: (data) => apiPost('/api/rental-calendar/bookings', data),
+    updateBooking: (id, data) => apiPatch(`/api/rental-calendar/bookings/${id}`, data),
+    cancelBooking: (id) => apiPost(`/api/rental-calendar/bookings/${id}/cancel`, {}),
+    convertBooking: (id) => apiPost(`/api/rental-calendar/bookings/${id}/convert`, {}),
+    removeBooking: (id) => apiDelete(`/api/rental-calendar/bookings/${id}`),
+};
+
 export const clientsApi = {
     list: (params) => apiGet('/api/clients', params),
     lookupByPhone: (phone) => apiGet('/api/clients/lookup', { phone }),

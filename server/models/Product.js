@@ -62,6 +62,10 @@ const Product = sequelize.define('Product', {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    instruction: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     adminNotes: {
         type: DataTypes.TEXT,
         allowNull: true // Внутрішні нотатки для адмінів (не для клієнтської частини)

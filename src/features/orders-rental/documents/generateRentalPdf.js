@@ -4,7 +4,9 @@ import autoTable from 'jspdf-autotable';
 import {
     fmtPdfMoney as fmt,
     fmtDate,
+    fmtDateWithTime,
     fmtFormalUaDate,
+    fmtSignatureDateLine,
     resolveMinRentDays,
     discountPctLabel as buildDiscountPctLabel,
 } from '../model/rentalDocFormat';
@@ -73,6 +75,7 @@ export const generateRentalPdf = async ({
     actNumber: payloadActNumber,
     actDate: payloadActDate,
     orderId: payloadOrderId,
+    rentStartTime = '',
 }, options = {}) => {
     const variantKey = options.variant === 'return_inspection' ? 'return_inspection' : 'handover';
     const variant = RENTAL_PDF_VARIANTS[variantKey];
@@ -217,8 +220,8 @@ export const generateRentalPdf = async ({
             { content: fmtMoney(item.replacementCostTotal, zeroAmounts), styles: { halign: 'right' } },
             { content: zeroAmounts ? '0%' : `${item.depositPercent || 0}%`, styles: { halign: 'center' } },
             { content: fmtMoney(item.depositAmount, zeroAmounts), styles: { halign: 'right' } },
-            { content: fmtDate(item.rentFrom), styles: { halign: 'center' } },
-            { content: fmtDate(item.rentTo), styles: { halign: 'center' } },
+            { content: fmtDateWithTime(item.rentFrom, rentStartTime), styles: { halign: 'center' } },
+            { content: fmtDateWithTime(item.rentTo, rentStartTime), styles: { halign: 'center' } },
             {
                 content: String(calcDays(item.rentFrom, item.rentTo) || item.days || 0),
                 styles: { halign: 'center' },
@@ -403,7 +406,7 @@ export const generateRentalPdf = async ({
     const sigLines = [
         [`П.І.Б.: ${lessor.name}`, `П.І.Б.: ${client.name || '___________________________'}`],
         ['Підпис: ___________________________', 'Підпис: ___________________________'],
-        ['Дата: ____/____/________', 'Дата: ____/____/________'],
+        [fmtSignatureDateLine(rentStartTime), fmtSignatureDateLine(rentStartTime)],
     ];
     sigLines.forEach((row, i) => {
         doc.text(row[0], 20, sigY + 5 + i * 5.5);

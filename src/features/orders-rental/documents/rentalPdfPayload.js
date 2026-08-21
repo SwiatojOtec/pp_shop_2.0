@@ -46,6 +46,10 @@ export function buildRentalPdfPayload(application, order = null) {
         totalRentalAfterDiscount,
         contractRef: buildRentalActContractRef(order, application),
         orderId: order?.id || application?.linkedOrder?.id || application?.orderId || null,
+        rentStartTime: order?.rentStartTime
+            || application?.rentStartTime
+            || application?.linkedOrder?.rentStartTime
+            || '',
     };
 }
 

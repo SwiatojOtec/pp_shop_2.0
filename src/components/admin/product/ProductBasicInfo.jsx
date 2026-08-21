@@ -1,5 +1,5 @@
 /**
- * Product basic info section: name, description, admin notes.
+ * Product basic info section: name, description, instruction, admin notes.
  */
 export default function ProductBasicInfo({ formData, onChange }) {
     return (
@@ -21,6 +21,16 @@ export default function ProductBasicInfo({ formData, onChange }) {
                         value={formData.desc}
                         onChange={(e) => onChange('desc', e.target.value)}
                         rows={10}
+                        style={{ resize: 'vertical' }}
+                    />
+                </div>
+                <div className="form-group">
+                    <label>Інструкція (вкладка на сторінці товару)</label>
+                    <textarea
+                        value={formData.instruction || ''}
+                        onChange={(e) => onChange('instruction', e.target.value)}
+                        rows={8}
+                        placeholder="Інструкція з експлуатації та безпеки праці…"
                         style={{ resize: 'vertical' }}
                     />
                 </div>

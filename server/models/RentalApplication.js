@@ -54,6 +54,11 @@ const RentalApplication = sequelize.define('RentalApplication', {
         type: DataTypes.DATEONLY,
         allowNull: true
     },
+    /** HH:MM — той самий час для «Оренда з» і «Оренда по» в документах. */
+    rentStartTime: {
+        type: DataTypes.STRING(8),
+        allowNull: true
+    },
     // Items: [{productId, name, inventoryNumber, serialNumber, quantity, pricePerDay, days, total}]
     items: {
         type: DataTypes.JSONB,

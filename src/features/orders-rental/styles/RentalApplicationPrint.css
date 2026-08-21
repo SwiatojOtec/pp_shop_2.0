@@ -176,6 +176,7 @@
 
 .td-num { text-align: center; }
 .td-center { text-align: center; }
+.td-date-time { white-space: pre-line; line-height: 1.25; }
 .td-right { text-align: right; }
 .td-name { }
 .bold { font-weight: bold; }

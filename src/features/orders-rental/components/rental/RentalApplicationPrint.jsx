@@ -2,15 +2,16 @@ import React from 'react';
 import { buildRentalActContractRef } from '../../documents/rentalContractRef';
 import {
     fmtPrintMoney as fmt,
-    fmtDate as fmtDateShared,
+    fmtDateWithTime as fmtDateWithTimeShared,
     fmtFormalUaDate,
+    fmtSignatureDateLine,
     resolveMinRentDays,
     discountPctLabel as buildDiscountPctLabel,
 } from '../../model/rentalDocFormat';
 import { calcDays } from '../../model/rentalItems';
 import '../../styles/RentalApplicationPrint.css';
 
-const fmtDate = (d) => fmtDateShared(d, '___/___/______');
+const fmtDateTime = (d, time) => fmtDateWithTimeShared(d, time, '___/___/______');
 
 const RentalApplicationPrint = React.forwardRef(({
     applicationNumber,
@@ -27,6 +28,7 @@ const RentalApplicationPrint = React.forwardRef(({
     contractRef,
     actNumber,
     actDate,
+    rentStartTime = '',
 }, ref) => {
     const refData = contractRef || buildRentalActContractRef(null, { applicationNumber });
     const safeDiscountAmount = Math.max(0, Number(discountAmount || 0));
@@ -147,8 +149,8 @@ const RentalApplicationPrint = React.forwardRef(({
                                 <td className="td-right">{fmt(item.replacementCostTotal)}</td>
                                 <td className="td-center">{item.depositPercent}%</td>
                                 <td className="td-right">{fmt(item.depositAmount)}</td>
-                                <td className="td-center">{fmtDate(item.rentFrom)}</td>
-                                <td className="td-center">{fmtDate(item.rentTo)}</td>
+                                <td className="td-center td-date-time">{fmtDateTime(item.rentFrom, rentStartTime)}</td>
+                                <td className="td-center td-date-time">{fmtDateTime(item.rentTo, rentStartTime)}</td>
                                 <td className="td-center">
                                     {calcDays(item.rentFrom, item.rentTo) || item.days || '—'}
                                 </td>
@@ -232,13 +234,13 @@ const RentalApplicationPrint = React.forwardRef(({
                     <div className="sig-title">Передав (Орендодавець):</div>
                     <div className="sig-line">П.І.Б.: ___________________________</div>
                     <div className="sig-line">Підпис: ___________________________</div>
-                    <div className="sig-line">Дата: ____/____/________</div>
+                    <div className="sig-line">{fmtSignatureDateLine(rentStartTime)}</div>
                 </div>
                 <div className="sig-block">
                     <div className="sig-title">Прийняв (Орендар):</div>
                     <div className="sig-line">П.І.Б.: {client.name || '___________________________'}</div>
                     <div className="sig-line">Підпис: ___________________________</div>
-                    <div className="sig-line">Дата: ____/____/________</div>
+                    <div className="sig-line">{fmtSignatureDateLine(rentStartTime)}</div>
                 </div>
             </div>
         </div>

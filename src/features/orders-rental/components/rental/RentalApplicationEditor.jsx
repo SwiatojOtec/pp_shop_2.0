@@ -28,6 +28,7 @@ export default function RentalApplicationEditor({
     onSaved,
     sellerId: sellerIdProp,
     orderDiscountPercent = null,
+    orderRentStartTime = null,
     orderClient = null,
     orderItems = null,
     rentProductIds = null,
@@ -46,6 +47,7 @@ export default function RentalApplicationEditor({
         embedded,
         onSaved,
         orderDiscountPercent,
+        orderRentStartTime,
         orderClient,
         orderItems,
         rentProductIds,
@@ -77,8 +79,11 @@ export default function RentalApplicationEditor({
         discountType: app.discountType,
         discountValue: totals.parsedDiscount,
         linkedOrder: app.linkedOrder,
+        rentStartTime: orderRentStartTime || app.rentStartTime || app.linkedOrder?.rentStartTime || '',
         sellerId,
-    }, app.linkedOrder), [app, totals.parsedDiscount, sellerId]);
+    }, app.linkedOrder
+        ? { ...app.linkedOrder, rentStartTime: orderRentStartTime || app.linkedOrder.rentStartTime || app.rentStartTime || '' }
+        : (orderRentStartTime ? { rentStartTime: orderRentStartTime } : null)), [app, totals.parsedDiscount, sellerId, orderRentStartTime]);
 
     const currentContractRef = buildRentalActContractRef(null, {
         applicationNumber: app.applicationNumber,
@@ -243,6 +248,7 @@ export default function RentalApplicationEditor({
                         discountAmount={totals.discountAmount}
                         totalRentalAfterDiscount={totals.totalRentalAfterDiscount}
                         contractRef={currentContractRef}
+                        rentStartTime={orderRentStartTime || app.rentStartTime || app.linkedOrder?.rentStartTime || ''}
                     />
                 </div>
             )}

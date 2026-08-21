@@ -17,6 +17,7 @@ export function useRentalApplication(id, isNew, options = {}) {
         embedded = false,
         onSaved,
         orderDiscountPercent = null,
+        orderRentStartTime = null,
         orderClient = null,
         orderItems = null,
         rentProductIds = null,
@@ -31,6 +32,7 @@ export function useRentalApplication(id, isNew, options = {}) {
     const [applicationNumber, setApplicationNumber] = useState('');
     const [status, setStatus] = useState('draft');
     const [notes, setNotes] = useState('');
+    const [rentStartTime, setRentStartTime] = useState('');
     const [discountType, setDiscountType] = useState('fixed');
     const [discountValue, setDiscountValue] = useState('');
     const [clients, setClients] = useState([]);
@@ -116,6 +118,7 @@ export function useRentalApplication(id, isNew, options = {}) {
                 setApplicationNumber(data.applicationNumber || '');
                 setStatus(data.status || 'draft');
                 setNotes(data.notes || '');
+                setRentStartTime(data.rentStartTime || data.linkedOrder?.rentStartTime || '');
 
                 const resolvedDiscount = resolveApplicationDiscount(data);
                 setDiscountType(resolvedDiscount.discountType);
@@ -232,6 +235,9 @@ export function useRentalApplication(id, isNew, options = {}) {
         const payload = {
             status,
             notes,
+            rentStartTime: (orderRentStartTime != null && orderRentStartTime !== ''
+                ? orderRentStartTime
+                : rentStartTime) || null,
             clientName: effectiveClient.name,
             clientPhone: normalizeUaPhone(effectiveClient.phone),
             clientEmail: effectiveClient.email,
@@ -284,7 +290,7 @@ export function useRentalApplication(id, isNew, options = {}) {
         } finally {
             setSaving(false);
         }
-    }, [status, notes, effectiveClient, effectiveClientId, effectiveResponsible, items, isNew, id, navigate, effectiveDiscountType, effectiveDiscountValue, embedded, onSaved]);
+    }, [status, notes, rentStartTime, orderRentStartTime, effectiveClient, effectiveClientId, effectiveResponsible, items, isNew, id, navigate, effectiveDiscountType, effectiveDiscountValue, embedded, onSaved]);
 
     return {
         loading,
@@ -294,6 +300,8 @@ export function useRentalApplication(id, isNew, options = {}) {
         setStatus,
         notes,
         setNotes,
+        rentStartTime,
+        setRentStartTime,
         discountType: effectiveDiscountType,
         setDiscountType,
         discountValue: effectiveDiscountValue,

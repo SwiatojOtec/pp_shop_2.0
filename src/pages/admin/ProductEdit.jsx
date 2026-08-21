@@ -39,7 +39,7 @@ function safeAdminReturnPath(raw) {
 
 const INITIAL_FORM = {
     name: '', price: '', oldPrice: '', category: '', image: '', images: [],
-    desc: '', adminNotes: '', sku: '', slug: '', groupId: '',
+    desc: '', instruction: '', adminNotes: '', sku: '', slug: '', groupId: '',
     stockStatus: 'in_stock', brand: '', packSize: 1.0, unit: 'м²', badge: '',
     specs: {}, priceMatrix: [], availableFrom: '', kitItems: [],
     quantityAvailable: '', showInRentCatalog: true, relatedProducts: [],
@@ -182,6 +182,7 @@ export default function ProductEdit({ context = 'products' }) {
                 oldPrice:          data.oldPrice ?? '',
                 images:            data.images || [],
                 adminNotes:        data.adminNotes || '',
+                instruction:       data.instruction || '',
                 specs:             data.specs || {},
                 priceMatrix:       data.priceMatrix || [],
                 availableFrom:     data.availableFrom || '',
@@ -290,6 +291,7 @@ export default function ProductEdit({ context = 'products' }) {
                 packSize:  formData.packSize === '' ? 1.0 : Number(formData.packSize),
                 availableFrom: formData.availableFrom || null,
                 adminNotes:    String(formData.adminNotes || '').trim() || null,
+                instruction:   String(formData.instruction || '').trim() || null,
                 badge:         isRentContext ? null : formData.badge,
                 quantityAvailable: !isRentContext
                     ? (formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable))

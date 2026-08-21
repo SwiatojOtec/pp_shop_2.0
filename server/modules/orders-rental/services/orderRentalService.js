@@ -126,6 +126,7 @@ async function syncApplicationWithOrder(application, order, transaction) {
         discountValue: orderDiscount,
         discountAmount,
         totalAmount,
+        rentStartTime: order.rentStartTime || application.rentStartTime || null,
     }, { transaction });
 
     return application;
@@ -190,6 +191,7 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
             discountType: 'percent',
             discountValue: discountPercent,
             discountAmount,
+            rentStartTime: order.rentStartTime || null,
             createdBy,
         }, { transaction });
 

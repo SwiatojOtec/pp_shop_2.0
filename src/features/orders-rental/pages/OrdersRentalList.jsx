@@ -4,36 +4,44 @@ import { Plus } from 'lucide-react';
 import { AdminPageHeader } from '../../../components/admin';
 import AdminOrders from './AdminOrders';
 import AdminRentalApplications from './AdminRentalApplications';
+import RentalCalendar from './RentalCalendar';
 import '../../../pages/admin/Admin.css';
 import '../styles/RentalApplicationForm.css';
 
 const TABS = [
     { key: 'orders', label: 'Замовлення' },
     { key: 'rental', label: 'Заявки оренди' },
+    { key: 'calendar', label: 'Календар' },
 ];
+
+function resolveTab(raw) {
+    const value = String(raw || 'orders').toLowerCase();
+    if (value === 'rental' || value === 'calendar') return value;
+    return 'orders';
+}
 
 export default function OrdersRentalList() {
     const [searchParams, setSearchParams] = useSearchParams();
-    const tab = useMemo(() => {
-        const raw = String(searchParams.get('tab') || 'orders').toLowerCase();
-        return raw === 'rental' ? 'rental' : 'orders';
-    }, [searchParams]);
+    const tab = useMemo(() => resolveTab(searchParams.get('tab')), [searchParams]);
 
     function setTab(next) {
         const params = new URLSearchParams(searchParams);
         if (next === 'orders') params.delete('tab');
         else params.set('tab', next);
-        // Keep newClientId etc. for orders composer
         setSearchParams(params, { replace: true });
     }
+
+    const subtitle = tab === 'rental'
+        ? 'Договори та заявки на оренду інструменту'
+        : tab === 'calendar'
+            ? 'Бронювання та зайнятість інструменту по датах'
+            : 'Замовлення магазину та оренди';
 
     return (
         <div className="orders-rental-list">
             <AdminPageHeader
                 title="Замовлення та оренда"
-                subtitle={tab === 'rental'
-                    ? 'Договори та заявки на оренду інструменту'
-                    : 'Замовлення магазину та оренди'}
+                subtitle={subtitle}
                 actions={
                     tab === 'rental' ? (
                         <Link
@@ -60,11 +68,9 @@ export default function OrdersRentalList() {
                 ))}
             </div>
 
-            {tab === 'orders' ? (
-                <AdminOrders hideHeader />
-            ) : (
-                <AdminRentalApplications hideHeader />
-            )}
+            {tab === 'orders' && <AdminOrders hideHeader />}
+            {tab === 'rental' && <AdminRentalApplications hideHeader />}
+            {tab === 'calendar' && <RentalCalendar />}
         </div>
     );
 }

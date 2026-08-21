@@ -11,17 +11,31 @@
     overflow: hidden;
 }
 
-.rent-product-grid {
+.rent-product-layout {
     display: grid;
-    grid-template-columns: minmax(0, 360px) minmax(0, 1fr) minmax(0, 300px);
-    gap: 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 28px;
     align-items: start;
     width: 100%;
     box-sizing: border-box;
 }
 
+.rent-main-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+}
+
+.rent-top-row {
+    display: grid;
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+}
+
 .rent-gallery,
-.rent-specs-col,
+.rent-price-col,
 .rent-sidebar {
     min-width: 0;
     max-width: 100%;
@@ -32,6 +46,13 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    max-width: 300px;
+}
+
+.rent-price-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .rent-main-image-wrap {
@@ -147,6 +168,15 @@
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     overflow: hidden;
+}
+
+.rent-product-tabs .rent-specs-table {
+    border: none;
+    border-radius: 0;
+}
+
+.rent-product-tabs .rent-spec-row:first-child {
+    border-top: none;
 }
 
 .rent-specs-header {
@@ -303,9 +333,10 @@
 
 /* Related products block */
 .rent-related-block {
-    margin-top: 16px;
-    border-top: 1px solid #e8e8e8;
-    padding-top: 14px;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 16px;
 }
 
 .rent-related-title {
@@ -320,17 +351,25 @@
 .rent-related-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     padding: 8px;
     border-radius: 8px;
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.15s;
     margin-bottom: 4px;
+    transition: background 0.15s;
 }
 
 .rent-related-item:hover {
     background: #f5f5f5;
+}
+
+.rent-related-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
 }
 
 .rent-related-img {
@@ -340,6 +379,34 @@
     border-radius: 6px;
     border: 1px solid #eee;
     flex-shrink: 0;
+}
+
+.rent-related-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 7px 10px;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-dark, #111);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.rent-related-add-btn:hover {
+    opacity: 0.88;
+    background: var(--color-primary);
+}
+
+.rent-related-add-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .rent-related-info {
@@ -476,35 +543,52 @@
 }
 
 
-/* Large screens only — keep desktop 3-col proportional */
+/* Large screens */
 @media (max-width: 1200px) {
-    .rent-product-grid {
-        grid-template-columns: minmax(0, 280px) minmax(0, 1fr) minmax(0, 260px);
-        gap: 24px;
+    .rent-product-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
+        gap: 20px;
+    }
+
+    .rent-top-row {
+        grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .rent-gallery {
+        max-width: 260px;
     }
 }
 
-/* Tablet ≤ 900px: image + sidebar top row, specs below */
+/* Tablet ≤ 900px */
 @media (max-width: 900px) {
     .rent-product-title {
         font-size: 1.6rem;
     }
 
-    .rent-product-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        grid-template-areas:
-            "gallery sidebar"
-            "specs   specs";
+    .rent-product-layout {
+        grid-template-columns: 1fr;
         gap: 20px;
     }
 
-    .rent-gallery   { grid-area: gallery; }
-    .rent-specs-col { grid-area: specs;   }
-    .rent-sidebar   { grid-area: sidebar; position: static; }
+    .rent-top-row {
+        grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+        gap: 20px;
+    }
 
-    .rent-product-grid,
+    .rent-gallery {
+        max-width: 240px;
+    }
+
+    .rent-sidebar {
+        position: static;
+    }
+
+    .rent-product-layout,
+    .rent-main-col,
+    .rent-top-row,
     .rent-gallery,
-    .rent-specs-col,
+    .rent-price-col,
     .rent-sidebar,
     .rent-price-box,
     .rent-phone-link,
@@ -512,6 +596,10 @@
         min-width: 0;
         max-width: 100%;
         width: 100%;
+    }
+
+    .rent-gallery {
+        max-width: 240px;
     }
 
     .purchase-section .buy-btn {
@@ -537,18 +625,23 @@
         gap: 6px;
     }
 
-    .rent-product-grid {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas:
-            "gallery"
-            "sidebar"
-            "specs";
+    .rent-product-layout {
+        grid-template-columns: 1fr;
         gap: 14px;
     }
 
-    .rent-gallery   { grid-area: gallery; }
-    .rent-specs-col { grid-area: specs;   }
-    .rent-sidebar   { grid-area: sidebar; position: static; }
+    .rent-top-row {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .rent-gallery {
+        max-width: none;
+    }
+
+    .rent-sidebar {
+        position: static;
+    }
 
     .rent-price {
         font-size: 1.8rem;
@@ -925,10 +1018,21 @@
     border-top: 1px solid var(--color-grey);
 }
 
+.rent-product-tabs {
+    margin-top: 0;
+    border-top: 1px solid var(--color-grey);
+}
+
 .tabs-header {
     display: flex;
     gap: 40px;
     justify-content: center;
+}
+
+.rent-product-tabs .tabs-header {
+    justify-content: flex-start;
+    gap: 36px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .tab-link {
@@ -944,8 +1048,21 @@
     transition: color 0.3s;
 }
 
+.rent-product-tabs .tab-link {
+    text-transform: none;
+    font-weight: 600;
+    font-size: 1.15rem;
+    padding: 18px 0 14px;
+    color: #9ca3af;
+}
+
 .tab-link.active {
     color: var(--color-dark);
+}
+
+.rent-product-tabs .tab-link.active {
+    font-weight: 800;
+    color: #111827;
 }
 
 .tab-link::after {
@@ -969,6 +1086,26 @@
     margin: 0 auto;
     line-height: 1.8;
     color: #444;
+}
+
+.rent-product-tabs .tab-content {
+    max-width: none;
+    margin: 0;
+    padding: 28px 0 8px;
+}
+
+.rent-tab-text {
+    margin: 0;
+    white-space: pre-line;
+    line-height: 1.7;
+    color: #374151;
+    font-size: 0.98rem;
+}
+
+.tab-empty {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 0.95rem;
 }
 
 .specs-grid {

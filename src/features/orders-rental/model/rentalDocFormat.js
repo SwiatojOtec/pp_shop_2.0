@@ -17,6 +17,32 @@ export function fmtDate(d, emptyPlaceholder = '___.____.______') {
     return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
 }
 
+/** Normalize "9:5" / "09:05:00" → "09:05", or '' if empty/invalid. */
+export function normalizeRentTime(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const m = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!m) return '';
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (!Number.isFinite(h) || !Number.isFinite(min) || h > 23 || min > 59) return '';
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** Date + optional time on a second line (for table cells). */
+export function fmtDateWithTime(d, time, emptyPlaceholder = '___.____.______') {
+    const date = fmtDate(d, emptyPlaceholder);
+    const t = normalizeRentTime(time);
+    if (!t || !d) return date;
+    return `${date}\n${t}`;
+}
+
+/** Signature date line with optional time suffix. */
+export function fmtSignatureDateLine(time) {
+    const t = normalizeRentTime(time);
+    return t ? `Дата: ____/____/________  ${t}` : 'Дата: ____/____/________';
+}
+
 export function fmtFormalUaDate(d) {
     if (!d) return '«____» _____.______';
     const { day, month, year } = formatContractDate(d);

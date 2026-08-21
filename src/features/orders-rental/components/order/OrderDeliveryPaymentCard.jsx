@@ -60,6 +60,21 @@ export default function OrderDeliveryPaymentCard({
                         </span>
                     )}
                 </div>
+
+                {hasRent && (
+                    <div className="form-group form-group--full">
+                        <label>Час початку оренди</label>
+                        <input
+                            type="time"
+                            value={draft.rentStartTime || ''}
+                            onChange={(e) => setField('rentStartTime', e.target.value || null)}
+                            onInput={(e) => setField('rentStartTime', e.target.value || null)}
+                        />
+                        <span className="form-hint">
+                            Той самий час підставиться в «Оренда по» та в документи заявки
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );
