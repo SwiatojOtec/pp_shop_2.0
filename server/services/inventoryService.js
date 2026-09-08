@@ -156,19 +156,44 @@ async function ensureRepairWarehouse() {
 async function sumActiveRentalQuantityForProduct(productId) {
     const pid = Number(productId);
     if (!Number.isFinite(pid)) return 0;
+    const map = await getActiveRentalQuantityByProduct();
+    return map.get(pid) || 0;
+}
+
+/** Те саме, для всіх товарів одразу (один запит) — «в оренді» в кластері
+ *  «Кількість» на Складі (docs/admin-redesign/03-screens.md, 1.1). Committed is
+ *  product-wide: an application doesn't record which warehouse a unit came from. */
+async function getActiveRentalQuantityByProduct() {
     const apps = await RentalApplication.findAll({
         where: { status: { [Op.in]: ['active', 'booked', 'overdue'] } },
         attributes: ['items'],
     });
-    let sum = 0;
+    const map = new Map();
     for (const app of apps) {
         for (const line of app.items || []) {
-            if (Number(line.productId) !== pid) continue;
+            const pid = Number(line.productId);
+            if (!Number.isFinite(pid)) continue;
             const q = Math.floor(Number(line.quantity));
-            sum += Number.isFinite(q) && q > 0 ? q : 1;
+            const add = Number.isFinite(q) && q > 0 ? q : 1;
+            map.set(pid, (map.get(pid) || 0) + add);
         }
     }
-    return sum;
+    return map;
+}
+
+/** Фізична сума одиниць по всіх складах, для всіх товарів одразу — «всього по
+ *  складах» в панелі позиції. */
+async function getPhysicalQuantityByProduct() {
+    const rows = await InventoryItem.findAll({
+        attributes: ['productId', [InventoryItem.sequelize.fn('SUM', InventoryItem.sequelize.col('quantity')), 'total']],
+        group: ['productId'],
+        raw: true,
+    });
+    const map = new Map();
+    for (const r of rows) {
+        map.set(Number(r.productId), Math.max(0, Math.floor(Number(r.total) || 0)));
+    }
+    return map;
 }
 
 async function recalculateProductQuantity(productId) {
@@ -236,6 +261,78 @@ async function bootstrapRentInventoryFromProducts() {
             }
         });
     }
+}
+
+/**
+ * Bulk move — one transaction for the whole selection instead of the client
+ * looping /move per item (docs/admin-redesign/03-screens.md, 1.2: a failure
+ * partway through used to leave half the selection moved with no rollback).
+ */
+async function moveInventoryItemsBetweenWarehouses({ items, fromWarehouseId, toWarehouseId, user }) {
+    const fromId = Number(fromWarehouseId);
+    const toId = Number(toWarehouseId);
+    if (!Number.isFinite(fromId) || !Number.isFinite(toId) || fromId === toId) {
+        throw new Error('Оберіть інший склад призначення');
+    }
+    const plan = (items || [])
+        .map((it) => ({ productId: Number(it.productId), quantity: Math.floor(Number(it.quantity)) }))
+        .filter((it) => Number.isFinite(it.productId) && Number.isFinite(it.quantity) && it.quantity > 0);
+    if (!plan.length) {
+        throw new Error('Немає позицій для переміщення');
+    }
+
+    const fromWh = await Warehouse.findByPk(fromId);
+    const toWh = await Warehouse.findByPk(toId);
+    if (!fromWh || !toWh) throw new Error('Склад не знайдено');
+
+    const sequelize = InventoryItem.sequelize;
+    const moved = [];
+
+    await sequelize.transaction(async (t) => {
+        for (const { productId, quantity } of plan) {
+            const product = await Product.findByPk(productId, { transaction: t });
+            if (!product || !product.isRent) {
+                throw new Error(`Товар #${productId} не знайдено або не є орендним`);
+            }
+            const fromRow = await InventoryItem.findOne({
+                where: { productId, warehouseId: fromId },
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+            if (!fromRow || fromRow.quantity < quantity) {
+                throw new Error(`Недостатньо одиниць «${product.name}» на складі-відправнику`);
+            }
+            const [toRow] = await InventoryItem.findOrCreate({
+                where: { productId, warehouseId: toId },
+                defaults: { quantity: 0, reserved: 0, minStock: 0 },
+                transaction: t,
+            });
+            await fromRow.update({ quantity: fromRow.quantity - quantity }, { transaction: t });
+            await toRow.update({ quantity: toRow.quantity + quantity }, { transaction: t });
+            moved.push({ productId, productName: product.name, quantity });
+        }
+    });
+
+    for (const productId of new Set(plan.map((p) => p.productId))) {
+        await recalculateProductQuantity(productId);
+    }
+
+    const summary = moved.length === 1
+        ? `«${moved[0].productName}» (${moved[0].quantity} шт.)`
+        : `${moved.length} позицій`;
+    await logWarehouseEvent({
+        user,
+        action: 'bulk_move_warehouse',
+        productId: moved[0]?.productId || 0,
+        productName: moved.length === 1 ? moved[0].productName : `bulk (${moved.length})`,
+        fromWarehouseId: fromId,
+        toWarehouseId: toId,
+        fromWarehouseName: fromWh.name,
+        toWarehouseName: toWh.name,
+        message: `${userDisplayName(user)} перемістив ${summary} зі складу «${fromWh.name}» на склад «${toWh.name}»`
+    });
+
+    return { ok: true, moved };
 }
 
 async function moveInventoryToRepairWarehouse({ productId, fromWarehouseId, quantity, user }) {
@@ -318,6 +415,9 @@ module.exports = {
     logWarehouseEvent,
     userDisplayName,
     moveInventoryBetweenWarehouses,
+    moveInventoryItemsBetweenWarehouses,
+    getActiveRentalQuantityByProduct,
+    getPhysicalQuantityByProduct,
     moveInventoryToRepairWarehouse,
     restoreAllRentInventoryOneEach,
     setRentProductStockStatus,

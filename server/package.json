@@ -15,6 +15,7 @@
     "db:safe-setup": "node scripts/dbSafeSetup.js",
     "db:snapshot": "node scripts/dbSnapshotCounts.js",
     "db:export-json": "node scripts/dbExportJson.js",
+    "db:import-json": "node scripts/dbImportJson.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

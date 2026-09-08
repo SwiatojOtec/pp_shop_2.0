@@ -34,6 +34,9 @@ dist
 # DB backups (keep locally, not in git)
 server/backups/
 
+# Local-only DB config (docs/admin-redesign/03-screens.md, "Робота з базою")
+server/config/*.local.js
+
 # Generated order documents (PDFs)
 server/uploads/order-documents/*
 !server/uploads/order-documents/.gitkeep

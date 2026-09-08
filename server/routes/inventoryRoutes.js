@@ -5,7 +5,7 @@ const InventoryItem = require('../models/InventoryItem');
 const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const { authMiddleware, requireRole } = require('../middleware/auth');
-const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName, bootstrapRentInventoryFromProducts, restoreAllRentInventoryOneEach } = require('../services/inventoryService');
+const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryItemsBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName, bootstrapRentInventoryFromProducts, restoreAllRentInventoryOneEach, getActiveRentalQuantityByProduct, getPhysicalQuantityByProduct } = require('../services/inventoryService');
 
 const GUARD = [authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud'])];
 
@@ -99,7 +99,21 @@ router.get('/', ...GUARD, async (req, res) => {
         ];
         await Promise.all(productIds.map((id) => recalculateProductQuantity(id)));
         const refreshed = await InventoryItem.findAll(findOpts);
-        res.json(refreshed);
+
+        // «Кількість» cluster (docs/admin-redesign/03-screens.md, 1.1): на складі
+        // (this row, exact) · в оренді / всього по складах (product-wide — no
+        // per-warehouse breakdown of rental commitments exists).
+        const [committedByProduct, physicalByProduct] = await Promise.all([
+            getActiveRentalQuantityByProduct(),
+            getPhysicalQuantityByProduct(),
+        ]);
+        const out = refreshed.map((r) => {
+            const plain = r.get({ plain: true });
+            plain.committedQuantity = committedByProduct.get(r.productId) || 0;
+            plain.physicalTotal = physicalByProduct.get(r.productId) || 0;
+            return plain;
+        });
+        res.json(out);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -116,6 +130,21 @@ router.post('/move', ...GUARD, async (req, res) => {
             user: req.user
         });
         res.json({ ok: true });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+router.post('/bulk-move', ...GUARD, async (req, res) => {
+    try {
+        const { items, fromWarehouseId, toWarehouseId } = req.body;
+        const result = await moveInventoryItemsBetweenWarehouses({
+            items,
+            fromWarehouseId: Number(fromWarehouseId),
+            toWarehouseId: Number(toWarehouseId),
+            user: req.user
+        });
+        res.json(result);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }

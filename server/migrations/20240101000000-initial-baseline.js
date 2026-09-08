@@ -94,7 +94,7 @@ module.exports = {
                     brand                VARCHAR(255),
                     image                TEXT,
                     images               JSONB  DEFAULT '[]',
-                    desc                 TEXT,
+                    "desc"               TEXT,
                     "adminNotes"         TEXT,
                     badge                VARCHAR(50),
                     "stockStatus"        VARCHAR(50)  DEFAULT 'in_stock',

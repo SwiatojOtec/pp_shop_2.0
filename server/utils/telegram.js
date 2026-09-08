@@ -6,7 +6,10 @@ const { Op } = require('sequelize');
 const { normalizeUaPhone } = require('./phoneUtils');
 require('dotenv').config();
 
-const token = process.env.TELEGRAM_BOT_TOKEN;
+// LOCAL_DEV=1 (docs/admin-redesign/03-screens.md, "Робота з базою") skips the real
+// bot token: polling it from a local run fights the production instance for the
+// same Telegram getUpdates ("terminated by other getUpdates request").
+const token = process.env.LOCAL_DEV ? null : process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.TELEGRAM_CHAT_ID;
 
 let bot;

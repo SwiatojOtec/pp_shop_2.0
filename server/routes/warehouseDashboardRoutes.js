@@ -3,6 +3,7 @@ const router = express.Router();
 const { Op } = require('sequelize');
 const WarehouseEvent = require('../models/WarehouseEvent');
 const RentalApplication = require('../models/RentalApplication');
+const Order = require('../models/Order');
 const Product = require('../models/Product');
 const InventoryItem = require('../models/InventoryItem');
 const Warehouse = require('../models/Warehouse');
@@ -138,8 +139,22 @@ router.get('/product-rentals/:productId', ...GUARD, async (req, res) => {
         });
 
         const filtered = apps.filter((a) => (a.items || []).some((i) => Number(i.productId) === pid));
+
+        // Панель позиції veде на угоду, не на застарілий маршрут заявки
+        // (docs/admin-redesign/03-screens.md, 1.2) — resolve the Order each
+        // application belongs to.
+        const appIds = filtered.map((a) => a.id);
+        const orders = appIds.length
+            ? await Order.findAll({
+                where: { rentalApplicationId: { [Op.in]: appIds } },
+                attributes: ['id', 'rentalApplicationId'],
+            })
+            : [];
+        const orderIdByApplication = new Map(orders.map((o) => [o.rentalApplicationId, o.id]));
+
         res.json(filtered.map((a) => ({
             id: a.id,
+            orderId: orderIdByApplication.get(a.id) || null,
             applicationNumber: a.applicationNumber,
             status: a.status,
             clientName: a.clientName,
@@ -165,6 +180,19 @@ router.get('/events/users', ...GUARD, async (_req, res) => {
     }
 });
 
+router.get('/events/actions', ...GUARD, async (_req, res) => {
+    try {
+        const rows = await WarehouseEvent.findAll({
+            attributes: ['action'],
+            group: ['action'],
+            order: [['action', 'ASC']],
+        });
+        res.json(rows.map((r) => r.action));
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/events', ...GUARD, async (req, res) => {
     try {
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
@@ -179,6 +207,17 @@ router.get('/events', ...GUARD, async (req, res) => {
         if (req.query.productId) {
             const pid = parseInt(req.query.productId, 10);
             if (!Number.isNaN(pid)) where.productId = pid;
+        }
+
+        if (req.query.action) {
+            where.action = req.query.action;
+        }
+
+        if (req.query.warehouseId) {
+            const wid = parseInt(req.query.warehouseId, 10);
+            if (!Number.isNaN(wid)) {
+                where[Op.or] = [{ fromWarehouseId: wid }, { toWarehouseId: wid }];
+            }
         }
 
         // from/to: YYYY-MM-DD
