@@ -197,20 +197,18 @@ router.put('/item/:id', ...GUARD, async (req, res) => {
         const row = await InventoryItem.findByPk(req.params.id);
         if (!row) return res.status(404).json({ message: 'Позицію залишку не знайдено.' });
 
-        const before = { quantity: row.quantity, reserved: row.reserved, minStock: row.minStock };
+        const before = { quantity: row.quantity, minStock: row.minStock };
 
         const next = {};
         if (Object.prototype.hasOwnProperty.call(req.body, 'quantity')) next.quantity = Number(req.body.quantity) || 0;
-        if (Object.prototype.hasOwnProperty.call(req.body, 'reserved')) next.reserved = Number(req.body.reserved) || 0;
         if (Object.prototype.hasOwnProperty.call(req.body, 'minStock')) next.minStock = Number(req.body.minStock) || 0;
 
         await row.update(next);
         await recalculateProductQuantity(row.productId);
 
-        const after = { quantity: row.quantity, reserved: row.reserved, minStock: row.minStock };
+        const after = { quantity: row.quantity, minStock: row.minStock };
         const changed = [];
         if (before.quantity !== after.quantity) changed.push(`к-сть: ${before.quantity} → ${after.quantity}`);
-        if (before.reserved !== after.reserved) changed.push(`резерв: ${before.reserved} → ${after.reserved}`);
         if (before.minStock !== after.minStock) changed.push(`мін.: ${before.minStock} → ${after.minStock}`);
 
         if (changed.length) {
