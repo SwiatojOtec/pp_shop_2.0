@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ordersApi, productsApi, clientsApi } from '../../../services/api';
-import { Search, Filter, ShoppingCart, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AdminPageHeader } from '../../../components/admin';
 import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
+import PageHeader from '../../admin/ui/PageHeader';
+import Toolbar from '../../admin/ui/Toolbar';
+import DataTable from '../../admin/ui/DataTable';
+import StatusBadge from '../../admin/ui/StatusBadge';
+import { getStatusOptions } from '../../admin/model/status';
+import { useToast } from '../../../context/ToastContext';
 import {
-    ORDER_STATUS_VARIANT,
-    getOrderStatusLabel,
     formatOrderNumberDisplay,
     calcOrderTotal,
     orderHasShopItems,
@@ -46,6 +48,7 @@ function buildComposerFromClient(client) {
 
 export default function AdminOrders({ hideHeader = false }) {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [orders, setOrders] = useState([]);
@@ -103,12 +106,12 @@ export default function AdminOrders({ hideHeader = false }) {
                 setComposerProductSearch('');
                 setComposerClientId(cid);
             } catch (e) {
-                alert(e.message || 'Не вдалося завантажити клієнта');
+                showToast(e.message || 'Не вдалося завантажити клієнта', 'warning');
             } finally {
                 clearQuery();
             }
         })();
-    }, [searchParams, setSearchParams]);
+    }, [searchParams, setSearchParams, showToast]);
 
     useEffect(() => {
         const raw = searchParams.get('openOrder');
@@ -120,7 +123,7 @@ export default function AdminOrders({ hideHeader = false }) {
             return n;
         }, { replace: true });
         if (!Number.isNaN(oid) && oid > 0) {
-            navigate(`/admin/orders/${oid}`, { replace: true });
+            navigate(`/admin/deals/${oid}`, { replace: true });
         }
     }, [searchParams, setSearchParams, navigate]);
 
@@ -251,7 +254,7 @@ export default function AdminOrders({ hideHeader = false }) {
     async function submitComposer() {
         if (!composer) return;
         if (!String(composer.customerName || '').trim() || !String(composer.customerPhone || '').trim()) {
-            alert('Вкажіть ім\'я та телефон клієнта');
+            showToast('Вкажіть ім\'я та телефон клієнта', 'warning');
             return;
         }
         setSavingComposer(true);
@@ -273,9 +276,9 @@ export default function AdminOrders({ hideHeader = false }) {
             setComposer(null);
             setComposerProductSearch('');
             setComposerClientId(null);
-            navigate(`/admin/orders/${created.id}`);
+            navigate(`/admin/deals/${created.id}`);
         } catch (e) {
-            alert(e.message || 'Помилка створення замовлення');
+            showToast(e.message || 'Помилка створення замовлення', 'warning');
         } finally {
             setSavingComposer(false);
         }
@@ -292,24 +295,74 @@ export default function AdminOrders({ hideHeader = false }) {
         && !composerClientId
         && (composerClientSuggestLoading || composerClientSuggestions.length > 0);
 
+    const columns = useMemo(() => [
+        {
+            key: 'orderNumber',
+            label: '№',
+            render: (_, order) => (
+                <span title={order.orderNumber || ''}>
+                    {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
+                </span>
+            ),
+        },
+        {
+            key: 'customerName',
+            label: 'Клієнт',
+            render: (_, order) => (
+                <div>
+                    <div className="font-semibold">{order.customerName}</div>
+                    <div className="text-sm text-gray-500">{order.customerPhone}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'items',
+            label: 'Товари',
+            render: (items) => {
+                const arr = items || [];
+                return (
+                    <span className="text-sm text-gray-600">
+                        {arr.slice(0, 2).map((i, idx) => (
+                            <span key={idx}>
+                                {i.name} ×{i.quantity}
+                                {idx < Math.min(arr.length, 2) - 1 ? ', ' : ''}
+                            </span>
+                        ))}
+                        {arr.length > 2 && <span className="text-gray-400"> +{arr.length - 2}</span>}
+                    </span>
+                );
+            },
+        },
+        {
+            key: 'totalAmount',
+            label: 'Сума',
+            render: (v) => <span className="font-bold">{parseFloat(v).toLocaleString()} ₴</span>,
+        },
+        {
+            key: 'status',
+            label: 'Статус',
+            render: (v) => <StatusBadge domain="order" status={v} />,
+        },
+    ], []);
+
+    const newOrderAction = (
+        <Button type="button" variant="secondary" onClick={openComposerBlank}>
+            <ShoppingCart size={16} /> Нове замовлення
+        </Button>
+    );
+
     return (
         <div>
             {!hideHeader && (
-                <AdminPageHeader
+                <PageHeader
                     title="Замовлення"
                     subtitle={`${filteredOrders.length} з ${orders.length}`}
-                    actions={
-                        <Button type="button" variant="secondary" onClick={openComposerBlank}>
-                            <ShoppingCart size={16} /> Нове замовлення
-                        </Button>
-                    }
+                    actions={newOrderAction}
                 />
             )}
             {hideHeader && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                    <Button type="button" variant="secondary" onClick={openComposerBlank}>
-                        <ShoppingCart size={16} /> Нове замовлення
-                    </Button>
+                <div className="flex justify-end mb-3">
+                    {newOrderAction}
                 </div>
             )}
 
@@ -397,7 +450,7 @@ export default function AdminOrders({ hideHeader = false }) {
                         )}
                     </div>
 
-                    <div className="order-detail-section" style={{ marginTop: '12px' }}>
+                    <div className="order-detail-section mt-3">
                         <h4 className="order-detail-label">Товари та оренда</h4>
                         <div className="order-item-list">
                             {composer.items.map((item, idx) => (
@@ -452,7 +505,7 @@ export default function AdminOrders({ hideHeader = false }) {
                     <div className="order-composer-card__footer">
                         <div className="text-sm">
                             Разом:{' '}
-                            <strong style={{ fontSize: '1.1rem', color: 'var(--admin-accent)' }}>
+                            <strong className="text-[1.1rem] text-[color:var(--admin-accent)]">
                                 {calcOrderTotal(composer.items).toLocaleString()} ₴
                             </strong>
                         </div>
@@ -468,89 +521,28 @@ export default function AdminOrders({ hideHeader = false }) {
                 </div>
             )}
 
-            <div className="order-filters-bar">
-                <div className="order-filters-bar__search">
-                    <Search size={16} className="order-filters-bar__search-icon" />
-                    <input
-                        type="text"
-                        placeholder="Пошук за ім'ям, телефоном або № замовлення..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-                <div className="order-filters-bar__selects">
-                    <Filter size={16} style={{ color: '#9ca3af', flexShrink: 0 }} />
-                    <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                        {TYPE_FILTER_OPTIONS.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                    </select>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="All">Всі статуси</option>
-                        <option value="pending">Новий</option>
-                        <option value="invoice_sent">Рахунок виставлено</option>
-                        <option value="paid">Оплачено</option>
-                        <option value="processing">В роботі</option>
-                        <option value="completed">Виконано</option>
-                        <option value="cancelled">Скасовано</option>
-                    </select>
-                </div>
-            </div>
+            <Toolbar
+                search={search}
+                onSearch={setSearch}
+                placeholder="Пошук за ім'ям, телефоном або № замовлення..."
+                filters={[
+                    { key: 'type', label: 'Всі замовлення', value: typeFilter === 'all' ? '' : typeFilter, options: TYPE_FILTER_OPTIONS.filter((o) => o.value !== 'all') },
+                    { key: 'status', label: 'Всі статуси', value: statusFilter === 'All' ? '' : statusFilter, options: getStatusOptions('order') },
+                ]}
+                onFilter={(key, value) => {
+                    if (key === 'type') setTypeFilter(value || 'all');
+                    if (key === 'status') setStatusFilter(value || 'All');
+                }}
+            />
 
-            <div className="admin-table-container">
-                {loading ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>Завантаження...</div>
-                ) : filteredOrders.length === 0 ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>Замовлень не знайдено</div>
-                ) : (
-                    filteredOrders.map((order) => (
-                        <div key={order.id} className="order-row-wrap">
-                            <div className="order-row-summary order-row-summary--static">
-                                <div className="order-row-num" title={order.orderNumber || ''}>
-                                    {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
-                                </div>
-
-                                <div className="order-row-client">
-                                    <span className="font-semibold">{order.customerName}</span>
-                                    <span className="text-sm text-gray-500">{order.customerPhone}</span>
-                                </div>
-
-                                <div className="order-row-items text-sm text-gray-600">
-                                    {(order.items || []).slice(0, 2).map((i, idx) => (
-                                        <span key={idx}>
-                                            {i.name} ×{i.quantity}
-                                            {idx < Math.min(order.items.length, 2) - 1 ? ', ' : ''}
-                                        </span>
-                                    ))}
-                                    {(order.items || []).length > 2 && (
-                                        <span className="text-gray-400"> +{order.items.length - 2}</span>
-                                    )}
-                                </div>
-
-                                <div className="order-row-amount font-bold">
-                                    {parseFloat(order.totalAmount).toLocaleString()} ₴
-                                </div>
-
-                                <div className="order-row-status">
-                                    <Badge variant={ORDER_STATUS_VARIANT[order.status] || 'secondary'}>
-                                        {getOrderStatusLabel(order.status)}
-                                    </Badge>
-                                </div>
-
-                                <div className="order-row-actions">
-                                    <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={() => navigate(`/admin/orders/${order.id}`)}
-                                    >
-                                        Детальніше <ChevronRight size={14} />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+            <DataTable
+                columns={columns}
+                rows={filteredOrders}
+                loading={loading}
+                onRowClick={(order) => navigate(`/admin/deals/${order.id}`)}
+                emptyIcon={ShoppingBag}
+                emptyTitle="Замовлень не знайдено"
+            />
         </div>
     );
 }

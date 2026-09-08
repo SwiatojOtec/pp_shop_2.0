@@ -1,39 +1,10 @@
-.pan-pivdenbud-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-}
-
-.pan-pivdenbud-tab {
-    padding: 10px 18px;
-    border-radius: 8px;
-    border: 1px solid var(--admin-border, #e5e7eb);
-    background: #fff;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    color: #666;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.pan-pivdenbud-tab:hover {
-    border-color: #ccc;
-    color: #333;
-}
-
-.pan-pivdenbud-tab.active {
-    background: var(--color-dark, #121212);
-    color: #fff;
-    border-color: var(--color-dark, #121212);
-}
-
 .pan-pivdenbud-panel {
-    padding: 16px;
+    padding: 16px 0 0;
     border-radius: 12px;
+}
+
+.timesheet-muted {
+    color: #999;
 }
 
 .timesheet-toolbar {

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { ordersApi } from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 import { resolveSellerId } from '../../../constants/sellers';
 import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
@@ -17,6 +18,7 @@ export function useOrderDraftEditor({
     const [saving, setSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [productSearch, setProductSearch] = useState('');
+    const { showToast } = useToast();
 
     const markSaved = useCallback(() => setDirty(false), []);
     const markDirty = useCallback(() => setDirty(true), []);
@@ -137,7 +139,7 @@ export function useOrderDraftEditor({
         try {
             await persistDraft();
         } catch (err) {
-            alert(err.message || 'Помилка збереження');
+            showToast(err.message || 'Помилка збереження', 'warning');
         } finally {
             setSaving(false);
         }

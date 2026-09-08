@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { timesheetApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { isTimesheetViewer } from '../../utils/adminRoles';
 import { downloadTimesheetXlsx } from '../../utils/timesheetExport';
+import PageHeader from '../../features/admin/ui/PageHeader';
 import './PanPivdenbud.css';
-
-const TABS = [{ id: 'timesheet', label: 'Табель' }];
 
 const WD_UK = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
@@ -161,7 +161,7 @@ function TimesheetCalendarTable({
 
 export default function PanPivdenbud() {
     const { token, user, loading: authLoading } = useAuth();
-    const [activeTab, setActiveTab] = useState('timesheet');
+    const { showToast } = useToast();
 
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
@@ -195,7 +195,7 @@ export default function PanPivdenbud() {
     );
 
     useEffect(() => {
-        if (!token || activeTab !== 'timesheet' || authLoading || !user) return;
+        if (!token || authLoading || !user) return;
         setLoading(true);
         if (isViewer) {
             timesheetApi.overview({ year, month })
@@ -223,7 +223,7 @@ export default function PanPivdenbud() {
                 setGrid(g);
             })
             .finally(() => setLoading(false));
-    }, [token, year, month, activeTab, isViewer, authLoading, user]);
+    }, [token, year, month, isViewer, authLoading, user]);
 
     useEffect(() => {
         if (selectedGroup === 'all') return;
@@ -236,7 +236,7 @@ export default function PanPivdenbud() {
     /** Вертикальне колесо → горизонтальний скрол (лише режим редагування) */
     useEffect(() => {
         const el = calendarWrapRef.current;
-        if (!el || loading || activeTab !== 'timesheet' || isViewer) return undefined;
+        if (!el || loading || isViewer) return undefined;
 
         const onWheel = e => {
             if (el.scrollWidth <= el.clientWidth) return;
@@ -255,7 +255,7 @@ export default function PanPivdenbud() {
 
         el.addEventListener('wheel', onWheel, { passive: false });
         return () => el.removeEventListener('wheel', onWheel);
-    }, [loading, activeTab, lastDay, year, month, isViewer]);
+    }, [loading, lastDay, year, month, isViewer]);
 
     const getCell = useCallback(
         (day, slot) => {
@@ -303,9 +303,9 @@ export default function PanPivdenbud() {
         }
         try {
             await timesheetApi.saveMonth({ year, month, cells });
-            alert('Табель збережено');
+            showToast('Табель збережено', 'success');
         } catch (e) {
-            alert(e.message);
+            showToast(e.message, 'warning');
         } finally {
             setSaving(false);
         }
@@ -335,7 +335,7 @@ export default function PanPivdenbud() {
 
             await downloadTimesheetXlsx({ year, month, lastDay, dayMeta, labels, getCell });
         } catch (e) {
-            alert(e.message || 'Помилка експорту в Excel');
+            showToast(e.message || 'Помилка експорту в Excel', 'warning');
         } finally {
             setExporting(false);
         }
@@ -349,171 +349,151 @@ export default function PanPivdenbud() {
 
     return (
         <div className="pan-pivdenbud">
-            <div className="admin-header" style={{ marginBottom: '16px' }}>
-                <h1 className="admin-title" style={{ margin: 0 }}>ПАН ПІВДЕНЬБУД</h1>
-                <p style={{ color: '#888', marginTop: '6px', fontSize: '0.9rem' }}>
-                    Внутрішні інструменти для команди компанії
-                </p>
-            </div>
+            <PageHeader title="ПАН ПІВДЕНЬБУД" subtitle="Внутрішні інструменти для команди компанії" />
 
-            <div className="pan-pivdenbud-tabs">
-                {TABS.map(tab => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        className={`pan-pivdenbud-tab ${activeTab === tab.id ? 'active' : ''}`}
-                        onClick={() => setActiveTab(tab.id)}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {activeTab === 'timesheet' && (
-                <div className="pan-pivdenbud-panel admin-section">
-                    <div className="timesheet-toolbar">
-                        <label>
-                            Рік:&nbsp;
-                            <input
-                                type="number"
-                                min={2020}
-                                max={2100}
-                                value={year}
-                                onChange={e => setYear(parseInt(e.target.value, 10) || year)}
-                                className="timesheet-input-year"
-                            />
-                        </label>
-                        <label>
-                            Місяць:&nbsp;
-                            <select
-                                value={month}
-                                onChange={e => setMonth(parseInt(e.target.value, 10))}
-                                className="timesheet-select-month"
-                            >
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                    <option key={m} value={m}>
-                                        {new Date(2000, m - 1, 1).toLocaleString('uk-UA', { month: 'long' })}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        {isViewer && (
-                            <label>
-                                Підрозділ:&nbsp;
-                                <select
-                                    value={selectedGroup}
-                                    onChange={e => setSelectedGroup(e.target.value)}
-                                    className="timesheet-select-group"
-                                >
-                                    <option value="all">Всі підрозділи</option>
-                                    {overviewSheets.map(sheet => {
-                                        const title =
-                                            sheet.subdivisionName ||
-                                            sheet.headDisplayName ||
-                                            `Голова #${sheet.headUserId}`;
-                                        return (
-                                            <option key={`group-${sheet.headUserId}`} value={String(sheet.headUserId)}>
-                                                {title}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            </label>
-                        )}
-                        {!isViewer && (
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={handleSave}
-                                disabled={saving || loading || exporting}
-                            >
-                                {saving ? 'Збереження...' : 'Зберегти табель'}
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={handleExportXlsx}
-                            disabled={loading || exporting || (isViewer && visibleOverviewSheets.length === 0)}
-                            title={
-                                isViewer
-                                    ? 'Експорт для обраного підрозділу'
-                                    : 'На кожен день 3 стовпці злиті в одну клітинку; час як 12:00, окремо рядок приходу та виходу'
-                            }
+            <div className="pan-pivdenbud-panel">
+                <div className="timesheet-toolbar">
+                    <label>
+                        Рік:&nbsp;
+                        <input
+                            type="number"
+                            min={2020}
+                            max={2100}
+                            value={year}
+                            onChange={e => setYear(parseInt(e.target.value, 10) || year)}
+                            className="timesheet-input-year"
+                        />
+                    </label>
+                    <label>
+                        Місяць:&nbsp;
+                        <select
+                            value={month}
+                            onChange={e => setMonth(parseInt(e.target.value, 10))}
+                            className="timesheet-select-month"
                         >
-                            {exporting ? 'Експорт...' : 'Excel (.xlsx)'}
-                        </button>
-                    </div>
-                    {isViewer ? (
-                        <p className="timesheet-hint">
-                            Табелі підрозділів: після натискання «Зберегти табель» головами підрозділів дані з’являються тут
-                            (за обраний рік і місяць). Редагування недоступне.
-                        </p>
-                    ) : (
-                        <p className="timesheet-hint">
-                            У кожній клітинці два рядки: прихід і вихід; години та хвилини поруч. Вихідні підсвічені.{' '}
-                            У Excel на кожен день — <strong>три стовпці злиті в одну клітинку</strong>; час одним текстом{' '}
-                            <strong>12:00</strong>. Окремо рядок «прихід» і рядок «вихід» для кожного співробітника — як у
-                            ручному шаблоні.
-                        </p>
-                    )}
-
-                    {authLoading || !user ? (
-                        <p style={{ color: '#999' }}>Завантаження...</p>
-                    ) : loading ? (
-                        <p style={{ color: '#999' }}>Завантаження...</p>
-                    ) : isViewer ? (
-                        visibleOverviewSheets.length === 0 ? (
-                            <p style={{ color: '#888' }}>
-                                {overviewSheets.length === 0
-                                    ? 'Немає збережених табелів за цей місяць (голови підрозділів ще не натиснули «Зберегти табель» або немає даних).'
-                                    : 'Для обраного підрозділу ще немає збереженого табеля за цей місяць.'}
-                            </p>
-                        ) : (
-                            <div className="timesheet-overview-list">
-                                {visibleOverviewSheets.map(sheet => {
-                                    const getCellRo = entriesToGetCell(sheet.entries);
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                <option key={m} value={m}>
+                                    {new Date(2000, m - 1, 1).toLocaleString('uk-UA', { month: 'long' })}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    {isViewer && (
+                        <label>
+                            Підрозділ:&nbsp;
+                            <select
+                                value={selectedGroup}
+                                onChange={e => setSelectedGroup(e.target.value)}
+                                className="timesheet-select-group"
+                            >
+                                <option value="all">Всі підрозділи</option>
+                                {overviewSheets.map(sheet => {
                                     const title =
                                         sheet.subdivisionName ||
                                         sheet.headDisplayName ||
                                         `Голова #${sheet.headUserId}`;
                                     return (
-                                        <section key={sheet.headUserId} className="timesheet-overview-block">
-                                            <h2 className="timesheet-overview-title">{title}</h2>
-                                            {sheet.subdivisionName && (
-                                                <p className="timesheet-overview-meta">
-                                                    Голова: {sheet.headDisplayName}
-                                                    {sheet.headEmail ? ` · ${sheet.headEmail}` : ''}
-                                                </p>
-                                            )}
-                                            {!sheet.subdivisionName && sheet.headEmail && (
-                                                <p className="timesheet-overview-meta">{sheet.headEmail}</p>
-                                            )}
-                                            <TimesheetCalendarTable
-                                                labels={sheet.labels || ['', '', '']}
-                                                getCell={getCellRo}
-                                                dayMeta={dayMeta}
-                                                readOnly
-                                                handleField={noopField}
-                                                calendarWrapRef={null}
-                                            />
-                                        </section>
+                                        <option key={`group-${sheet.headUserId}`} value={String(sheet.headUserId)}>
+                                            {title}
+                                        </option>
                                     );
                                 })}
-                            </div>
-                        )
-                    ) : (
-                        <TimesheetCalendarTable
-                            labels={labels}
-                            getCell={getCell}
-                            dayMeta={dayMeta}
-                            readOnly={false}
-                            handleField={handleField}
-                            calendarWrapRef={calendarWrapRef}
-                        />
+                            </select>
+                        </label>
                     )}
+                    {!isViewer && (
+                        <button
+                            type="button"
+                            className="ds-btn ds-btn--primary"
+                            onClick={handleSave}
+                            disabled={saving || loading || exporting}
+                        >
+                            {saving ? 'Збереження...' : 'Зберегти табель'}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        className="ds-btn ds-btn--secondary"
+                        onClick={handleExportXlsx}
+                        disabled={loading || exporting || (isViewer && visibleOverviewSheets.length === 0)}
+                        title={
+                            isViewer
+                                ? 'Експорт для обраного підрозділу'
+                                : 'На кожен день 3 стовпці злиті в одну клітинку; час як 12:00, окремо рядок приходу та виходу'
+                        }
+                    >
+                        {exporting ? 'Експорт...' : 'Excel (.xlsx)'}
+                    </button>
                 </div>
-            )}
+                {isViewer ? (
+                    <p className="timesheet-hint">
+                        Табелі підрозділів: після натискання «Зберегти табель» головами підрозділів дані з’являються тут
+                        (за обраний рік і місяць). Редагування недоступне.
+                    </p>
+                ) : (
+                    <p className="timesheet-hint">
+                        У кожній клітинці два рядки: прихід і вихід; години та хвилини поруч. Вихідні підсвічені.{' '}
+                        У Excel на кожен день — <strong>три стовпці злиті в одну клітинку</strong>; час одним текстом{' '}
+                        <strong>12:00</strong>. Окремо рядок «прихід» і рядок «вихід» для кожного співробітника — як у
+                        ручному шаблоні.
+                    </p>
+                )}
+
+                {authLoading || !user ? (
+                    <p className="timesheet-muted">Завантаження...</p>
+                ) : loading ? (
+                    <p className="timesheet-muted">Завантаження...</p>
+                ) : isViewer ? (
+                    visibleOverviewSheets.length === 0 ? (
+                        <p className="timesheet-muted">
+                            {overviewSheets.length === 0
+                                ? 'Немає збережених табелів за цей місяць (голови підрозділів ще не натиснули «Зберегти табель» або немає даних).'
+                                : 'Для обраного підрозділу ще немає збереженого табеля за цей місяць.'}
+                        </p>
+                    ) : (
+                        <div className="timesheet-overview-list">
+                            {visibleOverviewSheets.map(sheet => {
+                                const getCellRo = entriesToGetCell(sheet.entries);
+                                const title =
+                                    sheet.subdivisionName ||
+                                    sheet.headDisplayName ||
+                                    `Голова #${sheet.headUserId}`;
+                                return (
+                                    <section key={sheet.headUserId} className="timesheet-overview-block">
+                                        <h2 className="timesheet-overview-title">{title}</h2>
+                                        {sheet.subdivisionName && (
+                                            <p className="timesheet-overview-meta">
+                                                Голова: {sheet.headDisplayName}
+                                                {sheet.headEmail ? ` · ${sheet.headEmail}` : ''}
+                                            </p>
+                                        )}
+                                        {!sheet.subdivisionName && sheet.headEmail && (
+                                            <p className="timesheet-overview-meta">{sheet.headEmail}</p>
+                                        )}
+                                        <TimesheetCalendarTable
+                                            labels={sheet.labels || ['', '', '']}
+                                            getCell={getCellRo}
+                                            dayMeta={dayMeta}
+                                            readOnly
+                                            handleField={noopField}
+                                            calendarWrapRef={null}
+                                        />
+                                    </section>
+                                );
+                            })}
+                        </div>
+                    )
+                ) : (
+                    <TimesheetCalendarTable
+                        labels={labels}
+                        getCell={getCell}
+                        dayMeta={dayMeta}
+                        readOnly={false}
+                        handleField={handleField}
+                        calendarWrapRef={calendarWrapRef}
+                    />
+                )}
+            </div>
         </div>
     );
 }

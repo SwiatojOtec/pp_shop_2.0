@@ -15,7 +15,7 @@ import UpsellPanel from './UpsellPanel';
 import { useRentalApplication } from '../../hooks/useRentalApplication';
 import { useRentalTotals } from '../../hooks/useRentalTotals';
 import { useProductSearch } from '../../hooks/useProductSearch';
-import { STATUS_SELECT_OPTIONS } from '../../model/rentalStatus';
+import { getStatusOptions } from '../../../admin/model/status';
 
 export default function RentalApplicationEditor({
     id,
@@ -136,7 +136,7 @@ export default function RentalApplicationEditor({
                             onChange={e => app.setStatus(e.target.value)}
                             className="status-select"
                         >
-                            {STATUS_SELECT_OPTIONS.map(({ value, label }) => (
+                            {getStatusOptions('rental').map(({ value, label }) => (
                                 <option key={value} value={value}>{label}</option>
                             ))}
                         </select>

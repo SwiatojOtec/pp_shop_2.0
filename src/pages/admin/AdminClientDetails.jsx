@@ -1,35 +1,20 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-    ArrowLeft, ClipboardList, Phone, Mail, MapPin,
+    ArrowLeft, ClipboardList, Phone, Mail,
     FileText, Tag, Edit2, User, Plus, Check, X as XIcon,
     AlertTriangle, ShoppingCart,
 } from 'lucide-react';
 import { clientsApi, rentalApplicationsApi, ordersApi } from '../../services/api';
-import { parsePhones, normalizePhonesField } from '../../utils/phoneUtils';
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
+import { parsePhones } from '../../utils/phoneUtils';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import StatusBadge from '../../features/admin/ui/StatusBadge';
+import DataTable from '../../features/admin/ui/DataTable';
+import ClientFormModal from '../../features/admin/clients/ClientFormModal';
+import '../../features/admin/clients/clients.css';
 import './Admin.css';
 import './AdminClientDetails.css';
-
-const STATUS_META = {
-    draft:    { label: 'Чернетка',           variant: 'secondary' },
-    active:   { label: 'Активна',            variant: 'success'   },
-    booked:   { label: 'Заброньовано',       variant: 'default'   },
-    overdue:  { label: 'Термін прострочено', variant: 'danger'    },
-    returned: { label: 'Повернуто',          variant: 'secondary' },
-    cancelled:{ label: 'Скасована',          variant: 'danger'    },
-};
-
-const SHOP_ORDER_STATUS_META = {
-    pending:      { label: 'Новий',               variant: 'warning'   },
-    invoice_sent: { label: 'Рахунок виставлено', variant: 'secondary' },
-    paid:         { label: 'Оплачено',            variant: 'success'   },
-    processing:   { label: 'В роботі',            variant: 'default'   },
-    completed:    { label: 'Виконано',            variant: 'success'   },
-    cancelled:    { label: 'Скасовано',           variant: 'danger'    },
-};
 
 function formatShopOrderNumber(value) {
     if (!value || typeof value !== 'string') return value || '—';
@@ -41,7 +26,6 @@ function formatShopOrderNumber(value) {
     return value;
 }
 
-
 function fmtDate(d) {
     if (!d) return '—';
     const dt = new Date(d);
@@ -52,6 +36,7 @@ export default function AdminClientDetails() {
     const { id }    = useParams();
     const navigate  = useNavigate();
     const { user } = useAuth();
+    const { showToast } = useToast();
     const canCreateShopOrders = user?.role !== 'rent' && user?.role !== 'pivdenbud';
     const [client,       setClient]      = useState(null);
     const [applications, setApplications]= useState([]);
@@ -65,9 +50,7 @@ export default function AdminClientDetails() {
     const [claimsDraft, setClaimsDraft] = useState('');
     const [claimsSaving, setClaimsSaving] = useState(false);
     const claimsRef = useRef(null);
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editForm, setEditForm] = useState(null);
-    const [editSaving, setEditSaving] = useState(false);
+    const [formOpen, setFormOpen] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -108,7 +91,7 @@ export default function AdminClientDetails() {
             await clientsApi.update(id, { ...client, claims: claimsDraft });
             setClient(prev => ({ ...prev, claims: claimsDraft }));
             setEditingClaims(false);
-        } catch (e) { alert(e.message || 'Помилка збереження'); }
+        } catch (e) { showToast(e.message || 'Помилка збереження', 'warning'); }
         finally { setClaimsSaving(false); }
     }
 
@@ -124,7 +107,7 @@ export default function AdminClientDetails() {
             await clientsApi.update(id, { ...client, notes: notesDraft });
             setClient(prev => ({ ...prev, notes: notesDraft }));
             setEditingNotes(false);
-        } catch (e) { alert(e.message || 'Помилка збереження'); }
+        } catch (e) { showToast(e.message || 'Помилка збереження', 'warning'); }
         finally { setNotesSaving(false); }
     }
 
@@ -134,45 +117,31 @@ export default function AdminClientDetails() {
         setTimeout(() => notesRef.current?.focus(), 50);
     }
 
-    function openEditModal() {
-        setEditForm({
-            fullName: client.fullName || '',
-            phone: client.phone || '',
-            email: client.email || '',
-            passport: client.passport || '',
-            passportIssuedAt: client.passportIssuedAt || '',
-            ipn: client.ipn || '',
-            address: client.address || '',
-            siteAddress: client.siteAddress || '',
-            discountPercent: client.discountPercent ?? '',
-            notes: client.notes || '',
-            claims: client.claims || '',
-        });
-        setEditModalOpen(true);
+    function handleClientSaved(updated) {
+        setClient(updated);
+        setFormOpen(false);
     }
 
-    async function saveEditModal() {
-        if (!editForm?.fullName?.trim() || !editForm?.phone?.trim()) {
-            alert('Заповніть ПІБ і телефон');
-            return;
-        }
-        setEditSaving(true);
-        try {
-            const payload = {
-                ...editForm,
-                phone: normalizePhonesField(editForm.phone),
-                discountPercent: editForm.discountPercent === '' ? 0 : Number(editForm.discountPercent),
-            };
-            const updated = await clientsApi.update(id, payload);
-            setClient(updated);
-            setEditModalOpen(false);
-            setEditForm(null);
-        } catch (e) {
-            alert(e.message || 'Помилка збереження');
-        } finally {
-            setEditSaving(false);
-        }
-    }
+    const applicationColumns = useMemo(() => [
+        { key: 'applicationNumber', label: '№ заявки', className: 'cd-cell-mono', render: (v, a) => v || `#${a.id}` },
+        { key: 'rentFrom', label: 'Оренда', className: 'cd-cell-muted', render: (_, a) => `${fmtDate(a.rentFrom)} — ${fmtDate(a.rentTo)}` },
+        { key: 'totalAmount', label: 'Сума', className: 'cd-cell-amount', render: (v) => `${Number(v || 0).toLocaleString('uk-UA')} ₴` },
+        { key: 'status', label: 'Статус', render: (v) => <StatusBadge domain="rental" status={v} /> },
+    ], []);
+
+    const shopOrderColumns = useMemo(() => [
+        { key: 'orderNumber', label: '№ замовлення', className: 'cd-cell-mono', render: (v, o) => formatShopOrderNumber(v || `#${o.id}`) },
+        { key: 'createdAt', label: 'Дата', className: 'cd-cell-muted', render: (v) => fmtDate(v) },
+        {
+            key: 'items', label: 'Товари', className: 'cd-cell-muted cd-order-items-preview',
+            render: (items = []) => {
+                const line = (items || []).slice(0, 2).map((i) => `${i.name} ×${i.quantity}`).join(', ');
+                return <>{line || '—'}{items.length > 2 && <span className="cd-cell-more"> +{items.length - 2}</span>}</>;
+            },
+        },
+        { key: 'totalAmount', label: 'Сума', className: 'cd-cell-amount', render: (v) => `${Number(v || 0).toLocaleString('uk-UA')} ₴` },
+        { key: 'status', label: 'Статус', render: (v) => <StatusBadge domain="order" status={v} /> },
+    ], []);
 
     if (loading) return <div className="cd-loading">Завантаження...</div>;
     if (!client) return <div className="cd-loading cd-loading--err">Клієнта не знайдено</div>;
@@ -182,6 +151,7 @@ export default function AdminClientDetails() {
     const totalRevenue = applications.reduce((s,a) => s + Number(a.totalAmount || 0), 0);
     const activeCount  = applications.filter(a => ['active','booked'].includes(a.status)).length;
     const shopTotal    = shopOrders.reduce((s, o) => s + Number(o.totalAmount || 0), 0);
+    const hasClaims = !!(client.claims && String(client.claims).trim());
 
     return (
         <div className="cd-page">
@@ -198,26 +168,20 @@ export default function AdminClientDetails() {
                         <span className="cd-meta-id">#{client.id}</span>
                         {client.createdAt && <span className="cd-meta-date">клієнт з {fmtDate(client.createdAt)}</span>}
                         {discount > 0 && (
-                            <Badge variant="success" style={{ fontSize: '0.8rem' }}>
-                                <Tag size={11} style={{ marginRight: '3px', verticalAlign: 'middle' }} />
-                                Знижка {discount.toFixed(0)}%
-                            </Badge>
+                            <StatusBadge tone="success" label={<><Tag size={11} className="cd-badge-icon" />Знижка {discount.toFixed(0)}%</>} />
                         )}
-                        {!!(client.claims && String(client.claims).trim()) && (
-                            <Badge variant="danger" style={{ fontSize: '0.78rem' }} title="У клієнта є претензії">
-                                <AlertTriangle size={11} style={{ marginRight: '3px', verticalAlign: 'middle' }} />
-                                Претензії
-                            </Badge>
+                        {hasClaims && (
+                            <StatusBadge tone="danger" label={<><AlertTriangle size={11} className="cd-badge-icon" />Претензії</>} />
                         )}
                     </div>
                 </div>
 
                 <div className="cd-header-actions">
-                    <button type="button" className="cd-btn cd-btn--ghost" onClick={openEditModal}>
+                    <button type="button" className="cd-btn cd-btn--ghost" onClick={() => setFormOpen(true)}>
                         <Edit2 size={14} /> Редагувати
                     </button>
                     {canCreateShopOrders && (
-                        <Link to={`/admin/orders?newClientId=${client.id}`} className="cd-btn cd-btn--ghost" title="Нове замовлення магазину" style={{ color: '#0369a1', borderColor: '#bae6fd' }}>
+                        <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-btn cd-btn--ghost cd-btn--cart" title="Нове замовлення магазину">
                             <ShoppingCart size={14} /> Замовлення
                         </Link>
                     )}
@@ -300,17 +264,17 @@ export default function AdminClientDetails() {
                             </div>
                             <div className="cd-stat">
                                 <span className="cd-stat-label">Активних</span>
-                                <span className="cd-stat-value" style={activeCount > 0 ? { color: '#16a34a' } : {}}>{activeCount}</span>
+                                <span className={`cd-stat-value${activeCount > 0 ? ' cd-stat-value--positive' : ''}`}>{activeCount}</span>
                             </div>
                             <div className="cd-stat">
                                 <span className="cd-stat-label">Знижка</span>
-                                <span className="cd-stat-value" style={discount > 0 ? { color: '#16a34a' } : {}}>
+                                <span className={`cd-stat-value${discount > 0 ? ' cd-stat-value--positive' : ''}`}>
                                     {discount > 0 ? `${discount.toFixed(0)}%` : '—'}
                                 </span>
                             </div>
                             <div className="cd-stat">
                                 <span className="cd-stat-label">Сума оренди</span>
-                                <span className="cd-stat-value" style={{ fontSize: '0.95rem' }}>
+                                <span className="cd-stat-value cd-stat-value--sm">
                                     {totalRevenue > 0 ? `${totalRevenue.toLocaleString('uk-UA')} ₴` : '—'}
                                 </span>
                             </div>
@@ -322,7 +286,7 @@ export default function AdminClientDetails() {
                                     </div>
                                     <div className="cd-stat">
                                         <span className="cd-stat-label">Сума магазину</span>
-                                        <span className="cd-stat-value" style={{ fontSize: '0.95rem' }}>
+                                        <span className="cd-stat-value cd-stat-value--sm">
                                             {shopTotal > 0 ? `${shopTotal.toLocaleString('uk-UA')} ₴` : '—'}
                                         </span>
                                     </div>
@@ -338,8 +302,8 @@ export default function AdminClientDetails() {
                     <div className="cd-main-grid">
                         <div className="cd-main-primary">
                     <div className="cd-card cd-card--full">
-                        <div className="cd-card-title" style={{ justifyContent: 'space-between' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="cd-card-title cd-card-title--split">
+                            <span className="cd-card-title-main">
                                 <ClipboardList size={15} /> Історія заявок
                                 {applications.length > 0 && (
                                     <span className="cd-badge-count">{applications.length}</span>
@@ -349,131 +313,46 @@ export default function AdminClientDetails() {
 
                         {applications.length === 0 ? (
                             <div className="cd-apps-empty">
-                                <ClipboardList size={36} style={{ opacity: 0.2, marginBottom: '10px' }} />
+                                <ClipboardList size={36} className="cd-apps-empty-icon" />
                                 <p>Заявок ще немає</p>
                             </div>
                         ) : (
-                            <div className="admin-table-container" style={{ marginTop: '4px' }}>
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>№ заявки</th>
-                                            <th>Оренда</th>
-                                            <th>Сума</th>
-                                            <th>Статус</th>
-                                            <th style={{ textAlign: 'right' }}>Дії</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {applications.map(app => {
-                                            const sm = STATUS_META[app.status] || { label: app.status, variant: 'secondary' };
-                                            return (
-                                                <tr key={app.id} style={{ cursor: 'pointer' }}
-                                                    onClick={() => navigate(`/admin/rental-applications/${app.id}`)}>
-                                                    <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
-                                                        {app.applicationNumber || `#${app.id}`}
-                                                    </td>
-                                                    <td style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-                                                        {fmtDate(app.rentFrom)} — {fmtDate(app.rentTo)}
-                                                    </td>
-                                                    <td style={{ fontWeight: 700 }}>
-                                                        {Number(app.totalAmount || 0).toLocaleString('uk-UA')} ₴
-                                                    </td>
-                                                    <td><Badge variant={sm.variant}>{sm.label}</Badge></td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        <button className="action-btn"
-                                                            onClick={e => { e.stopPropagation(); navigate(`/admin/rental-applications/${app.id}`); }}>
-                                                            <ClipboardList size={15} />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <DataTable
+                                columns={applicationColumns}
+                                rows={applications}
+                                onRowClick={(app) => navigate(`/admin/rental-applications/${app.id}`)}
+                            />
                         )}
                     </div>
 
                     {canCreateShopOrders && (
-                        <div className="cd-card cd-card--full" style={{ marginTop: '16px' }}>
-                            <div className="cd-card-title" style={{ justifyContent: 'space-between' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="cd-card cd-card--full">
+                            <div className="cd-card-title cd-card-title--split">
+                                <span className="cd-card-title-main">
                                     <ShoppingCart size={15} /> Замовлення магазину
                                     {shopOrders.length > 0 && (
                                         <span className="cd-badge-count">{shopOrders.length}</span>
                                     )}
                                 </span>
-                                <Link to={`/admin/orders?newClientId=${client.id}`} className="cd-new-app-link">
+                                <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-new-app-link">
                                     <Plus size={13} /> Нове замовлення
                                 </Link>
                             </div>
 
                             {shopOrders.length === 0 ? (
                                 <div className="cd-apps-empty">
-                                    <ShoppingCart size={36} style={{ opacity: 0.2, marginBottom: '10px' }} />
+                                    <ShoppingCart size={36} className="cd-apps-empty-icon" />
                                     <p>Замовлень ще немає</p>
-                                    <Link to={`/admin/orders?newClientId=${client.id}`} className="cd-btn cd-btn--primary" style={{ marginTop: '12px', display: 'inline-flex' }}>
+                                    <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-btn cd-btn--primary cd-apps-empty-cta">
                                         <Plus size={14} /> Перше замовлення
                                     </Link>
                                 </div>
                             ) : (
-                                <div className="admin-table-container" style={{ marginTop: '4px' }}>
-                                    <table className="admin-table">
-                                        <thead>
-                                            <tr>
-                                                <th>№ замовлення</th>
-                                                <th>Дата</th>
-                                                <th>Товари</th>
-                                                <th>Сума</th>
-                                                <th>Статус</th>
-                                                <th style={{ textAlign: 'right' }}>Дії</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {shopOrders.map((o) => {
-                                                const sm = SHOP_ORDER_STATUS_META[o.status] || { label: o.status || '—', variant: 'secondary' };
-                                                const items = o.items || [];
-                                                const line = items.slice(0, 2).map((i) => `${i.name} ×${i.quantity}`).join(', ');
-                                                return (
-                                                    <tr
-                                                        key={o.id}
-                                                        style={{ cursor: 'pointer' }}
-                                                        onClick={() => navigate(`/admin/orders/${o.id}`)}
-                                                    >
-                                                        <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>
-                                                            {formatShopOrderNumber(o.orderNumber || `#${o.id}`)}
-                                                        </td>
-                                                        <td style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-                                                            {fmtDate(o.createdAt)}
-                                                        </td>
-                                                        <td style={{ color: '#6b7280', fontSize: '0.82rem', maxWidth: '280px' }} className="cd-order-items-preview">
-                                                            {line || '—'}
-                                                            {items.length > 2 && <span style={{ color: '#9ca3af' }}> +{items.length - 2}</span>}
-                                                        </td>
-                                                        <td style={{ fontWeight: 700 }}>
-                                                            {Number(o.totalAmount || 0).toLocaleString('uk-UA')} ₴
-                                                        </td>
-                                                        <td><Badge variant={sm.variant}>{sm.label}</Badge></td>
-                                                        <td style={{ textAlign: 'right' }}>
-                                                            <button
-                                                                type="button"
-                                                                className="action-btn"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    navigate(`/admin/orders/${o.id}`);
-                                                                }}
-                                                                title="Відкрити в замовленнях"
-                                                            >
-                                                                <ShoppingCart size={15} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <DataTable
+                                    columns={shopOrderColumns}
+                                    rows={shopOrders}
+                                    onRowClick={(o) => navigate(`/admin/deals/${o.id}`)}
+                                />
                             )}
                         </div>
                     )}
@@ -482,8 +361,8 @@ export default function AdminClientDetails() {
 
                         <div className="cd-main-aside">
                             <div className="cd-card">
-                                <div className="cd-card-title" style={{ justifyContent: 'space-between' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div className="cd-card-title cd-card-title--split">
+                                    <span className="cd-card-title-main">
                                         <FileText size={15} /> Нотатки
                                     </span>
                                     {!editingNotes && (
@@ -519,16 +398,14 @@ export default function AdminClientDetails() {
                                 )}
                             </div>
 
-                            <div className={`cd-card ${client.claims && String(client.claims).trim() ? 'cd-card--claims' : ''}`}>
-                                <div className="cd-card-title" style={{ justifyContent: 'space-between' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div className={`cd-card ${hasClaims ? 'cd-card--claims' : ''}`}>
+                                <div className="cd-card-title cd-card-title--split">
+                                    <span className="cd-card-title-main">
                                         <AlertTriangle size={15} /> Претензії
                                     </span>
                                     {!editingClaims && (
                                         <button type="button" className="cd-notes-edit-btn" onClick={startEditClaims}>
-                                            {client.claims && String(client.claims).trim()
-                                                ? <><Edit2 size={11} /> Редагувати</>
-                                                : <><Plus size={11} /> Додати</>}
+                                            {hasClaims ? <><Edit2 size={11} /> Редагувати</> : <><Plus size={11} /> Додати</>}
                                         </button>
                                     )}
                                 </div>
@@ -552,7 +429,7 @@ export default function AdminClientDetails() {
                                             </button>
                                         </div>
                                     </div>
-                                ) : client.claims && String(client.claims).trim() ? (
+                                ) : hasClaims ? (
                                     <p className="cd-notes-text cd-claims-text">{client.claims}</p>
                                 ) : (
                                     <p className="cd-notes-empty">Претензій немає</p>
@@ -563,90 +440,12 @@ export default function AdminClientDetails() {
                 </div>
             </div>
 
-            {editModalOpen && editForm && (
-                <div className="admin-modal-overlay" onClick={() => { setEditModalOpen(false); setEditForm(null); }}>
-                    <div className="admin-modal-card" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                            <h2 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Редагувати клієнта</h2>
-                            <button type="button" className="action-btn" onClick={() => { setEditModalOpen(false); setEditForm(null); }}>
-                                <XIcon size={14} />
-                            </button>
-                        </div>
-
-                        <div className="admin-form">
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>П.І.Б. *</label>
-                                    <input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Телефон *</label>
-                                    <input
-                                        value={editForm.phone}
-                                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                                        onBlur={(e) => setEditForm({ ...editForm, phone: normalizePhonesField(e.target.value) })}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Паспорт</label>
-                                    <input value={editForm.passport} onChange={(e) => setEditForm({ ...editForm, passport: e.target.value })} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Дата видачі паспорта</label>
-                                    <input value={editForm.passportIssuedAt} onChange={(e) => setEditForm({ ...editForm, passportIssuedAt: e.target.value })} />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>ІПН</label>
-                                    <input value={editForm.ipn} onChange={(e) => setEditForm({ ...editForm, ipn: e.target.value })} />
-                                </div>
-                                <div className="form-group">
-                                    <label>E-mail</label>
-                                    <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Адреса проживання</label>
-                                    <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Адреса майданчика</label>
-                                    <input value={editForm.siteAddress} onChange={(e) => setEditForm({ ...editForm, siteAddress: e.target.value })} />
-                                </div>
-                            </div>
-                            <div className="form-row" style={{ alignItems: 'flex-start' }}>
-                                <div className="form-group" style={{ maxWidth: '160px', flexShrink: 0 }}>
-                                    <label>Знижка, %</label>
-                                    <input type="number" min="0" max="100" step="0.5" value={editForm.discountPercent} onChange={(e) => setEditForm({ ...editForm, discountPercent: e.target.value })} />
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                    <div className="form-group" style={{ margin: 0 }}>
-                                        <label>Нотатки</label>
-                                        <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} style={{ resize: 'vertical' }} />
-                                    </div>
-                                    <div className="form-group" style={{ margin: 0 }}>
-                                        <label>Претензії</label>
-                                        <textarea value={editForm.claims} onChange={(e) => setEditForm({ ...editForm, claims: e.target.value })} rows={3} style={{ resize: 'vertical' }} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                            <Button onClick={saveEditModal} disabled={editSaving}>
-                                {editSaving ? 'Збереження...' : 'Зберегти'}
-                            </Button>
-                            <Button variant="secondary" onClick={() => { setEditModalOpen(false); setEditForm(null); }}>
-                                Скасувати
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ClientFormModal
+                open={formOpen}
+                client={client}
+                onClose={() => setFormOpen(false)}
+                onSaved={handleClientSaved}
+            />
         </div>
     );
 }

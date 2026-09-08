@@ -110,6 +110,11 @@
 }
 .cd-btn--ghost:hover { background: #f9fafb; }
 
+.cd-btn--cart {
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+
 .cd-btn--sm {
     padding: 6px 12px;
     font-size: 0.8rem;
@@ -184,6 +189,25 @@
     margin: 0 0 20px;
     padding: 4px 0 14px;
     border-bottom: 1px solid #f3f4f6;
+}
+
+.cd-card-title--split {
+    justify-content: space-between;
+}
+
+.cd-card-title-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cd-badge-icon {
+    margin-right: 3px;
+    vertical-align: middle;
+}
+
+.cd-main-primary .cd-card + .cd-card {
+    margin-top: 16px;
 }
 
 /* ── Fields ── */
@@ -265,6 +289,14 @@
     font-weight: 800;
     color: var(--admin-dark);
     line-height: 1;
+}
+
+.cd-stat-value--positive {
+    color: #16a34a;
+}
+
+.cd-stat-value--sm {
+    font-size: 0.95rem;
 }
 
 /* ── Notes ── */
@@ -390,10 +422,38 @@
     font-size: 0.92rem;
 }
 
+.cd-apps-empty-icon {
+    opacity: 0.2;
+    margin-bottom: 10px;
+}
+
+.cd-apps-empty-cta {
+    margin-top: 12px;
+}
+
 .cd-order-items-preview {
+    max-width: 280px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.cd-cell-mono {
+    font-family: monospace;
+    font-weight: 700;
+}
+
+.cd-cell-muted {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.cd-cell-amount {
+    font-weight: 700;
+}
+
+.cd-cell-more {
+    color: #9ca3af;
 }
 
 /* ── Responsive ── */
@@ -408,6 +468,6 @@
 }
 
 /* Table in applications card */
-.cd-card .admin-table-container {
+.cd-card .ds-table-wrap {
     margin-top: 12px;
 }

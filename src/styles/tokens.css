@@ -1,0 +1,216 @@
+/* Design tokens for the admin redesign — docs/admin-redesign/02-visual.md (крок 4).
+   Same `--ds-*` names as before; only the VALUES changed, so every component
+   under src/features/admin/ui picks up the new visual language without edits.
+
+   Requires the IBM Plex families. Add next to the Outfit import in src/index.css:
+     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+   Outfit stays: it is the public-site face and the admin wordmark (--ds-font-brand).
+
+   Dark mode stays opt-in via [data-theme='dark'] / .ds-theme-dark, NOT
+   prefers-color-scheme — src/pages/admin/Admin.css is still light-only and
+   hardcoded, so an automatic switch leaves ds-components invisible on a light
+   shell. Enable the media query as the LAST item of крок 4, once no file
+   imports Admin.css. */
+
+:root {
+  color-scheme: light;
+
+  /* ── Surfaces ──────────────────────────────────────────────
+     Warm neutrals, biased toward the brand red rather than the
+     default blue-grey — a chosen neutral, not an inherited one. */
+  --ds-bg: #f6f5f2;
+  --ds-surface: #ffffff;
+  --ds-surface-sunken: #fbfaf8;
+  --ds-overlay: rgba(23, 19, 15, 0.34);
+
+  /* ── Shell (sidebar / topbar) ──────────────────────────────
+     The shell is its own surface and needs its own tokens —
+     this is what was missing while AdminLayout lived on Admin.css. */
+  --ds-shell: #221e1a;
+  --ds-shell-text: #d9d2ca;
+  --ds-shell-text-dim: #8b8076;
+  --ds-shell-hover: rgba(255, 255, 255, 0.055);
+  --ds-shell-active: rgba(255, 255, 255, 0.1);
+  --ds-shell-divider: rgba(255, 255, 255, 0.07);
+
+  /* ── Borders ───────────────────────────────────────────── */
+  --ds-border: #e4dfd8;
+  --ds-border-subtle: #efebe5;
+  --ds-border-strong: #cfc8bf;
+
+  /* ── Text ──────────────────────────────────────────────── */
+  --ds-text: #17130f;
+  --ds-text-muted: #5e544c;
+  --ds-text-subtle: #8a7f76;
+  --ds-text-inverse: #ffffff;
+
+  /* ── Brand / accent ────────────────────────────────────────
+     Deepened from #d62828 so it survives eight hours on screen.
+     Spend it only on primary actions and the active nav item —
+     status colours below carry meaning and are NOT the accent. */
+  --ds-accent: #c0202b;
+  --ds-accent-hover: #a81a24;
+  --ds-accent-soft: #fbeded;
+
+  /* ── Status tones ──────────────────────────────────────── */
+  --ds-success: #1f7a4c;
+  --ds-success-soft: #e9f4ee;
+  --ds-warning: #96620a;
+  --ds-warning-soft: #fbf1e1;
+  --ds-danger: #b4231c;
+  --ds-danger-soft: #fbebea;
+  --ds-info: #2b5b87;
+  --ds-info-soft: #eaf1f7;
+  --ds-neutral: #7a716a;
+  --ds-neutral-soft: #f0ede9;
+
+  /* ── Typography ────────────────────────────────────────────
+     IBM Plex Sans for the interface, IBM Plex Mono for every
+     identifier and number — SKU, інв. №, серійні, кількості,
+     суми, дати, телефони. Mono is what makes columns of digits
+     line up and read as data rather than prose.
+     Outfit is kept only for the wordmark. */
+  --ds-font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --ds-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ds-font-brand: 'Outfit', var(--ds-font);
+
+  --ds-text-xs: 11px;     /* uppercase labels, table headers */
+  --ds-text-sm: 12.5px;   /* secondary lines, meta */
+  --ds-text-base: 13.5px; /* body, table cells, nav */
+  --ds-text-md: 14px;     /* inputs, emphasised cells */
+  --ds-text-lg: 16px;     /* page title */
+  --ds-text-xl: 18px;     /* record title (deal number, client name) */
+
+  --ds-tracking-label: 0.09em; /* uppercase labels only */
+  --ds-leading-tight: 1.25;
+  --ds-leading-base: 1.5;
+
+  /* ── Density ───────────────────────────────────────────────
+     Tighter than before on purpose: this is a work panel where
+     a screen of rows should be readable without scrolling. */
+  --ds-row-py: 11px;
+  --ds-row-px: 14px;
+  --ds-head-py: 10px;
+  --ds-control-h: 32px;
+  --ds-sidebar-w: 236px;
+  --ds-topbar-h: 56px;
+
+  /* ── Radius ────────────────────────────────────────────────
+     Small. Large radii read as consumer app, not as a tool. */
+  --ds-radius-sm: 4px;
+  --ds-radius-md: 6px;
+  --ds-radius-lg: 8px;
+  --ds-radius-full: 999px;
+
+  /* ── Shadow ──────────────────────────────────────────────
+     Warm-tinted, and used sparingly: border and fill carry the
+     hierarchy, shadow only lifts what genuinely floats
+     (drawer, modal, dropdown). */
+  --ds-shadow-sm: 0 1px 2px rgba(23, 19, 15, 0.06);
+  --ds-shadow-md: 0 2px 6px rgba(23, 19, 15, 0.07);
+  --ds-shadow-lg: 0 1px 2px rgba(23, 19, 15, 0.06), 0 8px 24px -12px rgba(23, 19, 15, 0.18);
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 24px;
+  --ds-space-6: 32px;
+
+  /* ── Motion ──────────────────────────────────────────────── */
+  --ds-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --ds-duration-fast: 120ms;
+  --ds-duration-base: 180ms;
+}
+
+:root[data-theme='dark'],
+.ds-theme-dark {
+  color-scheme: dark;
+
+  --ds-bg: #131110;
+  --ds-surface: #1b1817;
+  --ds-surface-sunken: #211e1c;
+  --ds-overlay: rgba(0, 0, 0, 0.6);
+
+  --ds-shell: #0e0c0b;
+  --ds-shell-text: #cdc5bd;
+  --ds-shell-text-dim: #7c736c;
+  --ds-shell-hover: rgba(255, 255, 255, 0.05);
+  --ds-shell-active: rgba(255, 255, 255, 0.09);
+  --ds-shell-divider: rgba(255, 255, 255, 0.07);
+
+  --ds-border: #302b27;
+  --ds-border-subtle: #28241f;
+  --ds-border-strong: #3d3831;
+
+  --ds-text: #f1ece6;
+  --ds-text-muted: #b5aba2;
+  --ds-text-subtle: #8c837b;
+  --ds-text-inverse: #17130f;
+
+  --ds-accent: #e4534e;
+  --ds-accent-hover: #ef6a65;
+  --ds-accent-soft: #33201f;
+
+  --ds-success: #5dbe8c;
+  --ds-success-soft: #16261f;
+  --ds-warning: #d3a159;
+  --ds-warning-soft: #2a2117;
+  --ds-danger: #e8756c;
+  --ds-danger-soft: #2e1b19;
+  --ds-info: #7fadd6;
+  --ds-info-soft: #18232d;
+  --ds-neutral: #9a9089;
+  --ds-neutral-soft: #252220;
+
+  --ds-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ds-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --ds-shadow-lg: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Forces the light palette on a container regardless of theme —
+   lets the UI sandbox show both side by side. */
+.ds-theme-light {
+  color-scheme: light;
+
+  --ds-bg: #f6f5f2;
+  --ds-surface: #ffffff;
+  --ds-surface-sunken: #fbfaf8;
+  --ds-overlay: rgba(23, 19, 15, 0.34);
+
+  --ds-shell: #221e1a;
+  --ds-shell-text: #d9d2ca;
+  --ds-shell-text-dim: #8b8076;
+  --ds-shell-hover: rgba(255, 255, 255, 0.055);
+  --ds-shell-active: rgba(255, 255, 255, 0.1);
+  --ds-shell-divider: rgba(255, 255, 255, 0.07);
+
+  --ds-border: #e4dfd8;
+  --ds-border-subtle: #efebe5;
+  --ds-border-strong: #cfc8bf;
+
+  --ds-text: #17130f;
+  --ds-text-muted: #5e544c;
+  --ds-text-subtle: #8a7f76;
+  --ds-text-inverse: #ffffff;
+
+  --ds-accent: #c0202b;
+  --ds-accent-hover: #a81a24;
+  --ds-accent-soft: #fbeded;
+
+  --ds-success: #1f7a4c;
+  --ds-success-soft: #e9f4ee;
+  --ds-warning: #96620a;
+  --ds-warning-soft: #fbf1e1;
+  --ds-danger: #b4231c;
+  --ds-danger-soft: #fbebea;
+  --ds-info: #2b5b87;
+  --ds-info-soft: #eaf1f7;
+  --ds-neutral: #7a716a;
+  --ds-neutral-soft: #f0ede9;
+
+  --ds-shadow-sm: 0 1px 2px rgba(23, 19, 15, 0.06);
+  --ds-shadow-md: 0 2px 6px rgba(23, 19, 15, 0.07);
+  --ds-shadow-lg: 0 1px 2px rgba(23, 19, 15, 0.06), 0 8px 24px -12px rgba(23, 19, 15, 0.18);
+}

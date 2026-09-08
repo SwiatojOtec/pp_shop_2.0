@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ordersApi, clientsApi } from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 import { resolveSellerId } from '../../../constants/sellers';
 import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
 import { isValidUaPhone, normalizeUaPhone } from '../../../utils/phoneUtils';
@@ -19,6 +20,7 @@ export function useOrderClientLink({
     const [clientLookupLoading, setClientLookupLoading] = useState(false);
     const [addingClient, setAddingClient] = useState(false);
     const [linkingClient, setLinkingClient] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (!draft) return undefined;
@@ -80,7 +82,7 @@ export function useOrderClientLink({
             setPhoneMatch(null);
             onPersisted?.();
         } catch (err) {
-            alert(err.message || 'Не вдалося прив\'язати клієнта');
+            showToast(err.message || 'Не вдалося прив\'язати клієнта', 'warning');
         } finally {
             setLinkingClient(false);
         }
@@ -89,7 +91,7 @@ export function useOrderClientLink({
     async function addClientToDatabase() {
         if (!draft) return;
         if (!String(draft.customerName || '').trim() || !String(draft.customerPhone || '').trim()) {
-            alert('Спочатку вкажіть ім\'я та телефон клієнта');
+            showToast('Спочатку вкажіть ім\'я та телефон клієнта', 'warning');
             return;
         }
         setAddingClient(true);
@@ -103,7 +105,7 @@ export function useOrderClientLink({
             });
             await linkClientToOrder(created.id);
         } catch (err) {
-            alert(err.message || 'Не вдалося додати клієнта');
+            showToast(err.message || 'Не вдалося додати клієнта', 'warning');
         } finally {
             setAddingClient(false);
         }

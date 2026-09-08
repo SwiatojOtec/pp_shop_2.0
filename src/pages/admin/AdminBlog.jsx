@@ -1,99 +1,123 @@
 import { blogApi } from '../../services/api';
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
-import { AdminPageHeader } from '../../components/admin';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, FileText } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import PageHeader from '../../features/admin/ui/PageHeader';
+import Toolbar from '../../features/admin/ui/Toolbar';
+import DataTable from '../../features/admin/ui/DataTable';
+import StatusBadge from '../../features/admin/ui/StatusBadge';
+import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
 import './Admin.css';
 
 export default function AdminBlog() {
     const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     useEffect(() => {
         fetchPosts();
     }, []);
 
     const fetchPosts = async () => {
+        setLoading(true);
         try {
             const data = await blogApi.list();
             setPosts(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Error fetching posts:', err);
             setPosts([]);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const filteredPosts = posts.filter(p => {
-        return p.title.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    const filteredPosts = useMemo(
+        () => posts.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase())),
+        [posts, searchTerm]
+    );
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Ви впевнені, що хочете видалити цю статтю?')) {
-            await blogApi.remove(id);
-            fetchPosts();
+    async function handleDeleteConfirm() {
+        if (!deleteTarget) return;
+        setDeleteLoading(true);
+        try {
+            await blogApi.remove(deleteTarget.id);
+            await fetchPosts();
+            setDeleteTarget(null);
+        } catch (err) {
+            showToast(err.message || 'Помилка видалення статті', 'warning');
+        } finally {
+            setDeleteLoading(false);
         }
-    };
+    }
+
+    const columns = useMemo(() => [
+        {
+            key: 'image',
+            label: 'Зображення',
+            render: (val, post) => <img src={val} alt={post.title} className="admin-table-img" />,
+        },
+        { key: 'title', label: 'Заголовок' },
+        {
+            key: 'category',
+            label: 'Категорія',
+            render: (val) => <StatusBadge tone="neutral" label={val} />,
+        },
+        {
+            key: 'date',
+            label: 'Дата',
+            render: (val) => new Date(val).toLocaleDateString(),
+        },
+        {
+            key: 'id',
+            label: 'Дії',
+            align: 'right',
+            render: (_, post) => (
+                <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="action-btn delete" onClick={() => setDeleteTarget(post)} title="Видалити">
+                        <Trash2 size={15} />
+                    </button>
+                </div>
+            ),
+        },
+    ], []);
 
     return (
         <div className="admin-products">
-            <AdminPageHeader
+            <PageHeader
                 title="Блог"
                 subtitle={`${filteredPosts.length} з ${posts.length} статей`}
-                actions={
-                    <Link to="/admin/blog/new" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                actions={(
+                    <button type="button" className="ds-btn ds-btn--primary" onClick={() => navigate('/admin/blog/new')}>
                         <Plus size={16} /> Додати статтю
-                    </Link>
-                }
+                    </button>
+                )}
             />
 
-            <div className="admin-filters" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                <div className="search-box" style={{ flex: 1, position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-                    <input
-                        type="text"
-                        placeholder="Пошук за заголовком..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' }}
-                    />
-                </div>
-            </div>
+            <Toolbar search={searchTerm} onSearch={setSearchTerm} placeholder="Пошук за заголовком..." />
 
-            <div className="admin-table-container">
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Зображення</th>
-                            <th>Заголовок</th>
-                            <th>Категорія</th>
-                            <th>Дата</th>
-                            <th>Дії</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredPosts.map(post => (
-                            <tr key={post.id}>
-                                <td><img src={post.image} alt={post.title} className="admin-table-img" style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} /></td>
-                                <td>{post.title}</td>
-                                <td><span style={{ background: '#eee', padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem' }}>{post.category}</span></td>
-                                <td>{new Date(post.date).toLocaleDateString()}</td>
-                                <td>
-                                    <div className="table-actions">
-                                        <button onClick={() => navigate(`/admin/blog/${post.id}`)} className="action-btn edit"><Edit2 size={18} /></button>
-                                        <button onClick={() => handleDelete(post.id)} className="action-btn delete"><Trash2 size={18} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {filteredPosts.length === 0 && (
-                            <tr>
-                                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Статей не знайдено</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <DataTable
+                columns={columns}
+                rows={filteredPosts}
+                loading={loading}
+                onRowClick={(post) => navigate(`/admin/blog/${post.id}`)}
+                emptyIcon={FileText}
+                emptyTitle="Статей не знайдено"
+            />
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити статтю?"
+                message={deleteTarget ? `Видалити статтю «${deleteTarget.title}»? Цю дію не можна скасувати.` : ''}
+                confirmText="Видалити"
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setDeleteTarget(null)}
+                loading={deleteLoading}
+            />
         </div>
     );
 }

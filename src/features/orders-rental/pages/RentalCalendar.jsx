@@ -1,104 +1,100 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, X, FilePlus2, Trash2, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, FilePlus2, Trash2, Search, CalendarCheck2 } from 'lucide-react';
 import { productsApi, rentalCalendarApi } from '../../../services/api';
+import ConfirmDialog from '../../admin/ui/ConfirmDialog';
+import Drawer from '../../admin/ui/Drawer';
+import PageHeader from '../../admin/ui/PageHeader';
+import Tabs from '../../admin/ui/Tabs';
+import {
+    toIsoDate, startOfMonth, addMonths, daysOfMonth, rangesOverlap, buildTimelineRows,
+} from '../model/calendarTimeline';
 import '../styles/RentalCalendar.css';
+import '../styles/resource-timeline.css';
 
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 const MONTHS_UA = [
     'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
     'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень',
 ];
 
-function toIsoDate(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
+const MODES = [
+    { value: 'busy', label: 'Зайняті' },
+    { value: 'categories', label: 'За категоріями' },
+    { value: 'all', label: 'Всі' },
+];
 
-function startOfMonth(date) {
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-}
+const STATUS_LABEL = {
+    active: 'Активна',
+    booked: 'Заброньовано',
+    overdue: 'Прострочено',
+    returned: 'Повернено',
+    draft: 'Чернетка',
+};
 
-function endOfMonth(date) {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-function addMonths(date, delta) {
-    return new Date(date.getFullYear(), date.getMonth() + delta, 1);
-}
-
-/** Monday-based weekday index 0..6 */
-function mondayIndex(date) {
-    const day = date.getDay();
-    return day === 0 ? 6 : day - 1;
-}
-
-function buildMonthCells(monthDate) {
-    const start = startOfMonth(monthDate);
-    const end = endOfMonth(monthDate);
-    const cells = [];
-    const lead = mondayIndex(start);
-    for (let i = 0; i < lead; i += 1) cells.push(null);
-    for (let d = 1; d <= end.getDate(); d += 1) {
-        cells.push(new Date(monthDate.getFullYear(), monthDate.getMonth(), d));
-    }
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-}
-
-function eventOnDay(event, isoDay) {
-    return event.rentFrom <= isoDay && event.rentTo >= isoDay;
-}
-
-function emptyForm(dayIso = '') {
+function emptyForm(productId = '', productName = '', dayIso = '') {
     return {
-        productId: '',
-        productName: '',
-        rentFrom: dayIso,
-        rentTo: dayIso,
-        clientName: '',
-        clientPhone: '',
-        note: '',
+        productId, productName, rentFrom: dayIso, rentTo: dayIso,
+        clientName: '', clientPhone: '', note: '',
     };
 }
+
+function filterProducts(products, query) {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return products
+        .filter((p) =>
+            String(p.name || '').toLowerCase().includes(q)
+            || String(p.sku || '').toLowerCase().includes(q)
+            || String(p.inventoryNumber || '').toLowerCase().includes(q))
+        .slice(0, 8);
+}
+
+const fmtUa = (iso) => (iso ? iso.split('-').reverse().join('.') : '—');
 
 export default function RentalCalendar() {
     const navigate = useNavigate();
     const [month, setMonth] = useState(() => startOfMonth(new Date()));
+    const [mode, setMode] = useState('busy');
     const [events, setEvents] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedDay, setSelectedDay] = useState(null);
+    const [error, setError] = useState('');
+
     const [formOpen, setFormOpen] = useState(false);
     const [form, setForm] = useState(() => emptyForm());
     const [productSearch, setProductSearch] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    const [detailEvent, setDetailEvent] = useState(null);
     const [convertingId, setConvertingId] = useState(null);
-    const [error, setError] = useState('');
+    const [cancelTarget, setCancelTarget] = useState(null);
+    const [cancelBusy, setCancelBusy] = useState(false);
+    const [openApplicationId, setOpenApplicationId] = useState(null);
 
-    const range = useMemo(() => {
-        const from = toIsoDate(startOfMonth(month));
-        const to = toIsoDate(endOfMonth(month));
-        return { from, to };
-    }, [month]);
+    const [checkProductId, setCheckProductId] = useState('');
+    const [checkProductName, setCheckProductName] = useState('');
+    const [checkProductSearch, setCheckProductSearch] = useState('');
+    const [checkFrom, setCheckFrom] = useState('');
+    const [checkTo, setCheckTo] = useState('');
+    const [checkQty, setCheckQty] = useState(1);
+    const [checkLoading, setCheckLoading] = useState(false);
+    const [checkResult, setCheckResult] = useState(null);
 
-    const cells = useMemo(() => buildMonthCells(month), [month]);
     const todayIso = toIsoDate(new Date());
+    const range = useMemo(() => ({
+        from: toIsoDate(startOfMonth(month)),
+        to: toIsoDate(new Date(month.getFullYear(), month.getMonth() + 1, 0)),
+    }), [month]);
+    const days = useMemo(() => daysOfMonth(month), [month]);
+    const dayIndexByIso = useMemo(() => {
+        const map = new Map();
+        days.forEach((d, i) => map.set(toIsoDate(d), i));
+        return map;
+    }, [days]);
 
-    const suggestedProducts = useMemo(() => {
-        const q = productSearch.trim().toLowerCase();
-        if (q.length < 2) return [];
-        return products
-            .filter((p) =>
-                String(p.name || '').toLowerCase().includes(q)
-                || String(p.sku || '').toLowerCase().includes(q)
-                || String(p.inventoryNumber || '').toLowerCase().includes(q)
-            )
-            .slice(0, 8);
-    }, [products, productSearch]);
+    const suggestedProducts = useMemo(() => filterProducts(products, productSearch), [products, productSearch]);
+    const checkSuggestedProducts = useMemo(() => filterProducts(products, checkProductSearch), [products, checkProductSearch]);
 
     const loadEvents = useCallback(async () => {
         setLoading(true);
@@ -114,9 +110,7 @@ export default function RentalCalendar() {
         }
     }, [range]);
 
-    useEffect(() => {
-        loadEvents();
-    }, [loadEvents]);
+    useEffect(() => { loadEvents(); }, [loadEvents]);
 
     useEffect(() => {
         let cancelled = false;
@@ -131,37 +125,25 @@ export default function RentalCalendar() {
         return () => { cancelled = true; };
     }, []);
 
-    const dayEvents = useMemo(() => {
-        if (!selectedDay) return [];
-        return events.filter((e) => eventOnDay(e, selectedDay));
-    }, [events, selectedDay]);
+    const groups = useMemo(() => buildTimelineRows(events, products, mode), [events, products, mode]);
 
-    function openDay(date) {
-        if (!date) return;
-        const iso = toIsoDate(date);
-        setSelectedDay(iso);
-        setFormOpen(false);
+    function openCreateForm(productId = '', productName = '', dayIso = '') {
         setEditingId(null);
-        setProductSearch('');
-        setError('');
-    }
-
-    function openCreateForm() {
-        setEditingId(null);
-        setForm(emptyForm(selectedDay || todayIso));
-        setProductSearch('');
+        setForm(emptyForm(productId, productName, dayIso || todayIso));
+        setProductSearch(productName);
         setFormOpen(true);
         setError('');
     }
 
     function openEditHold(event) {
         if (!event?.bookingId) return;
+        setDetailEvent(null);
         setEditingId(event.bookingId);
         setForm({
             productId: String(event.productId || ''),
             productName: event.productName || '',
-            rentFrom: event.rentFrom || selectedDay || '',
-            rentTo: event.rentTo || selectedDay || '',
+            rentFrom: event.rentFrom || '',
+            rentTo: event.rentTo || '',
             clientName: event.clientName || '',
             clientPhone: event.clientPhone || '',
             note: event.note || '',
@@ -172,11 +154,7 @@ export default function RentalCalendar() {
     }
 
     function selectProduct(product) {
-        setForm((f) => ({
-            ...f,
-            productId: String(product.id),
-            productName: product.name || '',
-        }));
+        setForm((f) => ({ ...f, productId: String(product.id), productName: product.name || '' }));
         setProductSearch(product.name || '');
     }
 
@@ -219,14 +197,18 @@ export default function RentalCalendar() {
         }
     }
 
-    async function handleCancelBooking(bookingId) {
-        if (!bookingId) return;
-        if (!window.confirm('Скасувати цю бронь?')) return;
+    async function confirmCancelBooking() {
+        if (!cancelTarget) return;
+        setCancelBusy(true);
         try {
-            await rentalCalendarApi.cancelBooking(bookingId);
+            await rentalCalendarApi.cancelBooking(cancelTarget);
+            setDetailEvent(null);
             await loadEvents();
         } catch (err) {
             setError(err.message || 'Не вдалося скасувати бронь');
+        } finally {
+            setCancelBusy(false);
+            setCancelTarget(null);
         }
     }
 
@@ -236,11 +218,9 @@ export default function RentalCalendar() {
         setError('');
         try {
             const { application } = await rentalCalendarApi.convertBooking(bookingId);
+            setDetailEvent(null);
             await loadEvents();
-            if (application?.id) {
-                const openNow = window.confirm('Заявку створено. Відкрити її зараз?');
-                if (openNow) navigate(`/admin/rental-applications/${application.id}`);
-            }
+            if (application?.id) setOpenApplicationId(application.id);
         } catch (err) {
             setError(err.message || 'Не вдалося створити заявку');
         } finally {
@@ -248,148 +228,70 @@ export default function RentalCalendar() {
         }
     }
 
-    function renderBookingForm() {
-        return (
-            <form className="rental-calendar__form" onSubmit={handleSaveBooking}>
-                <div className="rental-calendar__form-head">
-                    <strong>{editingId ? 'Редагувати бронь' : 'Нова бронь'}</strong>
-                    <button
-                        type="button"
-                        className="rental-calendar__icon-btn"
-                        onClick={() => {
-                            setFormOpen(false);
-                            setEditingId(null);
-                            setProductSearch('');
-                        }}
-                        aria-label="Закрити"
-                    >
-                        <X size={16} />
-                    </button>
-                </div>
-
-                {error && <div className="rental-calendar__error">{error}</div>}
-
-                <div className="form-group">
-                    <label>Товар</label>
-                    {form.productId ? (
-                        <div className="rental-calendar__picked">
-                            <span>{form.productName || `ID ${form.productId}`}</span>
-                            <button type="button" className="rental-calendar__icon-btn" onClick={clearSelectedProduct} title="Змінити товар">
-                                <X size={14} />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="order-product-search-wrap rental-calendar__product-search">
-                            <Search size={15} className="order-product-search-icon" />
-                            <input
-                                type="text"
-                                className="order-product-search-input"
-                                placeholder="Пошук: назва, артикул або інв. №..."
-                                value={productSearch}
-                                onChange={(e) => setProductSearch(e.target.value)}
-                                autoComplete="off"
-                            />
-                            {suggestedProducts.length > 0 && (
-                                <div className="order-product-suggest">
-                                    {suggestedProducts.map((p) => (
-                                        <div
-                                            key={p.id}
-                                            className="order-product-suggest__item"
-                                            onClick={() => selectProduct(p)}
-                                        >
-                                            <div>
-                                                <div className="font-semibold text-sm">{p.name}</div>
-                                                {(p.sku || p.inventoryNumber) && (
-                                                    <div className="text-xs text-gray-400">
-                                                        {p.sku ? `SKU: ${p.sku}` : ''}
-                                                        {p.sku && p.inventoryNumber ? ' · ' : ''}
-                                                        {p.inventoryNumber ? `Інв: ${p.inventoryNumber}` : ''}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <span className="font-bold text-[#e63946]">{p.price} ₴</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div className="rental-calendar__form-row">
-                    <div className="form-group">
-                        <label>Оренда з</label>
-                        <input
-                            type="date"
-                            required
-                            value={form.rentFrom}
-                            onChange={(e) => setForm((f) => ({ ...f, rentFrom: e.target.value }))}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Оренда по</label>
-                        <input
-                            type="date"
-                            required
-                            value={form.rentTo}
-                            onChange={(e) => setForm((f) => ({ ...f, rentTo: e.target.value }))}
-                        />
-                    </div>
-                </div>
-
-                <div className="form-group">
-                    <label>Клієнт (опційно)</label>
-                    <input
-                        type="text"
-                        value={form.clientName}
-                        onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))}
-                        placeholder="ПІБ"
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Телефон (опційно)</label>
-                    <input
-                        type="tel"
-                        value={form.clientPhone}
-                        onChange={(e) => setForm((f) => ({ ...f, clientPhone: e.target.value }))}
-                        placeholder="+380…"
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Примітка</label>
-                    <textarea
-                        rows={2}
-                        value={form.note}
-                        onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-                        placeholder="Коментар менеджера"
-                    />
-                </div>
-
-                <div className="rental-calendar__form-actions">
-                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                        {saving ? 'Збереження…' : 'Зберегти бронь'}
-                    </button>
-                    <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                            setFormOpen(false);
-                            setEditingId(null);
-                            setProductSearch('');
-                        }}
-                    >
-                        Скасувати
-                    </button>
-                </div>
-            </form>
-        );
+    async function runAvailabilityCheck() {
+        if (!checkProductId || !checkFrom || !checkTo) return;
+        setCheckLoading(true);
+        setCheckResult(null);
+        try {
+            const data = await rentalCalendarApi.events({ from: checkFrom, to: checkTo });
+            const all = Array.isArray(data?.events) ? data.events : [];
+            const conflicts = all.filter((e) => Number(e.productId) === Number(checkProductId)
+                && rangesOverlap(e.rentFrom, e.rentTo, checkFrom, checkTo));
+            setCheckResult({ conflicts });
+        } catch (err) {
+            setCheckResult({ error: err.message || 'Не вдалося перевірити доступність' });
+        } finally {
+            setCheckLoading(false);
+        }
     }
 
+    // ── Build the grid's explicit row/column placement ──────────────────────
+    const numDays = days.length;
+    let rowCursor = 1; // row 1 is the day header
+    const groupHeaders = [];
+    const rowLabels = [];
+    const bars = [];
+
+    for (const group of groups) {
+        if (group.category) {
+            rowCursor += 1;
+            groupHeaders.push({ key: `g-${group.category}`, label: group.category, row: rowCursor });
+        }
+        for (const row of group.rows) {
+            const startRow = rowCursor + 1;
+            rowCursor += row.laneCount;
+            rowLabels.push({ key: `row-${row.productId}`, row, startRow, rowSpan: row.laneCount });
+            for (const evt of row.events) {
+                const fromIdx = evt.rentFrom < range.from ? 0 : (dayIndexByIso.get(evt.rentFrom) ?? 0);
+                const toIdx = evt.rentTo > range.to ? numDays - 1 : (dayIndexByIso.get(evt.rentTo) ?? numDays - 1);
+                if (toIdx < fromIdx) continue;
+                bars.push({
+                    key: evt.id,
+                    evt,
+                    row: startRow + evt.lane,
+                    col: fromIdx + 2,
+                    span: toIdx - fromIdx + 1,
+                });
+            }
+        }
+    }
+    const totalRows = rowCursor;
+    const hasAnyRows = groups.some((g) => g.rows.length > 0);
     const monthLabel = `${MONTHS_UA[month.getMonth()]} ${month.getFullYear()}`;
 
     return (
-        <div className="rental-calendar">
-            <div className="rental-calendar__toolbar">
+        <div className="rt-page">
+            <PageHeader
+                title="Календар"
+                subtitle="Завантаженість інструментів по днях"
+                actions={(
+                    <button type="button" className="ds-btn ds-btn--primary" onClick={() => openCreateForm()}>
+                        <Plus size={16} /> Нова бронь
+                    </button>
+                )}
+            />
+
+            <div className="rt-toolbar">
                 <div className="rental-calendar__nav">
                     <button type="button" className="rental-calendar__nav-btn" onClick={() => setMonth((m) => addMonths(m, -1))} aria-label="Попередній місяць">
                         <ChevronLeft size={18} />
@@ -398,153 +300,337 @@ export default function RentalCalendar() {
                     <button type="button" className="rental-calendar__nav-btn" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Наступний місяць">
                         <ChevronRight size={18} />
                     </button>
-                    <button
-                        type="button"
-                        className="rental-calendar__today-btn"
-                        onClick={() => {
-                            const now = startOfMonth(new Date());
-                            setMonth(now);
-                            setSelectedDay(todayIso);
-                        }}
-                    >
+                    <button type="button" className="rental-calendar__today-btn" onClick={() => setMonth(startOfMonth(new Date()))}>
                         Сьогодні
                     </button>
                 </div>
 
-                <div className="rental-calendar__legend">
-                    <span className="rental-calendar__legend-item rental-calendar__legend-item--hold">Бронь</span>
-                    <span className="rental-calendar__legend-item rental-calendar__legend-item--application">Заявка</span>
-                    <span className="rental-calendar__legend-item rental-calendar__legend-item--overdue">Прострочено</span>
+                <Tabs tabs={MODES} value={mode} onChange={setMode} />
+
+                <div className="rt-legend">
+                    <span className="rt-legend-item rt-legend-item--hold">Бронь</span>
+                    <span className="rt-legend-item rt-legend-item--application">Заявка</span>
+                    <span className="rt-legend-item rt-legend-item--overdue">Прострочено</span>
                 </div>
             </div>
 
-            {error && !formOpen && (
-                <div className="rental-calendar__error">{error}</div>
-            )}
-
-            <div className="rental-calendar__layout">
-                <div className="rental-calendar__grid-wrap">
-                    {loading && <div className="rental-calendar__loading">Завантаження…</div>}
-                    <div className="rental-calendar__weekdays">
-                        {WEEKDAYS.map((d) => (
-                            <div key={d} className="rental-calendar__weekday">{d}</div>
-                        ))}
-                    </div>
-                    <div className="rental-calendar__grid">
-                        {cells.map((date, idx) => {
-                            if (!date) {
-                                return <div key={`empty-${idx}`} className="rental-calendar__cell is-empty" />;
-                            }
-                            const iso = toIsoDate(date);
-                            const dayEvts = events.filter((e) => eventOnDay(e, iso)).slice(0, 3);
-                            const more = events.filter((e) => eventOnDay(e, iso)).length - dayEvts.length;
-                            const isSelected = selectedDay === iso;
-                            const isToday = todayIso === iso;
-                            return (
-                                <button
-                                    key={iso}
-                                    type="button"
-                                    className={`rental-calendar__cell${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`}
-                                    onClick={() => openDay(date)}
+            <div className="rt-checker">
+                <div className="rt-checker-field rt-checker-product">
+                    Інструмент
+                    <input
+                        type="text"
+                        value={checkProductSearch}
+                        onChange={(e) => { setCheckProductSearch(e.target.value); setCheckProductId(''); setCheckProductName(''); }}
+                        placeholder="Почніть вводити назву..."
+                    />
+                    {checkProductSearch && !checkProductId && checkSuggestedProducts.length > 0 && (
+                        <div className="order-product-suggest">
+                            {checkSuggestedProducts.map((p) => (
+                                <div
+                                    key={p.id}
+                                    className="order-product-suggest__item"
+                                    onClick={() => { setCheckProductId(String(p.id)); setCheckProductName(p.name); setCheckProductSearch(p.name); }}
                                 >
-                                    <span className="rental-calendar__day-num">{date.getDate()}</span>
-                                    <div className="rental-calendar__chips">
-                                        {dayEvts.map((evt) => (
-                                            <span
-                                                key={evt.id}
-                                                className={`rental-calendar__chip rental-calendar__chip--${evt.kind}`}
-                                                title={`${evt.productName} · ${evt.title}`}
-                                            >
-                                                {evt.productName || evt.title}
-                                            </span>
-                                        ))}
-                                        {more > 0 && (
-                                            <span className="rental-calendar__chip rental-calendar__chip--more">+{more}</span>
-                                        )}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                    <div className="font-semibold text-sm">{p.name}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <label className="rt-checker-field">
+                    Дата від
+                    <input type="date" value={checkFrom} onChange={(e) => setCheckFrom(e.target.value)} />
+                </label>
+                <label className="rt-checker-field">
+                    Дата до
+                    <input type="date" value={checkTo} onChange={(e) => setCheckTo(e.target.value)} />
+                </label>
+                <label className="rt-checker-field rt-checker-field--qty">
+                    Кількість
+                    <input type="number" min="1" value={checkQty} onChange={(e) => setCheckQty(e.target.value)} />
+                </label>
+                <button
+                    type="button"
+                    className="ds-btn ds-btn--secondary"
+                    disabled={!checkProductId || !checkFrom || !checkTo || checkLoading}
+                    onClick={runAvailabilityCheck}
+                >
+                    <CalendarCheck2 size={16} /> {checkLoading ? 'Перевіряємо…' : 'Перевірити'}
+                </button>
+
+                {checkResult && !checkResult.error && (
+                    checkResult.conflicts.length === 0 ? (
+                        <div className="rt-checker-result rt-checker-result--free">
+                            «{checkProductName}» вільний на весь період {fmtUa(checkFrom)} — {fmtUa(checkTo)}.
+                        </div>
+                    ) : (
+                        <div className="rt-checker-result rt-checker-result--busy">
+                            Знайдено перетинів: {checkResult.conflicts.length} (потрібно {checkQty} шт. — звірте з фактичним залишком на складі).
+                            <ul>
+                                {checkResult.conflicts.map((c) => (
+                                    <li key={c.id}>{fmtUa(c.rentFrom)} — {fmtUa(c.rentTo)}: {c.clientName || c.title}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )
+                )}
+                {checkResult?.error && <div className="rt-checker-result rt-checker-result--busy">{checkResult.error}</div>}
+            </div>
+
+            {error && <div className="rental-calendar__error">{error}</div>}
+
+            <div className="rt-scroll">
+                {loading && <div className="rt-loading">Завантаження…</div>}
+                <div
+                    className="rt-grid"
+                    style={{ gridTemplateColumns: `220px repeat(${numDays}, 32px)`, gridTemplateRows: `34px repeat(${Math.max(totalRows - 1, 0)}, 30px)` }}
+                >
+                    <div className="rt-head-label rt-place" style={{ '--rt-col': 1, '--rt-row': 1 }}>Інструмент</div>
+                    {days.map((d, i) => {
+                        const iso = toIsoDate(d);
+                        const weekday = d.getDay();
+                        const isWeekend = weekday === 0 || weekday === 6;
+                        const isToday = iso === todayIso;
+                        return (
+                            <div
+                                key={iso}
+                                className={`rt-day-head rt-place${isWeekend ? ' rt-day-head--weekend' : ''}${isToday ? ' rt-day-head--today' : ''}`}
+                                style={{ '--rt-col': i + 2, '--rt-row': 1 }}
+                            >
+                                {d.getDate()}
+                            </div>
+                        );
+                    })}
+
+                    {groupHeaders.map((g) => (
+                        <div key={g.key} className="rt-group-label rt-place" style={{ '--rt-col': 1, '--rt-row': g.row, '--rt-span': numDays + 1 }}>
+                            {g.label}
+                        </div>
+                    ))}
+
+                    {rowLabels.map(({ key, row, startRow, rowSpan }) => (
+                        <div key={key} className="rt-row-label rt-place" style={{ '--rt-col': 1, '--rt-row': startRow, '--rt-row-span': rowSpan }}>
+                            <div className="rt-row-label-name" title={row.name}>{row.name}</div>
+                            {row.sku && <div className="rt-row-label-sku">{row.sku}</div>}
+                        </div>
+                    ))}
+
+                    {rowLabels.flatMap(({ row, startRow, rowSpan }) => (
+                        Array.from({ length: rowSpan }).flatMap((_, laneIdx) => (
+                            days.map((d, dayIdx) => {
+                                const iso = toIsoDate(d);
+                                const covered = row.events.some((e) => e.lane === laneIdx && e.rentFrom <= iso && e.rentTo >= iso);
+                                if (covered) return null;
+                                const weekday = d.getDay();
+                                const isWeekend = weekday === 0 || weekday === 6;
+                                return (
+                                    <div
+                                        key={`${row.productId}-${laneIdx}-${iso}`}
+                                        className={`rt-cell rt-place${isWeekend ? ' rt-cell--weekend' : ''}`}
+                                        style={{ '--rt-col': dayIdx + 2, '--rt-row': startRow + laneIdx }}
+                                        title={`${row.name} · ${fmtUa(iso)} — вільно, клік створить бронь`}
+                                        onClick={() => openCreateForm(String(row.productId), row.name, iso)}
+                                    />
+                                );
+                            })
+                        ))
+                    ))}
+
+                    {bars.map((b) => (
+                        <div
+                            key={b.key}
+                            className={`rt-bar rt-place rt-bar--${b.evt.kind}`}
+                            style={{ '--rt-col': b.col, '--rt-row': b.row, '--rt-span': b.span }}
+                            title={`${b.evt.productName} · ${b.evt.title || b.evt.clientName || ''} · ${fmtUa(b.evt.rentFrom)} — ${fmtUa(b.evt.rentTo)}`}
+                            onClick={() => setDetailEvent(b.evt)}
+                        >
+                            {b.evt.title || b.evt.clientName || b.evt.productName}
+                        </div>
+                    ))}
                 </div>
 
-                <aside className="rental-calendar__panel">
-                    {!selectedDay ? (
-                        <p className="rental-calendar__panel-hint">Оберіть день, щоб побачити зайнятість або створити бронь.</p>
-                    ) : (
-                        <>
-                            <div className="rental-calendar__panel-head">
-                                <h4>{selectedDay.split('-').reverse().join('.')}</h4>
-                                {!formOpen && (
-                                    <button type="button" className="btn btn-primary rental-calendar__new-btn" onClick={openCreateForm}>
-                                        <Plus size={15} /> Нова бронь
+                {!loading && !hasAnyRows && (
+                    <div className="rt-empty">
+                        {mode === 'all'
+                            ? 'У каталозі оренди поки немає жодного інструмента.'
+                            : 'У цьому місяці немає завантажених інструментів. Перемкніть режим на «Всі», щоб побачити весь каталог.'}
+                    </div>
+                )}
+            </div>
+
+            <Drawer
+                open={formOpen}
+                onClose={() => { setFormOpen(false); setEditingId(null); setProductSearch(''); }}
+                title={editingId ? 'Редагувати бронь' : 'Нова бронь'}
+                width="md"
+                footer={(
+                    <div className="rental-calendar__form-actions">
+                        <button type="submit" form="booking-form" className="btn btn-primary" disabled={saving}>
+                            {saving ? 'Збереження…' : 'Зберегти бронь'}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => { setFormOpen(false); setEditingId(null); setProductSearch(''); }}
+                        >
+                            Скасувати
+                        </button>
+                    </div>
+                )}
+            >
+                <form id="booking-form" className="rental-calendar__form" onSubmit={handleSaveBooking}>
+                    {error && <div className="rental-calendar__error">{error}</div>}
+
+                    <div className="form-group">
+                        <label>Товар</label>
+                        {form.productId ? (
+                            <div className="rental-calendar__picked">
+                                <span>{form.productName || `ID ${form.productId}`}</span>
+                                <button type="button" className="rental-calendar__icon-btn" onClick={clearSelectedProduct} title="Змінити товар">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="order-product-search-wrap rental-calendar__product-search">
+                                <Search size={15} className="order-product-search-icon" />
+                                <input
+                                    type="text"
+                                    className="order-product-search-input"
+                                    placeholder="Пошук: назва, артикул або інв. №..."
+                                    value={productSearch}
+                                    onChange={(e) => setProductSearch(e.target.value)}
+                                    autoComplete="off"
+                                />
+                                {suggestedProducts.length > 0 && (
+                                    <div className="order-product-suggest">
+                                        {suggestedProducts.map((p) => (
+                                            <div key={p.id} className="order-product-suggest__item" onClick={() => selectProduct(p)}>
+                                                <div>
+                                                    <div className="font-semibold text-sm">{p.name}</div>
+                                                    {(p.sku || p.inventoryNumber) && (
+                                                        <div className="text-xs text-gray-400">
+                                                            {p.sku ? `SKU: ${p.sku}` : ''}
+                                                            {p.sku && p.inventoryNumber ? ' · ' : ''}
+                                                            {p.inventoryNumber ? `Інв: ${p.inventoryNumber}` : ''}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-[#e63946]">{p.price} ₴</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="rental-calendar__form-row">
+                        <div className="form-group">
+                            <label>Оренда з</label>
+                            <input type="date" required value={form.rentFrom} onChange={(e) => setForm((f) => ({ ...f, rentFrom: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label>Оренда по</label>
+                            <input type="date" required value={form.rentTo} onChange={(e) => setForm((f) => ({ ...f, rentTo: e.target.value }))} />
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Клієнт (опційно)</label>
+                        <input type="text" value={form.clientName} onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))} placeholder="ПІБ" />
+                    </div>
+                    <div className="form-group">
+                        <label>Телефон (опційно)</label>
+                        <input type="tel" value={form.clientPhone} onChange={(e) => setForm((f) => ({ ...f, clientPhone: e.target.value }))} placeholder="+380…" />
+                    </div>
+                    <div className="form-group">
+                        <label>Примітка</label>
+                        <textarea rows={2} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} placeholder="Коментар менеджера" />
+                    </div>
+                </form>
+            </Drawer>
+
+            <Drawer open={!!detailEvent} onClose={() => setDetailEvent(null)} title={detailEvent?.productName || 'Подія'} width="md">
+                {detailEvent && (
+                    <ul className="rental-calendar__event-list">
+                        <li className={`rental-calendar__event-card rental-calendar__event-card--${detailEvent.kind}`}>
+                            <div className="rental-calendar__event-meta">
+                                {fmtUa(detailEvent.rentFrom)} — {fmtUa(detailEvent.rentTo)}
+                            </div>
+                            {(detailEvent.clientName || detailEvent.title) && (
+                                <div className="rental-calendar__event-meta">{detailEvent.clientName || detailEvent.title}</div>
+                            )}
+                            {detailEvent.clientPhone && <div className="rental-calendar__event-meta">{detailEvent.clientPhone}</div>}
+                            {detailEvent.applicationNumber && (
+                                <div className="rental-calendar__event-meta">
+                                    Заявка {detailEvent.applicationNumber}
+                                    {detailEvent.status && ` · ${STATUS_LABEL[detailEvent.status] || detailEvent.status}`}
+                                </div>
+                            )}
+                            {detailEvent.note && <div className="rental-calendar__event-note">{detailEvent.note}</div>}
+
+                            <div className="rental-calendar__event-actions">
+                                {detailEvent.source === 'booking' && detailEvent.bookingId && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary"
+                                            disabled={!!convertingId}
+                                            onClick={() => handleConvert(detailEvent.bookingId)}
+                                        >
+                                            <FilePlus2 size={14} />
+                                            {convertingId === detailEvent.bookingId ? 'Створюємо…' : 'Створити заявку'}
+                                        </button>
+                                        <button type="button" className="btn btn-secondary" onClick={() => openEditHold(detailEvent)}>
+                                            Змінити
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={() => setCancelTarget(detailEvent.bookingId)}
+                                            title="Скасувати бронь"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </>
+                                )}
+                                {detailEvent.source === 'application' && detailEvent.applicationId && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => navigate(`/admin/rental-applications/${detailEvent.applicationId}`)}
+                                    >
+                                        Відкрити заявку
                                     </button>
                                 )}
                             </div>
+                        </li>
+                    </ul>
+                )}
+            </Drawer>
 
-                            {formOpen && renderBookingForm()}
+            <ConfirmDialog
+                open={!!cancelTarget}
+                title="Скасувати бронь?"
+                message="Ця бронь буде скасована. Позиція звільниться в календарі."
+                confirmText="Скасувати бронь"
+                loading={cancelBusy}
+                onConfirm={confirmCancelBooking}
+                onCancel={() => setCancelTarget(null)}
+            />
 
-                            {dayEvents.length === 0 && !formOpen && (
-                                <p className="rental-calendar__panel-hint">На цей день подій немає.</p>
-                            )}
-
-                            <ul className="rental-calendar__event-list">
-                                {dayEvents.map((evt) => (
-                                    <li key={evt.id} className={`rental-calendar__event-card rental-calendar__event-card--${evt.kind}`}>
-                                        <div className="rental-calendar__event-title">{evt.productName}</div>
-                                        <div className="rental-calendar__event-meta">
-                                            {evt.rentFrom.split('-').reverse().join('.')} — {evt.rentTo.split('-').reverse().join('.')}
-                                        </div>
-                                        {(evt.clientName || evt.title) && (
-                                            <div className="rental-calendar__event-meta">{evt.clientName || evt.title}</div>
-                                        )}
-                                        {evt.applicationNumber && (
-                                            <div className="rental-calendar__event-meta">Заявка {evt.applicationNumber}</div>
-                                        )}
-                                        {evt.note && <div className="rental-calendar__event-note">{evt.note}</div>}
-
-                                        <div className="rental-calendar__event-actions">
-                                            {evt.source === 'booking' && evt.bookingId && (
-                                                <>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-primary"
-                                                        disabled={!!convertingId}
-                                                        onClick={() => handleConvert(evt.bookingId)}
-                                                    >
-                                                        <FilePlus2 size={14} />
-                                                        {convertingId === evt.bookingId ? 'Створюємо…' : 'Створити заявку'}
-                                                    </button>
-                                                    <button type="button" className="btn btn-secondary" onClick={() => openEditHold(evt)}>
-                                                        Змінити
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-secondary"
-                                                        onClick={() => handleCancelBooking(evt.bookingId)}
-                                                        title="Скасувати бронь"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </>
-                                            )}
-                                            {evt.source === 'application' && evt.applicationId && (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-secondary"
-                                                    onClick={() => navigate(`/admin/rental-applications/${evt.applicationId}`)}
-                                                >
-                                                    Відкрити заявку
-                                                </button>
-                                            )}
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        </>
-                    )}
-                </aside>
-            </div>
+            <ConfirmDialog
+                open={!!openApplicationId}
+                title="Заявку створено"
+                message="Заявку оренди створено з цієї брони. Відкрити її зараз?"
+                confirmText="Відкрити"
+                danger={false}
+                onConfirm={() => {
+                    navigate(`/admin/rental-applications/${openApplicationId}`);
+                    setOpenApplicationId(null);
+                }}
+                onCancel={() => setOpenApplicationId(null)}
+            />
         </div>
     );
 }

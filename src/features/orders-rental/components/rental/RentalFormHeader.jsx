@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
-import { STATUS_SELECT_OPTIONS } from '../../model/rentalStatus';
+import { getStatusOptions } from '../../../admin/model/status';
 
 export default function RentalFormHeader({
     isNew,
@@ -15,7 +15,7 @@ export default function RentalFormHeader({
     return (
         <div className="rental-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <Link to="/admin/rental-applications" className="btn-back">
+                <Link to="/admin/deals?type=rent" className="btn-back">
                     <ArrowLeft size={18} />
                 </Link>
                 <div>
@@ -27,7 +27,7 @@ export default function RentalFormHeader({
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
                 <select value={status} onChange={e => onStatusChange(e.target.value)} className="status-select">
-                    {STATUS_SELECT_OPTIONS.map(({ value, label }) => (
+                    {getStatusOptions('rental').map(({ value, label }) => (
                         <option key={value} value={value}>{label}</option>
                     ))}
                 </select>

@@ -1,0 +1,27 @@
+.blog-edit-excerpt {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-family: inherit;
+}
+
+.blog-edit-image-preview {
+    margin-top: 10px;
+}
+
+.blog-edit-image-preview img {
+    max-height: 200px;
+    border-radius: 8px;
+}
+
+.blog-edit-quill-wrap {
+    background: white;
+    border-radius: 8px;
+}
+
+.blog-edit-quill-editor {
+    height: 400px;
+    margin-bottom: 50px;
+}

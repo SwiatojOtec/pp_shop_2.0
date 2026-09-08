@@ -1,21 +1,3 @@
-export const ORDER_STATUS_OPTIONS = [
-    { value: 'pending',       label: 'Новий' },
-    { value: 'invoice_sent',  label: 'Рахунок виставлено' },
-    { value: 'paid',          label: 'Оплачено' },
-    { value: 'processing',    label: 'В роботі' },
-    { value: 'completed',     label: 'Виконано' },
-    { value: 'cancelled',     label: 'Скасовано' },
-];
-
-export const ORDER_STATUS_VARIANT = {
-    pending:      'warning',
-    invoice_sent: 'secondary',
-    paid:         'success',
-    processing:   'default',
-    completed:    'success',
-    cancelled:    'danger',
-};
-
 export const DELIVERY_LABELS = {
     pickup: 'Самовивіз',
     delivery: 'Доставка',
@@ -26,10 +8,6 @@ export const PAYMENT_LABELS = {
     cash: 'Готівка',
     card: 'Картка',
 };
-
-export function getOrderStatusLabel(status) {
-    return ORDER_STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
-}
 
 export function formatOrderNumberDisplay(value) {
     if (!value || typeof value !== 'string') return value || '—';

@@ -1,0 +1,261 @@
+/* Resource timeline for the rental calendar — "інструмент × дні"
+   (docs/admin-redesign/00-plan.md, УХ рішення №6). Uses --ds-* tokens. */
+
+.rt-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.rt-checker-field--qty {
+    width: 80px;
+}
+
+.rt-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+}
+
+.rt-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-3);
+}
+
+.rt-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+
+.rt-legend-item::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.rt-legend-item--hold::before { background: #2563eb; }
+.rt-legend-item--application::before { background: #059669; }
+.rt-legend-item--overdue::before { background: #dc2626; }
+
+/* ── Availability checker ──────────────────────────────────────────────── */
+
+.rt-checker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--ds-space-3);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    padding: var(--ds-space-3) var(--ds-space-4);
+}
+
+.rt-checker-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ds-text-muted);
+}
+
+.rt-checker-field input,
+.rt-checker-field select {
+    padding: 8px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.88rem;
+    font-weight: 400;
+}
+
+.rt-checker-product {
+    position: relative;
+    min-width: 220px;
+}
+
+.rt-checker-result {
+    flex-basis: 100%;
+    border-radius: var(--ds-radius-sm);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    font-size: 0.85rem;
+}
+
+.rt-checker-result--free {
+    background: var(--ds-success-soft);
+    color: var(--ds-success);
+}
+
+.rt-checker-result--busy {
+    background: var(--ds-warning-soft);
+    color: var(--ds-warning);
+}
+
+.rt-checker-result ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+/* ── Mode tabs ──────────────────────────────────────────────────────────── */
+
+.rt-modes {
+    display: flex;
+    gap: 4px;
+}
+
+/* ── Grid ───────────────────────────────────────────────────────────────── */
+
+.rt-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface);
+    position: relative;
+}
+
+.rt-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 3;
+    font-size: 0.9rem;
+    color: var(--ds-text-muted);
+}
+
+.rt-grid {
+    display: grid;
+    grid-auto-rows: 30px;
+    min-width: max-content;
+}
+
+/* Every cell in the grid is placed explicitly via --rt-col/--rt-row/--rt-span/
+   --rt-row-span (set inline, since placement is computed from data — the
+   number of days in the month, how many lanes a tool's bookings need). */
+.rt-place {
+    grid-column: var(--rt-col) / span var(--rt-span, 1);
+    grid-row: var(--rt-row) / span var(--rt-row-span, 1);
+}
+
+.rt-head-label,
+.rt-group-label {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--ds-surface-sunken);
+    border-right: 1px solid var(--ds-border);
+    border-bottom: 1px solid var(--ds-border);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--ds-space-3);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ds-text-subtle);
+    text-transform: uppercase;
+}
+
+.rt-group-label {
+    font-size: 0.8rem;
+    color: var(--ds-text);
+    background: var(--ds-surface-sunken);
+}
+
+.rt-day-head {
+    border-right: 1px solid var(--ds-border);
+    border-bottom: 1px solid var(--ds-border);
+    background: var(--ds-surface-sunken);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    color: var(--ds-text-muted);
+    line-height: 1.2;
+}
+
+.rt-day-head--weekend {
+    background: var(--ds-neutral-soft);
+}
+
+.rt-day-head--today {
+    color: var(--ds-accent);
+    font-weight: 700;
+}
+
+.rt-row-label {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--ds-surface);
+    border-right: 1px solid var(--ds-border);
+    border-bottom: 1px solid var(--ds-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4px var(--ds-space-3);
+    min-width: 0;
+}
+
+.rt-row-label-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ds-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rt-row-label-sku {
+    font-size: 0.7rem;
+    color: var(--ds-text-subtle);
+}
+
+.rt-cell {
+    border-right: 1px solid var(--ds-border);
+    border-bottom: 1px solid var(--ds-border);
+    cursor: pointer;
+}
+
+.rt-cell--weekend {
+    background: var(--ds-surface-sunken);
+}
+
+.rt-cell:hover {
+    background: var(--ds-accent-soft);
+}
+
+.rt-bar {
+    margin: 3px 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rt-bar--hold { background: #2563eb; }
+.rt-bar--application { background: #059669; }
+.rt-bar--overdue { background: #dc2626; }
+
+.rt-empty {
+    padding: var(--ds-space-6);
+    text-align: center;
+    color: var(--ds-text-subtle);
+}

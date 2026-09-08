@@ -3,6 +3,7 @@ import {
     Files, FileText, ClipboardList, Undo2, ScrollText,
     Download, X, RefreshCw, ChevronDown, Loader2,
 } from 'lucide-react';
+import ConfirmDialog from '../../../admin/ui/ConfirmDialog';
 
 const DOC_KINDS = [
     { type: 'invoice', label: 'Рахунок', icon: FileText, rentOnly: false },
@@ -50,6 +51,7 @@ export default function DocumentsPanel({
     onDeleteDocument,
 }) {
     const [expanded, setExpanded] = useState({});
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const groups = useMemo(() => groupDocumentsByType(documents), [documents]);
 
     const anyBusy = invoiceLoading || depositInvoiceLoading || converting
@@ -155,7 +157,7 @@ export default function DocumentsPanel({
                                                     <button
                                                         type="button"
                                                         className="doc-version__remove"
-                                                        onClick={() => onDeleteDocument(doc)}
+                                                        onClick={() => setDeleteTarget(doc)}
                                                         disabled={deletingDocId === doc.id}
                                                         title="Видалити"
                                                     >
@@ -194,7 +196,7 @@ export default function DocumentsPanel({
                                 <button
                                     type="button"
                                     className="doc-version__remove"
-                                    onClick={() => onDeleteDocument(doc)}
+                                    onClick={() => setDeleteTarget(doc)}
                                     disabled={deletingDocId === doc.id}
                                     title="Видалити"
                                 >
@@ -205,6 +207,19 @@ export default function DocumentsPanel({
                     </ul>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити файл?"
+                message={deleteTarget ? `«${deleteTarget.title || deleteTarget.fileName}» буде видалено без можливості відновлення.` : ''}
+                confirmText="Видалити"
+                loading={deletingDocId === deleteTarget?.id}
+                onConfirm={async () => {
+                    await onDeleteDocument(deleteTarget);
+                    setDeleteTarget(null);
+                }}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </aside>
     );
 }

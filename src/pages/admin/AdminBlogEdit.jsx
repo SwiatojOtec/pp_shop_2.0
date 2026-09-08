@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { blogApi } from '../../services/api';
 import { transliterate } from '../../utils/transliterate';
-import { AdminPageHeader } from '../../components/admin';
+import { useToast } from '../../context/ToastContext';
+import PageHeader from '../../features/admin/ui/PageHeader';
 import './Admin.css';
+import './AdminBlogEdit.css';
 
 export default function AdminBlogEdit() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const isNew = id === 'new';
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -27,6 +30,7 @@ export default function AdminBlogEdit() {
         if (!isNew) {
             fetchPost();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     // Auto-generate slug from title
@@ -73,7 +77,7 @@ export default function AdminBlogEdit() {
             navigate('/admin/blog');
         } catch (err) {
             console.error('Error saving post:', err);
-            alert(err.message || 'Помилка збереження');
+            showToast(err.message || 'Помилка збереження', 'warning');
         } finally {
             setLoading(false);
         }
@@ -98,14 +102,14 @@ export default function AdminBlogEdit() {
 
     return (
         <div className="admin-product-edit">
-            <AdminPageHeader
+            <PageHeader
                 title={isNew ? 'Нова стаття' : 'Редагування статті'}
                 backTo="/admin/blog"
-                actions={
-                    <button type="submit" form="blog-edit-form" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Save size={16} /> Зберегти
+                actions={(
+                    <button type="submit" form="blog-edit-form" className="ds-btn ds-btn--primary" disabled={loading}>
+                        <Save size={16} /> {loading ? 'Збереження...' : 'Зберегти'}
                     </button>
-                }
+                )}
             />
 
             <form id="blog-edit-form" onSubmit={handleSubmit} className="edit-form admin-form">
@@ -172,8 +176,8 @@ export default function AdminBlogEdit() {
                                 required
                             />
                             {formData.image && (
-                                <div style={{ marginTop: '10px' }}>
-                                    <img src={formData.image} alt="Preview" style={{ maxHeight: '200px', borderRadius: '8px' }} />
+                                <div className="blog-edit-image-preview">
+                                    <img src={formData.image} alt="Preview" />
                                 </div>
                             )}
                         </div>
@@ -190,20 +194,20 @@ export default function AdminBlogEdit() {
                                 onChange={handleChange}
                                 rows={3}
                                 required
-                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                className="blog-edit-excerpt"
                             />
                         </div>
 
                         <div className="form-group">
                             <label>Повний текст статті</label>
-                            <div className="quill-editor-container" style={{ background: 'white', borderRadius: '8px' }}>
+                            <div className="blog-edit-quill-wrap">
                                 <ReactQuill
                                     theme="snow"
                                     value={formData.content}
                                     onChange={handleContentChange}
                                     modules={modules}
                                     formats={formats}
-                                    style={{ height: '400px', marginBottom: '50px' }}
+                                    className="blog-edit-quill-editor"
                                 />
                             </div>
                         </div>

@@ -1,0 +1,136 @@
+/* Shared styles for the clients feature: the create/edit modal (used by both
+   the clients list and the client details page) and the clients list table. */
+
+.client-modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.client-modal-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-3);
+}
+
+.client-modal-row--tight {
+    grid-template-columns: 160px 1fr;
+    align-items: start;
+}
+
+.client-modal-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-3);
+}
+
+.client-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+
+.client-modal-field input,
+.client-modal-field textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.9rem;
+    font-weight: 400;
+    font-family: inherit;
+}
+
+.client-modal-field textarea {
+    resize: vertical;
+}
+
+.client-modal-hint {
+    font-weight: 400;
+    color: var(--ds-text-subtle);
+    font-size: 0.78rem;
+}
+
+@media (max-width: 560px) {
+    .client-modal-row,
+    .client-modal-row--tight {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Clients list ───────────────────────────────────────────────────────── */
+
+.client-name-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.client-claims-icon {
+    flex-shrink: 0;
+    color: var(--ds-warning);
+    margin-top: 2px;
+}
+
+.client-name-block {
+    min-width: 0;
+}
+
+.client-name {
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.client-notes-preview {
+    font-size: 0.78rem;
+    color: var(--ds-text-subtle);
+    margin-top: 2px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-phone-row,
+.client-email-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.88rem;
+    color: var(--ds-text-muted);
+}
+
+.client-phone-row a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.client-email-row {
+    margin-top: 2px;
+    font-size: 0.8rem;
+}
+
+.client-address-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    color: var(--ds-text-muted);
+    font-size: 0.88rem;
+}
+
+.client-muted-dash {
+    color: var(--ds-text-subtle);
+}
+
+.client-actions {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.client-cart-link {
+    color: var(--ds-info);
+}

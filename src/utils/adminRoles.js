@@ -12,11 +12,10 @@ export const ROLE_LABELS = {
     [ROLES.RENT]: 'Менеджер оренди',
     [ROLES.PIVDENBUD]: 'ПАН ПІВДЕНЬБУД',
     [ROLES.SHOP_RENT]: 'Менеджер магазину та оренди',
-    manager: 'Менеджер (застаріла)',
 };
 
 export function hasShopAccess(role) {
-    return role === ROLES.OWNER || role === ROLES.SHOP_MANAGER || role === ROLES.SHOP_RENT || role === 'manager';
+    return role === ROLES.OWNER || role === ROLES.SHOP_MANAGER || role === ROLES.SHOP_RENT;
 }
 
 export function hasRentAccess(role) {

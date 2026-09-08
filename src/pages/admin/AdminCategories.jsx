@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, FolderTree, Award, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { categoriesApi, rentCategoriesApi, brandsApi } from '../../services/api';
-import { AdminPageHeader } from '../../components/admin';
+import { useToast } from '../../context/ToastContext';
+import PageHeader from '../../features/admin/ui/PageHeader';
+import Tabs from '../../features/admin/ui/Tabs';
+import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
 import './Admin.css';
 
+const TABS = [
+    { value: 'categories', label: 'Категорії' },
+    { value: 'brands', label: 'Бренди' },
+];
+
 export default function AdminSettings() {
+    const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState('categories');
     const [categories, setCategories] = useState([]);
     const [rentCategories, setRentCategories] = useState([]);
@@ -13,14 +22,15 @@ export default function AdminSettings() {
     const [newRentCategory, setNewRentCategory] = useState('');
     const [newRentGroup, setNewRentGroup] = useState('');
     const [newBrand, setNewBrand] = useState({ name: '', logo: '' });
-    const [loading, setLoading] = useState(true);
     const [openRentGroups, setOpenRentGroups] = useState({});
+    const [deleteTarget, setDeleteTarget] = useState(null); // { kind, id, label }
+    const [deleteBusy, setDeleteBusy] = useState(false);
+
     useEffect(() => {
         fetchData();
     }, []);
 
     const fetchData = async () => {
-        setLoading(true);
         try {
             const [cats, rentCats, brandRows] = await Promise.all([
                 categoriesApi.list(),
@@ -32,8 +42,6 @@ export default function AdminSettings() {
             setBrands(Array.isArray(brandRows) ? brandRows : []);
         } catch (err) {
             console.error('Error fetching settings data:', err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -46,17 +54,7 @@ export default function AdminSettings() {
             setNewCategory('');
             fetchData();
         } catch (err) {
-            console.error('Error adding category:', err);
-        }
-    };
-
-    const handleDeleteCategory = async (id) => {
-        if (!window.confirm('Ви впевнені?')) return;
-        try {
-            await categoriesApi.remove(id);
-            fetchData();
-        } catch (err) {
-            console.error('Error deleting category:', err);
+            showToast(err.message || 'Не вдалося додати категорію', 'warning');
         }
     };
 
@@ -73,17 +71,7 @@ export default function AdminSettings() {
             setNewRentGroup('');
             fetchData();
         } catch (err) {
-            console.error('Error adding rent category:', err);
-        }
-    };
-
-    const handleDeleteRentCategory = async (id) => {
-        if (!window.confirm('Ви впевнені?')) return;
-        try {
-            await rentCategoriesApi.remove(id);
-            fetchData();
-        } catch (err) {
-            console.error('Error deleting rent category:', err);
+            showToast(err.message || 'Не вдалося додати категорію оренди', 'warning');
         }
     };
 
@@ -92,7 +80,7 @@ export default function AdminSettings() {
             await rentCategoriesApi.update(id, { group });
             fetchData();
         } catch (err) {
-            console.error('Error updating rent category group:', err);
+            showToast(err.message || 'Не вдалося оновити групу', 'warning');
         }
     };
 
@@ -105,17 +93,7 @@ export default function AdminSettings() {
             setNewBrand({ name: '', logo: '' });
             fetchData();
         } catch (err) {
-            console.error('Error adding brand:', err);
-        }
-    };
-
-    const handleDeleteBrand = async (id) => {
-        if (!window.confirm('Ви впевнені?')) return;
-        try {
-            await brandsApi.remove(id);
-            fetchData();
-        } catch (err) {
-            console.error('Error deleting brand:', err);
+            showToast(err.message || 'Не вдалося додати бренд', 'warning');
         }
     };
 
@@ -124,7 +102,7 @@ export default function AdminSettings() {
             await rentCategoriesApi.patch(id, { isActive: value });
             setRentCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: value } : c));
         } catch (err) {
-            alert(err.message || 'Помилка при зміні статусу категорії');
+            showToast(err.message || 'Помилка при зміні статусу категорії', 'warning');
         }
     };
 
@@ -133,47 +111,57 @@ export default function AdminSettings() {
             await brandsApi.patch(id, { [field]: value });
             setBrands(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
         } catch (err) {
-            console.error('Error toggling brand:', err);
+            showToast(err.message || 'Не вдалося оновити бренд', 'warning');
         }
     };
 
+    async function handleConfirmDelete() {
+        if (!deleteTarget) return;
+        setDeleteBusy(true);
+        try {
+            if (deleteTarget.kind === 'category') await categoriesApi.remove(deleteTarget.id);
+            else if (deleteTarget.kind === 'rentCategory') await rentCategoriesApi.remove(deleteTarget.id);
+            else if (deleteTarget.kind === 'brand') await brandsApi.remove(deleteTarget.id);
+            await fetchData();
+            setDeleteTarget(null);
+        } catch (err) {
+            showToast(err.message || 'Помилка видалення', 'warning');
+        } finally {
+            setDeleteBusy(false);
+        }
+    }
+
+    const rentGroups = Object.entries(
+        rentCategories.reduce((acc, cat) => {
+            const group = cat.group || 'Без групи';
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(cat);
+            return acc;
+        }, {})
+    );
+
     return (
         <div className="admin-settings-page">
-            <AdminPageHeader title="Налаштування" subtitle="Категорії, бренди та оренда" />
+            <PageHeader title="Налаштування" subtitle="Категорії, бренди та оренда" />
 
-            <div className="settings-tabs" style={{ display: 'flex', gap: '20px', marginBottom: '30px', borderBottom: '1px solid #eee' }}>
-                <button
-                    className={`tab-link ${activeTab === 'categories' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('categories')}
-                    style={{ padding: '10px 20px', borderBottom: activeTab === 'categories' ? '2px solid var(--admin-accent)' : '2px solid transparent', background: 'none', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'categories' ? 700 : 500 }}
-                >
-                    Категорії
-                </button>
-                <button
-                    className={`tab-link ${activeTab === 'brands' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('brands')}
-                    style={{ padding: '10px 20px', borderBottom: activeTab === 'brands' ? '2px solid var(--admin-accent)' : '2px solid transparent', background: 'none', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'brands' ? 700 : 500 }}
-                >
-                    Бренди
-                </button>
-            </div>
+            <Tabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
 
             {activeTab === 'categories' && (
-                <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div className="admin-section bg-white p-6 rounded-xl border border-[var(--admin-border)] mt-4">
+                    <div className="grid grid-cols-2 gap-8">
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px' }}>
+                            <div className="flex items-center gap-2 mb-5">
                                 <FolderTree size={20} />
-                                <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Категорії магазину</h2>
+                                <h2 className="text-[1.1rem] m-0 font-extrabold">Категорії магазину</h2>
                             </div>
 
-                            <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+                            <form onSubmit={handleAddCategory} className="flex gap-2 mb-6">
                                 <input
                                     type="text"
                                     placeholder="Назва нової категорії..."
                                     value={newCategory}
                                     onChange={(e) => setNewCategory(e.target.value)}
-                                    style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                    className="flex-1 p-3 rounded-lg border border-gray-300"
                                 />
                                 <button type="submit" className="btn btn-primary">
                                     <Plus size={20} /> Додати
@@ -185,16 +173,19 @@ export default function AdminSettings() {
                                     <tr>
                                         <th>Назва</th>
                                         <th>Slug</th>
-                                        <th style={{ textAlign: 'right' }}>Дії</th>
+                                        <th className="text-right">Дії</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {categories.map(cat => (
                                         <tr key={cat.id}>
-                                            <td style={{ fontWeight: 600 }}>{cat.name}</td>
+                                            <td className="font-semibold">{cat.name}</td>
                                             <td>{cat.slug}</td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                <button onClick={() => handleDeleteCategory(cat.id)} className="action-btn delete">
+                                            <td className="text-right">
+                                                <button
+                                                    onClick={() => setDeleteTarget({ kind: 'category', id: cat.id, label: cat.name })}
+                                                    className="action-btn delete"
+                                                >
                                                     <Trash2 size={18} />
                                                 </button>
                                             </td>
@@ -205,81 +196,61 @@ export default function AdminSettings() {
                         </div>
 
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px' }}>
+                            <div className="flex items-center gap-2 mb-5">
                                 <FolderTree size={20} />
-                                <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Категорії оренди</h2>
+                                <h2 className="text-[1.1rem] m-0 font-extrabold">Категорії оренди</h2>
                             </div>
 
-                            <form onSubmit={handleAddRentCategory} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px', marginBottom: '30px' }}>
+                            <form onSubmit={handleAddRentCategory} className="grid grid-cols-[2fr_1fr_auto] gap-2 mb-6">
                                 <input
                                     type="text"
                                     placeholder="Назва нової категорії оренди..."
                                     value={newRentCategory}
                                     onChange={(e) => setNewRentCategory(e.target.value)}
-                                    style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                    className="p-3 rounded-lg border border-gray-300"
                                 />
                                 <input
                                     type="text"
                                     placeholder="Група (напр. Монтажне устаткування)"
                                     value={newRentGroup}
                                     onChange={(e) => setNewRentGroup(e.target.value)}
-                                    style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                    className="p-3 rounded-lg border border-gray-300"
                                 />
                                 <button type="submit" className="btn btn-primary">
                                     <Plus size={20} /> Додати
                                 </button>
                             </form>
 
-                            {Object.entries(
-                                rentCategories.reduce((acc, cat) => {
-                                    const group = cat.group || 'Без групи';
-                                    if (!acc[group]) acc[group] = [];
-                                    acc[group].push(cat);
-                                    return acc;
-                                }, {})
-                            ).map(([groupName, items]) => {
+                            {rentGroups.map(([groupName, items]) => {
                                 const isOpen = openRentGroups[groupName] ?? true;
                                 return (
-                                    <div key={groupName} style={{ marginBottom: '15px', border: '1px solid var(--admin-border)', borderRadius: '10px', overflow: 'hidden' }}>
+                                    <div key={groupName} className="mb-4 border border-[var(--admin-border)] rounded-[10px] overflow-hidden">
                                         <button
                                             type="button"
                                             onClick={() => setOpenRentGroups(prev => ({ ...prev, [groupName]: !isOpen }))}
-                                            style={{
-                                                width: '100%',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '10px 16px',
-                                                background: '#f8fafc',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                fontWeight: 700
-                                            }}
+                                            className="w-full flex justify-between items-center px-4 py-2.5 bg-slate-50 border-none cursor-pointer font-bold"
                                         >
                                             <span>{groupName}</span>
                                             <ChevronDown
                                                 size={16}
-                                                style={{
-                                                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                    transition: 'transform 0.2s'
-                                                }}
+                                                className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                                             />
                                         </button>
                                         {isOpen && (
-                                            <table className="admin-table" style={{ borderTop: '1px solid var(--admin-border)' }}>
+                                            <table className="admin-table border-t border-[var(--admin-border)]">
                                                 <thead>
                                                     <tr>
                                                         <th>Назва</th>
                                                         <th>Slug</th>
                                                         <th>Група</th>
-                                                        <th style={{ textAlign: 'center' }}>На сайті</th>
-                                                        <th style={{ textAlign: 'right' }}>Дії</th>
+                                                        <th className="text-center">На сайті</th>
+                                                        <th className="text-right">Дії</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {items.map(cat => (
                                                         <tr key={cat.id}>
-                                                            <td style={{ fontWeight: 600 }}>{cat.name}</td>
+                                                            <td className="font-semibold">{cat.name}</td>
                                                             <td>{cat.slug}</td>
                                                             <td>
                                                                 <input
@@ -287,10 +258,10 @@ export default function AdminSettings() {
                                                                     defaultValue={cat.group || ''}
                                                                     onBlur={(e) => handleUpdateRentCategoryGroup(cat.id, e.target.value)}
                                                                     placeholder="Група..."
-                                                                    style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #ddd', width: '100%' }}
+                                                                    className="px-2 py-1.5 rounded-md border border-gray-300 w-full"
                                                                 />
                                                             </td>
-                                                            <td style={{ textAlign: 'center' }}>
+                                                            <td className="text-center">
                                                                 <label className="brand-toggle">
                                                                     <input
                                                                         type="checkbox"
@@ -300,8 +271,11 @@ export default function AdminSettings() {
                                                                     <span className="brand-toggle-slider" />
                                                                 </label>
                                                             </td>
-                                                            <td style={{ textAlign: 'right' }}>
-                                                                <button onClick={() => handleDeleteRentCategory(cat.id)} className="action-btn delete">
+                                                            <td className="text-right">
+                                                                <button
+                                                                    onClick={() => setDeleteTarget({ kind: 'rentCategory', id: cat.id, label: cat.name })}
+                                                                    className="action-btn delete"
+                                                                >
                                                                     <Trash2 size={18} />
                                                                 </button>
                                                             </td>
@@ -319,26 +293,26 @@ export default function AdminSettings() {
             )}
 
             {activeTab === 'brands' && (
-                <div className="admin-section" style={{ background: 'white', padding: '30px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px' }}>
+                <div className="admin-section bg-white p-6 rounded-xl border border-[var(--admin-border)] mt-4">
+                    <div className="flex items-center gap-2 mb-5">
                         <Award size={20} />
-                        <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800 }}>Управління брендами</h2>
+                        <h2 className="text-[1.1rem] m-0 font-extrabold">Управління брендами</h2>
                     </div>
 
-                    <form onSubmit={handleAddBrand} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '30px' }}>
+                    <form onSubmit={handleAddBrand} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-6">
                         <input
                             type="text"
                             placeholder="Назва бренду..."
                             value={newBrand.name}
                             onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
-                            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            className="p-3 rounded-lg border border-gray-300"
                         />
                         <input
                             type="text"
                             placeholder="URL логотипу..."
                             value={newBrand.logo}
                             onChange={(e) => setNewBrand({ ...newBrand, logo: e.target.value })}
-                            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }}
+                            className="p-3 rounded-lg border border-gray-300"
                         />
                         <button type="submit" className="btn btn-primary">
                             <Plus size={20} /> Додати
@@ -350,9 +324,9 @@ export default function AdminSettings() {
                             <tr>
                                 <th>Лого</th>
                                 <th>Назва</th>
-                                <th style={{ textAlign: 'center' }}>Магазин</th>
-                                <th style={{ textAlign: 'center' }}>Оренда</th>
-                                <th style={{ textAlign: 'right' }}>Дії</th>
+                                <th className="text-center">Магазин</th>
+                                <th className="text-center">Оренда</th>
+                                <th className="text-right">Дії</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -360,13 +334,13 @@ export default function AdminSettings() {
                                 <tr key={brand.id}>
                                     <td>
                                         {brand.logo ? (
-                                            <img src={brand.logo} alt={brand.name} style={{ height: '30px', maxWidth: '100px', objectFit: 'contain' }} />
+                                            <img src={brand.logo} alt={brand.name} className="h-[30px] max-w-[100px] object-contain" />
                                         ) : (
-                                            <ImageIcon size={20} color="#ccc" />
+                                            <ImageIcon size={20} className="text-gray-300" />
                                         )}
                                     </td>
-                                    <td style={{ fontWeight: 600 }}>{brand.name}</td>
-                                    <td style={{ textAlign: 'center' }}>
+                                    <td className="font-semibold">{brand.name}</td>
+                                    <td className="text-center">
                                         <label className="brand-toggle">
                                             <input
                                                 type="checkbox"
@@ -376,7 +350,7 @@ export default function AdminSettings() {
                                             <span className="brand-toggle-slider" />
                                         </label>
                                     </td>
-                                    <td style={{ textAlign: 'center' }}>
+                                    <td className="text-center">
                                         <label className="brand-toggle">
                                             <input
                                                 type="checkbox"
@@ -386,8 +360,11 @@ export default function AdminSettings() {
                                             <span className="brand-toggle-slider" />
                                         </label>
                                     </td>
-                                    <td style={{ textAlign: 'right' }}>
-                                        <button onClick={() => handleDeleteBrand(brand.id)} className="action-btn delete">
+                                    <td className="text-right">
+                                        <button
+                                            onClick={() => setDeleteTarget({ kind: 'brand', id: brand.id, label: brand.name })}
+                                            className="action-btn delete"
+                                        >
                                             <Trash2 size={18} />
                                         </button>
                                     </td>
@@ -397,6 +374,16 @@ export default function AdminSettings() {
                     </table>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити?"
+                message={deleteTarget ? `Видалити «${deleteTarget.label}»? Цю дію не можна скасувати.` : ''}
+                confirmText="Видалити"
+                loading={deleteBusy}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </div>
     );
 }

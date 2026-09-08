@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Wrench } from 'lucide-react';
 import { ordersApi } from '../../../services/api';
-import { ConfirmDialog } from '../../../components/admin';
+import { useToast } from '../../../context/ToastContext';
+import ConfirmDialog from '../../admin/ui/ConfirmDialog';
 import { orderHasRentItems } from '../amounts/orderHelpers';
 import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
 import { calcDays } from '../model/rentalItems';
@@ -28,6 +29,7 @@ const emptyExtras = () => ({ passport: '', siteAddress: '', responsible: [] });
 export default function DealWorkspace() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [openingRental, setOpeningRental] = useState(false);
     const [rentalOpen, setRentalOpen] = useState(false);
@@ -247,7 +249,7 @@ export default function DealWorkspace() {
             if (rentalSaveRef.current) await rentalSaveRef.current();
             setJustSaved(true);
         } catch (err) {
-            alert(err.message || 'Помилка збереження');
+            showToast(err.message || 'Помилка збереження', 'warning');
         } finally {
             setSavingAll(false);
         }
@@ -280,9 +282,9 @@ export default function DealWorkspace() {
         if (!order) return;
         try {
             await ordersApi.remove(order.id);
-            navigate('/admin/orders', { replace: true });
+            navigate('/admin/deals', { replace: true });
         } catch (err) {
-            alert(err.message || 'Помилка видалення');
+            showToast(err.message || 'Помилка видалення', 'warning');
         } finally {
             setDeleteOpen(false);
         }
@@ -295,7 +297,7 @@ export default function DealWorkspace() {
             await loadLinkedRentalApplication();
             setRentalOpen(true);
         } catch (err) {
-            alert(err.message || 'Не вдалося відкрити заявку оренди');
+            showToast(err.message || 'Не вдалося відкрити заявку оренди', 'warning');
         } finally {
             setOpeningRental(false);
         }

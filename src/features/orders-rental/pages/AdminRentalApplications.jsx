@@ -1,17 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Eye } from 'lucide-react';
+import { Plus, Trash2, Eye, ClipboardList } from 'lucide-react';
 import { rentalApplicationsApi } from '../../../services/api';
-import { AdminPageHeader, AdminFilters, AdminTable, ConfirmDialog } from '../../../components/admin';
-import { Badge } from '../../../components/ui/badge';
-import '../../../pages/admin/Admin.css';
-import { STATUS_META, STATUS_FILTER_OPTIONS } from '../model/rentalStatus';
+import { useToast } from '../../../context/ToastContext';
+import PageHeader from '../../admin/ui/PageHeader';
+import Toolbar from '../../admin/ui/Toolbar';
+import DataTable from '../../admin/ui/DataTable';
+import StatusBadge from '../../admin/ui/StatusBadge';
+import ConfirmDialog from '../../admin/ui/ConfirmDialog';
+import { STATUS_FILTER_OPTIONS } from '../model/rentalStatus';
 import { fmtDate as fmtDateShared } from '../model/rentalDocFormat';
 
 const fmtDate = (d) => fmtDateShared(d, '—');
 
 export default function AdminRentalApplications({ hideHeader = false }) {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading]           = useState(true);
     const [filterStatus, setFilterStatus] = useState('');
@@ -42,7 +46,7 @@ export default function AdminRentalApplications({ hideHeader = false }) {
             setApplications((prev) => prev.filter((a) => a.id !== deleteTarget.id));
             setDeleteTarget(null);
         } catch (err) {
-            alert(err.message);
+            showToast(err.message || 'Помилка видалення', 'warning');
         } finally {
             setDeleteLoading(false);
         }
@@ -64,27 +68,27 @@ export default function AdminRentalApplications({ hideHeader = false }) {
         {
             key: 'applicationNumber',
             label: '№ Заявки',
-            render: (v) => <span className="admin-code" style={{ fontWeight: 700 }}>{v || '—'}</span>,
+            render: (v) => <code className="admin-code font-bold">{v || '—'}</code>,
         },
         {
             key: 'clientName',
             label: 'Клієнт',
-            render: (v) => <span style={{ fontWeight: 600 }}>{v || '—'}</span>,
+            render: (v) => <span className="font-semibold">{v || '—'}</span>,
         },
         {
             key: 'clientPhone',
             label: 'Телефон',
-            render: (v) => <span style={{ color: '#6b7280' }}>{v || '—'}</span>,
+            render: (v) => <span className="text-gray-500">{v || '—'}</span>,
         },
         {
             key: 'items',
             label: 'Інструменти',
             render: (items) => {
                 const arr = Array.isArray(items) ? items : [];
-                if (!arr.length) return <span style={{ color: '#d1d5db' }}>—</span>;
+                if (!arr.length) return <span className="text-gray-300">—</span>;
                 const preview = arr.slice(0, 2).map((i) => i.name).join(', ');
                 return (
-                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                    <span className="text-sm text-gray-500">
                         {preview}{arr.length > 2 ? ` +${arr.length - 2}` : ''}
                     </span>
                 );
@@ -94,7 +98,7 @@ export default function AdminRentalApplications({ hideHeader = false }) {
             key: 'rentFrom',
             label: 'Оренда',
             render: (_, row) => (
-                <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                <span className="text-sm text-gray-500">
                     {row.rentFrom ? `${fmtDate(row.rentFrom)} — ${fmtDate(row.rentTo)}` : '—'}
                 </span>
             ),
@@ -103,7 +107,7 @@ export default function AdminRentalApplications({ hideHeader = false }) {
             key: 'totalAmount',
             label: 'Сума',
             render: (v) => (
-                <span style={{ fontWeight: 700 }}>
+                <span className="font-bold">
                     {v != null && v >= 0 ? `${Number(v).toLocaleString('uk-UA')} ₴` : '—'}
                 </span>
             ),
@@ -111,15 +115,12 @@ export default function AdminRentalApplications({ hideHeader = false }) {
         {
             key: 'status',
             label: 'Статус',
-            render: (v) => {
-                const s = STATUS_META[v] || { label: v, variant: 'secondary' };
-                return <Badge variant={s.variant}>{s.label}</Badge>;
-            },
+            render: (v) => <StatusBadge domain="rental" status={v} />,
         },
         {
             key: 'id',
             label: 'Дії',
-            width: '90px',
+            align: 'right',
             render: (id, row) => (
                 <ApplicationRowActions id={id} row={row} onDelete={setDeleteTarget} navigate={navigate} />
             ),
@@ -129,18 +130,18 @@ export default function AdminRentalApplications({ hideHeader = false }) {
     return (
         <div>
             {!hideHeader && (
-                <AdminPageHeader
+                <PageHeader
                     title="Заявки оренди"
                     subtitle="Договори та заявки на оренду інструменту"
-                    actions={
-                        <Link to="/admin/rental-applications/new" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+                    actions={(
+                        <Link to="/admin/rental-applications/new" className="ds-btn ds-btn--primary">
                             <Plus size={16} /> Створити заявку
                         </Link>
-                    }
+                    )}
                 />
             )}
 
-            <AdminFilters
+            <Toolbar
                 search={search}
                 onSearch={setSearch}
                 placeholder="Пошук за клієнтом, номером, телефоном..."
@@ -153,16 +154,17 @@ export default function AdminRentalApplications({ hideHeader = false }) {
                 onFilter={(key, value) => { if (key === 'status') setFilterStatus(value); }}
             />
 
-            <AdminTable
+            <DataTable
                 columns={columns}
                 rows={filtered}
                 loading={loading}
-                empty="Заявок поки немає"
+                emptyIcon={ClipboardList}
+                emptyTitle="Заявок поки немає"
                 onRowClick={(row) => navigate(`/admin/rental-applications/${row.id}`)}
             />
 
             {!loading && filtered.length > 0 && (
-                <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#9ca3af' }}>
+                <p className="mt-3 text-sm text-gray-400">
                     Показано {filtered.length} з {applications.length}
                 </p>
             )}
@@ -182,7 +184,7 @@ export default function AdminRentalApplications({ hideHeader = false }) {
 
 function ApplicationRowActions({ id, row, onDelete, navigate }) {
     return (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
             <button
                 type="button"
                 className="action-btn"

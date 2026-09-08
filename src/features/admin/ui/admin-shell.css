@@ -1,0 +1,231 @@
+/* Admin shell — sidebar, topbar, content frame (docs/admin-redesign/02-visual.md,
+   крок 4.2). Replaces the .admin-layout/.admin-sidebar/.admin-topbar rules that
+   used to live in src/pages/admin/Admin.css. All values come from --ds-* tokens
+   (src/styles/tokens.css) — nothing hardcoded here besides the one-off logout
+   red, which isn't a semantic status colour so it has no token of its own. */
+
+.ds-shell {
+    display: grid;
+    grid-template-columns: var(--ds-sidebar-w) 1fr;
+    position: fixed;
+    inset: 0;
+    background: var(--ds-bg);
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+
+.ds-shell-side {
+    background: var(--ds-shell);
+    color: var(--ds-shell-text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.ds-shell-side-top {
+    padding: 18px 18px 16px;
+    border-bottom: 1px solid var(--ds-shell-divider);
+    flex-shrink: 0;
+}
+
+.ds-shell-logo {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.ds-shell-nav {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.ds-shell-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ds-shell-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--ds-radius-sm);
+}
+
+.ds-shell-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--ds-radius-md);
+    width: 100%;
+    text-align: left;
+    color: var(--ds-shell-text);
+    font-size: 13.5px;
+    font-family: var(--ds-font);
+    text-decoration: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    min-width: 0;
+    transition: background var(--ds-duration-fast) var(--ds-ease), color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.ds-shell-nav-item svg {
+    flex-shrink: 0;
+    opacity: 0.72;
+    transition: opacity var(--ds-duration-fast) var(--ds-ease), color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.ds-shell-nav-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.ds-shell-nav-item:hover {
+    background: var(--ds-shell-hover);
+}
+
+.ds-shell-nav-item--active {
+    background: var(--ds-shell-active);
+    color: #fff;
+    font-weight: 600;
+}
+
+.ds-shell-nav-item--active svg {
+    opacity: 1;
+    color: var(--ds-accent);
+}
+
+.ds-shell-side-bot {
+    padding: 10px 10px 14px;
+    border-top: 1px solid var(--ds-shell-divider);
+    flex-shrink: 0;
+}
+
+.ds-shell-nav-item--logout:hover {
+    background: var(--ds-shell-hover);
+    color: #e8756c;
+}
+
+.ds-shell-nav-item--logout:hover svg {
+    opacity: 1;
+    color: #e8756c;
+}
+
+/* ── Main column ────────────────────────────────────────────────────────── */
+
+.ds-shell-main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.ds-shell-topbar {
+    height: var(--ds-topbar-h);
+    background: var(--ds-surface);
+    border-bottom: 1px solid var(--ds-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--ds-space-5);
+    flex-shrink: 0;
+    font-family: var(--ds-font);
+}
+
+.ds-shell-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ds-text-base);
+    color: var(--ds-text-subtle);
+    min-width: 0;
+}
+
+.ds-shell-breadcrumb-role {
+    font-weight: 600;
+    color: var(--ds-text-muted);
+    white-space: nowrap;
+}
+
+.ds-shell-breadcrumb-sep {
+    color: var(--ds-border-strong);
+    flex-shrink: 0;
+}
+
+.ds-shell-breadcrumb-page {
+    font-weight: 700;
+    color: var(--ds-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ds-shell-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.ds-shell-user-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--ds-radius-md);
+    padding: 4px 8px;
+    transition: background var(--ds-duration-fast) var(--ds-ease);
+}
+
+.ds-shell-user-link:hover {
+    background: var(--ds-surface-sunken);
+}
+
+.ds-shell-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--ds-accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.ds-shell-user-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.ds-shell-user-name {
+    font-size: var(--ds-text-sm);
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.ds-shell-user-role {
+    font-size: var(--ds-text-xs);
+    color: var(--ds-text-subtle);
+}
+
+.ds-shell-content {
+    padding: var(--ds-space-5) var(--ds-space-6) 48px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}

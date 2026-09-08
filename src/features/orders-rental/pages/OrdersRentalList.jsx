@@ -1,51 +1,53 @@
 import { useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { AdminPageHeader } from '../../../components/admin';
 import AdminOrders from './AdminOrders';
 import AdminRentalApplications from './AdminRentalApplications';
-import RentalCalendar from './RentalCalendar';
 import '../../../pages/admin/Admin.css';
 import '../styles/RentalApplicationForm.css';
 
 const TABS = [
-    { key: 'orders', label: 'Замовлення' },
-    { key: 'rental', label: 'Заявки оренди' },
+    { key: 'all', label: 'Всі' },
+    { key: 'rent', label: 'Оренда' },
     { key: 'calendar', label: 'Календар' },
 ];
 
 function resolveTab(raw) {
-    const value = String(raw || 'orders').toLowerCase();
-    if (value === 'rental' || value === 'calendar') return value;
-    return 'orders';
+    const value = String(raw || 'all').toLowerCase();
+    if (value === 'rent') return 'rent';
+    return 'all';
 }
 
 export default function OrdersRentalList() {
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const tab = useMemo(() => resolveTab(searchParams.get('tab')), [searchParams]);
+    const tab = useMemo(() => resolveTab(searchParams.get('type')), [searchParams]);
 
     function setTab(next) {
+        if (next === 'calendar') {
+            navigate('/admin/deals/calendar');
+            return;
+        }
         const params = new URLSearchParams(searchParams);
-        if (next === 'orders') params.delete('tab');
-        else params.set('tab', next);
+        if (next === 'all') params.delete('type');
+        else params.set('type', next);
         setSearchParams(params, { replace: true });
     }
 
-    const subtitle = tab === 'rental'
+    const subtitle = tab === 'rent'
         ? 'Договори та заявки на оренду інструменту'
-        : tab === 'calendar'
-            ? 'Бронювання та зайнятість інструменту по датах'
-            : 'Замовлення магазину та оренди';
+        : 'Замовлення магазину та оренди';
 
     return (
         <div className="orders-rental-list">
             <AdminPageHeader
-                title="Замовлення та оренда"
+                title="Угоди"
                 subtitle={subtitle}
                 actions={
-                    tab === 'rental' ? (
+                    tab === 'rent' ? (
                         <Link
-                            to="/admin/rental-applications/new"
+                            to="/admin/deals/new?type=rent"
                             className="btn btn-primary"
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
                         >
@@ -68,9 +70,8 @@ export default function OrdersRentalList() {
                 ))}
             </div>
 
-            {tab === 'orders' && <AdminOrders hideHeader />}
-            {tab === 'rental' && <AdminRentalApplications hideHeader />}
-            {tab === 'calendar' && <RentalCalendar />}
+            {tab === 'all' && <AdminOrders hideHeader />}
+            {tab === 'rent' && <AdminRentalApplications hideHeader />}
         </div>
     );
 }

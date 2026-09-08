@@ -2,11 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Network, Plus, Trash2, Pencil, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { subdivisionsApi, usersApi } from '../../services/api';
-import { AdminPageHeader } from '../../components/admin';
-import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { ConfirmDialog } from '../../components/admin';
+import PageHeader from '../../features/admin/ui/PageHeader';
+import StatusBadge from '../../features/admin/ui/StatusBadge';
+import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
 import { ROLE_LABELS } from '../../utils/adminRoles';
 import './Admin.css';
 
@@ -313,30 +312,30 @@ export default function AdminSubdivisions() {
 
     if (!isOwner) {
         return (
-            <div className="admin-content">
-                <p style={{ color: '#6b7280' }}>Доступ лише для власника.</p>
+            <div>
+                <p className="text-gray-500">Доступ лише для власника.</p>
             </div>
         );
     }
 
     return (
         <div>
-            <AdminPageHeader
+            <PageHeader
                 title="Підрозділи"
                 subtitle="Структура компанії для табелю ПАН ПІВДЕНЬБУД"
                 actions={
                     !showForm && !editingSub && (
-                        <Button onClick={openCreate}>
+                        <button type="button" className="ds-btn ds-btn--primary" onClick={openCreate}>
                             <Plus size={16} /> Створити підрозділ
-                        </Button>
+                        </button>
                     )
                 }
             />
 
             {error && (
-                <div className="admin-alert error" style={{ marginBottom: '16px' }}>
+                <div className="admin-alert error mb-4">
                     {error}
-                    <button style={{ marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setError('')}>✕</button>
+                    <button type="button" className="ml-2.5 bg-transparent border-0 cursor-pointer" onClick={() => setError('')}>✕</button>
                 </div>
             )}
 
@@ -354,7 +353,7 @@ export default function AdminSubdivisions() {
                         <form onSubmit={editingSub ? handleEditSubmit : handleSubmit} className="subdiv-form">
                             <div className="subdiv-form__grid">
                                 <div className="subdiv-form__main">
-                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <div className="form-group !mb-0">
                                         <label>Назва підрозділу</label>
                                         <input
                                             type="text"
@@ -363,7 +362,7 @@ export default function AdminSubdivisions() {
                                             placeholder="Наприклад: МАКС І АНТОН"
                                         />
                                     </div>
-                                    <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <div className="form-group !mb-0">
                                         <label>Голова підрозділу *</label>
                                         <select required value={headId} onChange={(e) => setHeadId(e.target.value)}>
                                             <option value="">— оберіть —</option>
@@ -397,25 +396,23 @@ export default function AdminSubdivisions() {
                                             />
                                         ))}
                                     </div>
-                                    <Button
+                                    <button
                                         type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="subdiv-add-member-btn"
+                                        className="ds-btn ds-btn--secondary subdiv-add-member-btn"
                                         onClick={addMemberRow}
                                         disabled={filledMemberCount >= MAX_MEMBERS}
                                     >
                                         <UserPlus size={15} /> Додати співробітника
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
                             <div className="subdiv-form__actions">
-                                <Button type="submit" disabled={saving}>
+                                <button type="submit" className="ds-btn ds-btn--primary" disabled={saving}>
                                     {saving ? 'Збереження...' : (editingSub ? 'Зберегти зміни' : 'Зберегти підрозділ')}
-                                </Button>
-                                <Button type="button" variant="secondary" onClick={cancelForm}>
+                                </button>
+                                <button type="button" className="ds-btn ds-btn--secondary" onClick={cancelForm}>
                                     Скасувати
-                                </Button>
+                                </button>
                             </div>
                         </form>
                     </CardContent>
@@ -434,7 +431,7 @@ export default function AdminSubdivisions() {
                     </CardContent>
                 </Card>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="flex flex-col gap-3">
                     {subdivisions.map((sub) => (
                         <Card key={sub.id}>
                             <CardContent className="p-5">
@@ -453,9 +450,9 @@ export default function AdminSubdivisions() {
                                                 {sub.head ? (
                                                     <>
                                                         {formatUser(sub.head)}
-                                                        <Badge variant="secondary" className="ml-2 text-xs">
-                                                            {ROLE_LABELS[sub.head.role] || sub.head.role}
-                                                        </Badge>
+                                                        <span className="ml-2">
+                                                            <StatusBadge tone="neutral" label={ROLE_LABELS[sub.head.role] || sub.head.role} />
+                                                        </span>
                                                     </>
                                                 ) : '—'}
                                             </div>
@@ -473,14 +470,13 @@ export default function AdminSubdivisions() {
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <Button
+                                        <button
                                             type="button"
-                                            variant="outline"
-                                            size="sm"
+                                            className="ds-btn ds-btn--secondary"
                                             onClick={() => openEdit(sub)}
                                         >
                                             <Pencil size={15} /> Редагувати
-                                        </Button>
+                                        </button>
                                         <button
                                             type="button"
                                             className="action-btn delete"

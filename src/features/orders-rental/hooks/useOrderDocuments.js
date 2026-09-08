@@ -4,6 +4,7 @@ import { resolveSellerId } from '../../../constants/sellers';
 import { formatOrderDate } from '../amounts/orderHelpers';
 import { generateRentalPdf } from '../documents/generateRentalPdf';
 import { buildRentalPdfPayload, blobToBase64 } from '../documents/rentalPdfPayload';
+import { useToast } from '../../../context/ToastContext';
 
 export function useOrderDocuments({
     order,
@@ -27,6 +28,7 @@ export function useOrderDocuments({
     const [contractMissingFields, setContractMissingFields] = useState([]);
     const [contractForm, setContractForm] = useState({});
     const [contractSaving, setContractSaving] = useState(false);
+    const { showToast } = useToast();
 
     function formatDocDateTime(value) {
         if (!value) return '';
@@ -47,7 +49,7 @@ export function useOrderDocuments({
             setDocuments((prev) => [doc, ...prev.filter((d) => d.id !== doc.id)]);
             await ordersApi.downloadDocument(saved.id, doc.id, doc.fileName);
         } catch (err) {
-            alert(err.message || 'Не вдалося сформувати рахунок');
+            showToast(err.message || 'Не вдалося сформувати рахунок', 'warning');
         } finally {
             setInvoiceLoading(false);
         }
@@ -68,7 +70,7 @@ export function useOrderDocuments({
             setDocuments((prev) => [document, ...prev.filter((d) => d.id !== document.id)]);
             await ordersApi.downloadDocument(saved.id, document.id, document.fileName);
         } catch (err) {
-            alert(err.message || 'Не вдалося сформувати рахунок на заставу');
+            showToast(err.message || 'Не вдалося сформувати рахунок на заставу', 'warning');
         } finally {
             setDepositInvoiceLoading(false);
         }
@@ -79,20 +81,19 @@ export function useOrderDocuments({
         try {
             await ordersApi.downloadDocument(order.id, doc.id, doc.fileName);
         } catch (err) {
-            alert(err.message || 'Не вдалося завантажити файл');
+            showToast(err.message || 'Не вдалося завантажити файл', 'warning');
         }
     }
 
     async function handleDeleteDocument(doc) {
         if (!order || !doc?.id) return;
-        if (!window.confirm('Видалити цей файл?')) return;
 
         setDeletingDocId(doc.id);
         try {
             await ordersApi.removeDocument(order.id, doc.id);
             setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
         } catch (err) {
-            alert(err.message || 'Не вдалося видалити файл');
+            showToast(err.message || 'Не вдалося видалити файл', 'warning');
         } finally {
             setDeletingDocId(null);
         }
@@ -150,7 +151,7 @@ export function useOrderDocuments({
                 titlePrefix: 'Заявка',
             });
         } catch (err) {
-            alert(`Помилка: ${err.message}`);
+            showToast(`Помилка: ${err.message}`, 'warning');
         } finally {
             setConverting(false);
         }
@@ -166,7 +167,7 @@ export function useOrderDocuments({
                 titlePrefix: 'Акт повернення',
             });
         } catch (err) {
-            alert(`Помилка: ${err.message}`);
+            showToast(`Помилка: ${err.message}`, 'warning');
         } finally {
             setReturnActLoading(false);
         }
@@ -227,7 +228,7 @@ export function useOrderDocuments({
             if (err.missing?.length) {
                 openContractModal(err.missing, 'protocol');
             } else {
-                alert(err.message || 'Не вдалося перевірити дані для протоколу');
+                showToast(err.message || 'Не вдалося перевірити дані для протоколу', 'warning');
             }
         } finally {
             setProtocolLoading(false);
@@ -249,7 +250,7 @@ export function useOrderDocuments({
             if (err.missing?.length) {
                 openContractModal(err.missing, 'contract');
             } else {
-                alert(err.message || 'Не вдалося перевірити дані для договору');
+                showToast(err.message || 'Не вдалося перевірити дані для договору', 'warning');
             }
         } finally {
             setContractLoading(false);
@@ -266,7 +267,7 @@ export function useOrderDocuments({
             if (err.missing?.length) {
                 openContractModal(err.missing, contractModalTarget);
             } else {
-                alert(err.message || 'Не вдалося сформувати договір');
+                showToast(err.message || 'Не вдалося сформувати договір', 'warning');
             }
         } finally {
             setContractSaving(false);

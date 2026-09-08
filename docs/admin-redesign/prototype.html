@@ -1,0 +1,1415 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>:root{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Адмінка ПАН ПАРКЕТ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@800&display=swap">
+<style>
+:root{
+  --paper:#F6F5F2;
+  --surface:#FFFFFF;
+  --surface-2:#FBFAF8;
+  --sidebar:#221E1A;
+  --sidebar-ink:#D9D2CA;
+  --sidebar-ink-dim:#8B8076;
+  --ink:#17130F;
+  --ink-2:#5E544C;
+  --muted:#8A7F76;
+  --line:#E4DFD8;
+  --line-2:#EFEBE5;
+  --accent:#C0202B;
+  --accent-soft:#FBEDED;
+  --ok:#1F7A4C; --ok-bg:#E9F4EE;
+  --warn:#96620A; --warn-bg:#FBF1E1;
+  --crit:#B4231C; --crit-bg:#FBEBEA;
+  --info:#2B5B87; --info-bg:#EAF1F7;
+  --neutral:#7A716A; --neutral-bg:#F0EDE9;
+  --radius:6px;
+  --shadow:0 1px 2px rgba(23,19,15,.06), 0 8px 24px -12px rgba(23,19,15,.18);
+  --sans:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono','SF Mono',Consolas,monospace;
+  --brand:'Outfit',var(--sans);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#131110; --surface:#1B1817; --surface-2:#211E1C;
+    --sidebar:#0E0C0B; --sidebar-ink:#CDC5BD; --sidebar-ink-dim:#7C736C;
+    --ink:#F1ECE6; --ink-2:#B5ABA2; --muted:#8C837B;
+    --line:#302B27; --line-2:#28241F;
+    --accent:#E4534E; --accent-soft:#33201F;
+    --ok:#5DBE8C; --ok-bg:#16261F;
+    --warn:#D3A159; --warn-bg:#2A2117;
+    --crit:#E8756C; --crit-bg:#2E1B19;
+    --info:#7FADD6; --info-bg:#18232D;
+    --neutral:#9A9089; --neutral-bg:#252220;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131110; --surface:#1B1817; --surface-2:#211E1C;
+  --sidebar:#0E0C0B; --sidebar-ink:#CDC5BD; --sidebar-ink-dim:#7C736C;
+  --ink:#F1ECE6; --ink-2:#B5ABA2; --muted:#8C837B;
+  --line:#302B27; --line-2:#28241F;
+  --accent:#E4534E; --accent-soft:#33201F;
+  --ok:#5DBE8C; --ok-bg:#16261F;
+  --warn:#D3A159; --warn-bg:#2A2117;
+  --crit:#E8756C; --crit-bg:#2E1B19;
+  --info:#7FADD6; --info-bg:#18232D;
+  --neutral:#9A9089; --neutral-bg:#252220;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ─── Shell ─────────────────────────────────────────── */
+.shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+.side{background:var(--sidebar);color:var(--sidebar-ink);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side-top{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.wordmark{font-family:var(--brand);font-weight:800;font-size:15px;letter-spacing:.06em;color:#fff;line-height:1.1}
+.wordmark span{color:var(--accent)}
+.side-sub{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--sidebar-ink-dim);margin-top:5px}
+
+.nav{padding:10px 10px;display:flex;flex-direction:column;gap:1px;flex:1;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);width:100%;text-align:left;color:var(--sidebar-ink);font-size:13.5px;transition:background .12s}
+.nav-item svg{flex:none;opacity:.72}
+.nav-item:hover{background:rgba(255,255,255,.055)}
+.nav-item.on{background:rgba(255,255,255,.1);color:#fff;font-weight:600}
+.nav-item.on svg{opacity:1;color:var(--accent)}
+.nav-badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;background:var(--accent);color:#fff;border-radius:20px;padding:1px 6px;min-width:19px;text-align:center}
+.nav-item.on .nav-badge{background:var(--accent)}
+
+.side-bot{padding:12px 12px 14px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:10px}
+.role-pick{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sidebar-ink-dim)}
+.role-btns{display:flex;gap:4px;background:rgba(255,255,255,.06);padding:3px;border-radius:var(--radius)}
+.role-btns button{flex:1;padding:5px 4px;font-size:11.5px;border-radius:4px;color:var(--sidebar-ink-dim);transition:.12s}
+.role-btns button.on{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
+.side-user{display:flex;align-items:center;gap:9px;padding-top:2px}
+.ava{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.side-user-t{min-width:0}
+.side-user-n{font-size:12.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-user-r{font-size:11px;color:var(--sidebar-ink-dim)}
+
+/* ─── Main ──────────────────────────────────────────── */
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding:0 24px;height:56px;display:flex;align-items:center;gap:14px}
+.crumb{display:flex;align-items:baseline;gap:8px;min-width:0}
+.crumb h1{font-size:16px;font-weight:600;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.crumb .path{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.topbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.body{padding:22px 24px 56px;max-width:1400px;width:100%}
+.page{display:none}
+.page.on{display:block}
+
+/* ─── Bits ──────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6.5px 12px;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:500;white-space:nowrap;transition:.12s}
+.btn:hover{border-color:var(--muted);background:var(--surface-2)}
+.btn-p{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn-p:hover{background:var(--accent);border-color:var(--accent);filter:brightness(1.08)}
+.btn-q{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn-q:hover{background:var(--line-2);border-color:transparent}
+.btn-sm{padding:4px 9px;font-size:12px}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px 2px 6px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap;line-height:1.6}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.p-ok{background:var(--ok-bg);color:var(--ok)}
+.p-warn{background:var(--warn-bg);color:var(--warn)}
+.p-crit{background:var(--crit-bg);color:var(--crit)}
+.p-info{background:var(--info-bg);color:var(--info)}
+.p-neu{background:var(--neutral-bg);color:var(--neutral)}
+
+.chip{display:inline-block;padding:1.5px 7px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.02em;background:var(--line-2);color:var(--ink-2)}
+.chip-rent{background:var(--info-bg);color:var(--info)}
+.chip-shop{background:var(--neutral-bg);color:var(--neutral)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.card-h{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line-2)}
+.card-h h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-2)}
+.card-h .count{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.card-b{padding:16px}
+
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+.dim{color:var(--muted)}
+.sec-lbl{font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+
+/* toolbar */
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.search{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:0 10px;min-width:250px;flex:1;max-width:340px}
+.search svg{color:var(--muted);flex:none}
+.search input{border:none;background:none;outline:none;padding:7px 0;width:100%;font-size:13px}
+.sel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:6.5px 26px 6.5px 10px;font-size:13px;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 14px) 51%,calc(100% - 9px) 51%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tab{padding:8px 13px;font-size:13.5px;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.12s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.tab .c{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:5px}
+
+/* table */
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface-2)}
+td{padding:11px 14px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.clik{cursor:pointer}
+tbody tr.clik:hover{background:var(--surface-2)}
+tbody tr.sel-row{background:var(--accent-soft)}
+.tal{text-align:right}
+
+.prod{display:flex;align-items:center;gap:10px;min-width:0}
+.thumb{width:34px;height:34px;border-radius:5px;flex:none;display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--surface);letter-spacing:-.02em}
+.prod-t{min-width:0}
+.prod-n{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:290px}
+.prod-m{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* qty cluster — the fix for К-сть / Резерв / Всього */
+.qty{display:flex;gap:14px}
+.qty div{text-align:right}
+.qty b{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;line-height:1.2}
+.qty small{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.qty .free b{color:var(--ok)}
+.qty .zero b{color:var(--crit)}
+
+/* attention list */
+.att{display:flex;flex-direction:column}
+.att-row{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-2);cursor:pointer;text-align:left;width:100%;transition:.12s}
+.att-row:last-child{border-bottom:none}
+.att-row:hover{background:var(--surface-2)}
+.att-bar{width:3px;align-self:stretch;border-radius:2px;flex:none;margin:1px 0}
+.b-crit{background:var(--crit)} .b-warn{background:var(--warn)} .b-info{background:var(--info)} .b-neu{background:var(--neutral)}
+.att-t{flex:1;min-width:0}
+.att-t strong{display:block;font-weight:600;font-size:13.5px}
+.att-t span{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.att-go{font-size:12px;color:var(--muted);white-space:nowrap;align-self:center}
+
+/* today strip */
+.today{display:flex;flex-direction:column;gap:0}
+.tdy{display:flex;justify-content:space-between;align-items:baseline;padding:11px 16px;border-bottom:1px solid var(--line-2)}
+.tdy:last-child{border-bottom:none}
+.tdy span{font-size:13px;color:var(--ink-2)}
+.tdy b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;font-weight:600}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) minmax(0,.85fr);gap:16px;align-items:start}
+@media (max-width:1100px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* segmented */
+.seg{display:inline-flex;background:var(--line-2);padding:3px;border-radius:var(--radius);gap:2px}
+.seg button{padding:5px 11px;font-size:12.5px;border-radius:4px;color:var(--ink-2);white-space:nowrap}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(23,19,15,.08)}
+
+/* stepper */
+.steps{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-right:none;background:var(--surface)}
+.step:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+.step:last-child{border-right:1px solid var(--line);border-radius:0 var(--radius) var(--radius) 0}
+.step i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:9px;font-family:var(--mono);flex:none}
+.step.done{color:var(--ok)} .step.done i{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.step.now{color:var(--ink);font-weight:600;background:var(--accent-soft);border-color:var(--accent)}
+.step.now i{border-color:var(--accent);background:var(--accent);color:#fff}
+
+/* field rows */
+.fld{display:grid;grid-template-columns:108px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-2);align-items:baseline}
+.deal-price{flex:none;padding-left:10px}
+.wrapm{white-space:normal!important}
+
+/* availability checker */
+.check{display:flex;flex-wrap:wrap;gap:9px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.check-l{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.date-in{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:6.5px 10px;font-size:13px;font-family:var(--mono)}
+.answer{display:flex;align-items:center;gap:9px;margin-left:auto;padding:5px 12px;border-radius:var(--radius);background:var(--ok-bg);color:var(--ok);font-size:13px;font-weight:600}
+.answer.no{background:var(--crit-bg);color:var(--crit)}
+.answer small{font-weight:400;opacity:.85;font-size:12px}
+
+/* timeline groups + capacity */
+tr.grp td{background:var(--surface-2);border-bottom:1px solid var(--line);padding:8px 14px;cursor:pointer;user-select:none}
+tr.grp:hover td{background:var(--line-2)}
+.grp-t{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600}
+.grp-t .chev{display:inline-block;transition:transform .14s;color:var(--muted);font-size:11px}
+tr.grp.open .chev{transform:rotate(90deg)}
+.grp-c{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400}
+.grp-load{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400}
+.load-bar{width:72px;height:5px;border-radius:3px;background:var(--line-2);overflow:hidden}
+.load-bar i{display:block;height:100%;background:var(--info)}
+.load-bar.hot i{background:var(--warn)}
+.load-bar.full i{background:var(--crit)}
+
+.capcell{text-align:center;padding:7px 5px}
+.capbar{height:24px;background:var(--line-2);border-radius:3px;position:relative;overflow:hidden;margin-bottom:3px}
+.capbar span{position:absolute;left:0;right:0;bottom:0;background:var(--info);opacity:.8}
+.capbar.hot span{background:var(--warn)}
+.capbar.full span{background:var(--crit)}
+.capcell small{font-family:var(--mono);font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{border-radius:4px;padding:5px 8px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-deal{background:var(--info-bg);color:var(--info);border-left:3px solid var(--info)}
+.bar-hold{background:var(--warn-bg);color:var(--warn);border-left:3px solid var(--warn)}
+.bar-late{background:var(--crit-bg);color:var(--crit);border-left:3px solid var(--crit)}
+.bar-free{border:1px dashed var(--line);color:var(--muted);font-weight:400}
+.tl-more{padding:11px 14px;border-top:1px solid var(--line);background:var(--surface-2);display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);border-radius:0 0 8px 8px}
+.fld:last-child{border-bottom:none}
+.fld dt{font-size:12.5px;color:var(--muted)}
+.fld dd{margin:0;font-size:13.5px}
+
+/* doc rows */
+.doc{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line-2)}
+.doc:last-child{border-bottom:none}
+.doc-t{flex:1;min-width:0}
+.doc-t strong{display:block;font-size:13px;font-weight:500}
+.doc-t span{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.doc-a{display:flex;gap:4px}
+.ico{width:26px;height:26px;border-radius:5px;display:grid;place-items:center;color:var(--muted);border:1px solid transparent}
+.ico:hover{background:var(--line-2);color:var(--ink)}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(23,19,15,.34);z-index:60;animation:fade .16s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,92vw);background:var(--surface);border-left:1px solid var(--line);z-index:61;display:flex;flex-direction:column;box-shadow:var(--shadow);animation:slide .2s cubic-bezier(.2,.8,.3,1)}
+@keyframes slide{from{transform:translateX(100%)}to{transform:none}}
+.drawer-h{padding:16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.drawer-b{overflow-y:auto;padding:0 0 20px;flex:1}
+.drawer-sec{padding:14px 16px;border-bottom:1px solid var(--line-2)}
+.drawer-sec:last-child{border-bottom:none}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.acts .btn{justify-content:flex-start}
+.act-dz{color:var(--crit);border-color:var(--line)}
+.act-dz:hover{background:var(--crit-bg);border-color:var(--crit)}
+
+/* diff panel */
+.diff{position:fixed;top:0;right:0;bottom:0;width:min(400px,92vw);background:var(--surface);border-left:1px solid var(--line);z-index:61;display:flex;flex-direction:column;box-shadow:var(--shadow);animation:slide .2s cubic-bezier(.2,.8,.3,1)}
+.diff-b{overflow-y:auto;flex:1;padding:4px 0 24px}
+.dr{padding:13px 16px;border-bottom:1px solid var(--line-2)}
+.dr .was{font-size:12.5px;color:var(--muted);display:flex;gap:7px;margin-bottom:5px}
+.dr .now{font-size:13.5px;display:flex;gap:7px;font-weight:500}
+.dr .tag{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;padding:1px 5px;border-radius:3px;height:fit-content;margin-top:2px;flex:none}
+.tag-was{background:var(--neutral-bg);color:var(--neutral)}
+.tag-now{background:var(--ok-bg);color:var(--ok)}
+
+/* misc */
+.note{background:var(--info-bg);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;font-size:12.5px;color:var(--ink-2);display:flex;gap:9px}
+.note svg{color:var(--info);flex:none;margin-top:1px}
+.stub{padding:56px 20px;text-align:center;color:var(--muted)}
+.stub strong{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:12px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
+.kit{font-size:12px;color:var(--ink-2);line-height:1.7}
+.kit b{font-family:var(--mono);font-weight:600}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="side-top">
+      <div class="wordmark">ПАН <span>ПАРКЕТ</span></div>
+      <div class="side-sub">Адмінпанель</div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-bot">
+      <div class="role-pick">Дивитись очима</div>
+      <div class="role-btns">
+        <button class="on" data-role="owner">Власник</button>
+        <button data-role="rent">Оренда</button>
+      </div>
+      <div class="side-user">
+        <div class="ava" id="ava">М</div>
+        <div class="side-user-t">
+          <div class="side-user-n" id="uname">Микола Панкратьєв</div>
+          <div class="side-user-r" id="urole">Власник</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><h1 id="ttl">Робочий стіл</h1><span class="path mono" id="pth">/admin</span></div>
+      <div class="topbar-r">
+        <button class="btn btn-q" id="themeBtn" title="Світла / темна тема">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+        </button>
+        <button class="btn" id="diffBtn">Що змінилось</button>
+      </div>
+    </header>
+
+    <div class="body">
+      <!-- ═══ РОБОЧИЙ СТІЛ ═══ -->
+      <section class="page on" id="p-desk">
+        <div class="grid2">
+          <div>
+            <div class="card">
+              <div class="card-h">
+                <h2>Потребує уваги</h2><span class="count">8 пунктів</span>
+                <span style="margin-left:auto" class="pill p-crit">2 критичні</span>
+              </div>
+              <div class="att">
+                <button class="att-row" data-go="deals">
+                  <span class="att-bar b-crit"></span>
+                  <span class="att-t"><strong>Оренда прострочена на 3 доби</strong>
+                  <span>Вібротрамбовка Wacker BS 60-4 · Ковальчук А. П. · мала повернутись 04.09</span></span>
+                  <span class="att-go">Угода 138/28/08 →</span>
+                </button>
+                <button class="att-row" data-go="deals">
+                  <span class="att-bar b-crit"></span>
+                  <span class="att-t"><strong>Оренда прострочена на 1 добу</strong>
+                  <span>Шліфмашина Husqvarna PG 450 · ТОВ «Будсервіс Плюс» · мала повернутись 06.09</span></span>
+                  <span class="att-go">Угода 140/01/09 →</span>
+                </button>
+                <button class="att-row" data-go="deals">
+                  <span class="att-bar b-warn"></span>
+                  <span class="att-t"><strong>3 позиції повертаються сьогодні</strong>
+                  <span>Перфоратор Bosch GBH 5-40 · Віброплита Zitrek CNP 20-1 · Різак Norton CS 451</span></span>
+                  <span class="att-go">До угод →</span>
+                </button>
+                <button class="att-row" data-go="stock">
+                  <span class="att-bar b-warn"></span>
+                  <span class="att-t"><strong>Запит на видалення складу</strong>
+                  <span>«Склад №2 (Васильківська)» · від Антон М. · 05.09, 14:22</span></span>
+                  <span class="att-go">Склад · Склади →</span>
+                </button>
+                <button class="att-row" data-go="company">
+                  <span class="att-bar b-warn"></span>
+                  <span class="att-t"><strong>2 нові користувачі чекають підтвердження</strong>
+                  <span>o.melnyk@gmail.com · v.tkachenko@gmail.com</span></span>
+                  <span class="att-go">Компанія →</span>
+                </button>
+                <button class="att-row" data-go="stock">
+                  <span class="att-bar b-info"></span>
+                  <span class="att-t"><strong>4 інструменти — мало на складі (≤2 вільних)</strong>
+                  <span>Бетонозмішувач Limex 165 LS · Ліси риштувальні · ще 2</span></span>
+                  <span class="att-go">Склад →</span>
+                </button>
+                <button class="att-row" data-go="deals">
+                  <span class="att-bar b-info"></span>
+                  <span class="att-t"><strong>Угода без рахунку 3 доби</strong>
+                  <span>141/02/09/2026 · Парафія Св. Миколая · 28 400 ₴</span></span>
+                  <span class="att-go">Угода 141/02/09 →</span>
+                </button>
+                <button class="att-row" data-go="catalog">
+                  <span class="att-bar b-neu"></span>
+                  <span class="att-t"><strong>2 картки без головного фото</strong>
+                  <span>Не показуються в каталозі на сайті</span></span>
+                  <span class="att-go">Каталог →</span>
+                </button>
+              </div>
+            </div>
+            <p class="hint">Кожен рядок веде рівно в те місце, де проблема вирішується. Нічого не «просто показується».</p>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-h"><h2>Сьогодні · 7 вересня</h2></div>
+              <div class="today">
+                <div class="tdy"><span>Видати інструмент</span><b>3</b></div>
+                <div class="tdy"><span>Прийняти назад</span><b>5</b></div>
+                <div class="tdy"><span>Активних оренд</span><b>14</b></div>
+                <div class="tdy"><span>В оренді на суму</span><b>48 200 ₴</b></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h2>Магазин · вересень</h2></div>
+              <div class="today">
+                <div class="tdy"><span>Замовлень</span><b>12</b></div>
+                <div class="tdy"><span>Оплачено</span><b>9</b></div>
+                <div class="tdy"><span>Виручка</span><b>186 340 ₴</b></div>
+              </div>
+              <div style="padding:11px 16px;border-top:1px solid var(--line-2)">
+                <p class="hint" style="margin:0">Скасовані угоди не рахуються — на відміну від поточного дашборду.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ УГОДИ ═══ -->
+      <section class="page" id="p-deals">
+        <div class="tabs" id="dealTabs">
+          <button class="tab on" data-dt="all">Всі <span class="c">34</span></button>
+          <button class="tab" data-dt="shop">Магазин <span class="c">12</span></button>
+          <button class="tab" data-dt="rent">Оренда <span class="c">22</span></button>
+          <button class="tab" data-dt="cal">Календар</button>
+        </div>
+
+        <div id="dealList">
+          <div class="tools">
+            <label class="search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input placeholder="Клієнт, телефон, № угоди, інв. №…" aria-label="Пошук угод">
+            </label>
+            <select class="sel"><option>Всі статуси</option><option>Новий</option><option>Рахунок виставлено</option><option>Оплачено</option><option>В роботі</option><option>Виконано</option><option>Скасовано</option></select>
+            <select class="sel"><option>Весь період</option><option>Цей тиждень</option><option>Цей місяць</option><option>Прострочені</option></select>
+            <button class="btn btn-p" style="margin-left:auto">＋ Нова угода</button>
+          </div>
+
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th style="width:140px">№ / дата</th><th>Клієнт</th><th>Позиції</th>
+                <th style="width:110px" class="tal">Сума</th><th style="width:150px">Статус</th><th style="width:120px">Оренда до</th>
+              </tr></thead>
+              <tbody>
+                <tr class="clik" data-go="deal">
+                  <td><div class="num">142/03/09</div><div class="prod-m">03.09.2026</div></td>
+                  <td><div style="font-weight:500">Ковальчук Андрій Петрович</div><div class="prod-m">+380 67 214 88 03</div></td>
+                  <td><span class="chip chip-rent">оренда</span> <span class="chip chip-shop">магазин</span> <span class="dim">· 4 позиції</span></td>
+                  <td class="tal num">31 480 ₴</td>
+                  <td><span class="pill p-info">Оплачено</span></td>
+                  <td class="num">14.09.2026</td>
+                </tr>
+                <tr class="clik" data-go="deal">
+                  <td><div class="num">141/02/09</div><div class="prod-m">02.09.2026</div></td>
+                  <td><div style="font-weight:500">Парафія Св. Миколая</div><div class="prod-m">+380 44 501 22 17</div></td>
+                  <td><span class="chip chip-shop">магазин</span> <span class="dim">· Вінілова підлога Wineo 800, 96 м²</span></td>
+                  <td class="tal num">28 400 ₴</td>
+                  <td><span class="pill p-neu">Новий</span></td>
+                  <td class="dim">—</td>
+                </tr>
+                <tr class="clik" data-go="deal">
+                  <td><div class="num">140/01/09</div><div class="prod-m">01.09.2026</div></td>
+                  <td><div style="font-weight:500">ТОВ «Будсервіс Плюс»</div><div class="prod-m">+380 50 337 04 91</div></td>
+                  <td><span class="chip chip-rent">оренда</span> <span class="dim">· Шліфмашина Husqvarna PG 450</span></td>
+                  <td class="tal num">9 600 ₴</td>
+                  <td><span class="pill p-crit">Прострочено</span></td>
+                  <td class="num" style="color:var(--crit)">06.09.2026</td>
+                </tr>
+                <tr class="clik" data-go="deal">
+                  <td><div class="num">139/29/08</div><div class="prod-m">29.08.2026</div></td>
+                  <td><div style="font-weight:500">Ткаченко Влада Сергіївна</div><div class="prod-m">+380 63 118 77 40</div></td>
+                  <td><span class="chip chip-shop">магазин</span> <span class="dim">· Паркетна дошка Barlinek, 42 м²</span></td>
+                  <td class="tal num">64 260 ₴</td>
+                  <td><span class="pill p-ok">Виконано</span></td>
+                  <td class="dim">—</td>
+                </tr>
+                <tr class="clik" data-go="deal">
+                  <td><div class="num">138/28/08</div><div class="prod-m">28.08.2026</div></td>
+                  <td><div style="font-weight:500">Ковальчук Андрій Петрович</div><div class="prod-m">+380 67 214 88 03</div></td>
+                  <td><span class="chip chip-rent">оренда</span> <span class="dim">· Вібротрамбовка Wacker BS 60-4</span></td>
+                  <td class="tal num">7 200 ₴</td>
+                  <td><span class="pill p-crit">Прострочено</span></td>
+                  <td class="num" style="color:var(--crit)">04.09.2026</td>
+                </tr>
+                <tr class="clik" data-go="deal">
+                  <td><div class="num">137/26/08</div><div class="prod-m">26.08.2026</div></td>
+                  <td><div style="font-weight:500">Мельник Олег Ігорович</div><div class="prod-m">+380 96 402 15 58</div></td>
+                  <td><span class="chip chip-rent">оренда</span> <span class="dim">· Опалубка стінова 1.2×3.0, 12 шт</span></td>
+                  <td class="tal num">18 900 ₴</td>
+                  <td><span class="pill p-warn">В роботі</span></td>
+                  <td class="num">20.09.2026</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">Одна таблиця замість трьох списків. «Заявка оренди» більше не окрема сутність зі своїм URL — це вкладка всередині угоди.</p>
+        </div>
+
+        <div id="dealCal" hidden>
+
+          <div class="check">
+            <span class="check-l">Чи вільно</span>
+            <select class="sel" style="min-width:250px">
+              <option>Вібротрамбовка Wacker Neuson BS 60-4</option>
+              <option>Перфоратор Bosch GBH 5-40 DCE</option>
+              <option>Ліси риштувальні, секція 2×3 м</option>
+            </select>
+            <input class="date-in" type="text" value="12.09.2026" aria-label="Дата з" style="width:110px">
+            <span class="dim">→</span>
+            <input class="date-in" type="text" value="19.09.2026" aria-label="Дата по" style="width:110px">
+            <input class="date-in" type="text" value="1" aria-label="Кількість" style="width:52px">
+            <span class="dim" style="font-size:12.5px">шт</span>
+            <span class="answer">✓ Вільно
+              <small>1 з 2 одиниць · можна бронювати</small></span>
+          </div>
+
+          <div class="tools">
+            <div class="seg" id="calMode">
+              <button class="on" data-cm="busy">Зайняті <span class="mono" style="opacity:.6">14</span></button>
+              <button data-cm="cat">За категоріями</button>
+              <button data-cm="all">Всі <span class="mono" style="opacity:.6">196</span></button>
+            </div>
+            <label class="search" style="max-width:260px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input placeholder="Знайти інструмент…" aria-label="Пошук у шкалі">
+            </label>
+            <div class="seg"><button class="on">Тиждень</button><button>2 тижні</button><button>Місяць</button></div>
+            <button class="btn btn-q">← 31.08</button><button class="btn btn-q">07 – 13 вересня</button><button class="btn btn-q">14.09 →</button>
+            <button class="btn btn-p" style="margin-left:auto">＋ Нова бронь</button>
+          </div>
+
+          <div class="tw">
+            <table style="table-layout:fixed;min-width:900px">
+              <thead><tr><th style="width:250px">Інструмент</th>
+                <th style="text-align:center">7 пн</th><th style="text-align:center">8 вт</th><th style="text-align:center">9 ср</th><th style="text-align:center">10 чт</th><th style="text-align:center">11 пт</th><th style="text-align:center;color:var(--muted)">12 сб</th><th style="text-align:center;color:var(--muted)">13 нд</th></tr></thead>
+              <tbody id="calBody">
+
+                <tr class="grp open" data-grp="g1"><td colspan="8"><div class="grp-t"><span class="chev">›</span>Ущільнення ґрунту <span class="grp-c">3 з 14 зайнято</span>
+                  <span class="grp-load"><span class="load-bar"><i style="width:21%"></i></span>21 %</span></div></td></tr>
+                <tr data-in="g1" data-busy="1"><td><div class="prod-n">Вібротрамбовка Wacker BS 60-4</div><div class="prod-m">INV-0142 · 1 з 2 вільно</div></td>
+                  <td colspan="3" style="padding:6px"><div class="bar bar-late">Ковальчук А. П. · прострочено</div></td>
+                  <td colspan="4" style="padding:6px"></td></tr>
+                <tr data-in="g1" data-busy="1"><td><div class="prod-n">Віброплита Zitrek CNP 20-1</div><div class="prod-m">INV-0177 · 0 з 1 вільно</div></td>
+                  <td colspan="2" style="padding:6px"></td>
+                  <td colspan="3" style="padding:6px"><div class="bar bar-hold">Бронь · Гончар В.</div></td>
+                  <td colspan="2" style="padding:6px"></td></tr>
+                <tr data-in="g1" data-busy="0"><td><div class="prod-n">Віброплита Wacker DPU 3050</div><div class="prod-m">INV-0203 · 2 з 2 вільно</div></td>
+                  <td colspan="7" style="padding:6px"><div class="bar bar-free">вільна весь період</div></td></tr>
+
+                <tr class="grp open" data-grp="g2"><td colspan="8"><div class="grp-t"><span class="chev">›</span>Шліфування та різання <span class="grp-c">4 з 21 зайнято</span>
+                  <span class="grp-load"><span class="load-bar hot"><i style="width:52%"></i></span>52 %</span></div></td></tr>
+                <tr data-in="g2" data-busy="1"><td><div class="prod-n">Шліфмашина Husqvarna PG 450</div><div class="prod-m">INV-0088 · 0 з 1 вільно</div></td>
+                  <td colspan="2" style="padding:6px"><div class="bar bar-late">Будсервіс Плюс · прострочено</div></td>
+                  <td colspan="5" style="padding:6px"></td></tr>
+                <tr data-in="g2" data-busy="1"><td><div class="prod-n">Перфоратор Bosch GBH 5-40 DCE</div><div class="prod-m">INV-0231 · 3 з 4 вільно</div></td>
+                  <td style="padding:6px"></td>
+                  <td colspan="4" style="padding:6px"><div class="bar bar-deal">Мельник О. І. · угода 137/26/08</div></td>
+                  <td colspan="2" style="padding:6px"></td></tr>
+                <tr data-in="g2" data-busy="0"><td><div class="prod-n">Різак швів Norton Clipper CS 451</div><div class="prod-m">INV-0309 · на ремонті</div></td>
+                  <td colspan="7" style="padding:6px"><div class="bar bar-free" style="border-style:solid;background:var(--neutral-bg)">на ремонті — недоступний</div></td></tr>
+
+                <tr class="grp open" data-grp="g3"><td colspan="8"><div class="grp-t"><span class="chev">›</span>Опалубка та ліси <span class="grp-c">кількісні позиції · 62 од.</span>
+                  <span class="grp-load"><span class="load-bar full"><i style="width:74%"></i></span>74 %</span></div></td></tr>
+                <tr data-in="g3" data-busy="1"><td><div class="prod-n">Ліси риштувальні, секція 2×3 м</div><div class="prod-m">24 од. всього</div></td>
+                  <td class="capcell"><div class="capbar hot"><span style="height:67%"></span></div><small>16/24</small></td>
+                  <td class="capcell"><div class="capbar hot"><span style="height:67%"></span></div><small>16/24</small></td>
+                  <td class="capcell"><div class="capbar full"><span style="height:92%"></span></div><small>22/24</small></td>
+                  <td class="capcell"><div class="capbar full"><span style="height:100%"></span></div><small>24/24</small></td>
+                  <td class="capcell"><div class="capbar full"><span style="height:100%"></span></div><small>24/24</small></td>
+                  <td class="capcell"><div class="capbar"><span style="height:33%"></span></div><small>8/24</small></td>
+                  <td class="capcell"><div class="capbar"><span style="height:33%"></span></div><small>8/24</small></td></tr>
+                <tr data-in="g3" data-busy="1"><td><div class="prod-n">Опалубка стінова 1.2 × 3.0 м</div><div class="prod-m">38 од. всього</div></td>
+                  <td class="capcell"><div class="capbar"><span style="height:32%"></span></div><small>12/38</small></td>
+                  <td class="capcell"><div class="capbar"><span style="height:32%"></span></div><small>12/38</small></td>
+                  <td class="capcell"><div class="capbar"><span style="height:32%"></span></div><small>12/38</small></td>
+                  <td class="capcell"><div class="capbar hot"><span style="height:63%"></span></div><small>24/38</small></td>
+                  <td class="capcell"><div class="capbar hot"><span style="height:63%"></span></div><small>24/38</small></td>
+                  <td class="capcell"><div class="capbar hot"><span style="height:63%"></span></div><small>24/38</small></td>
+                  <td class="capcell"><div class="capbar hot"><span style="height:63%"></span></div><small>24/38</small></td></tr>
+
+                <tr class="grp" data-grp="g4"><td colspan="8"><div class="grp-t"><span class="chev">›</span>Бетонні роботи <span class="grp-c">1 з 9 зайнято</span>
+                  <span class="grp-load"><span class="load-bar"><i style="width:11%"></i></span>11 %</span></div></td></tr>
+                <tr data-in="g4" data-busy="1" hidden><td><div class="prod-n">Бетонозмішувач Limex 165 LS</div><div class="prod-m">INV-0054 · 1 з 3 вільно</div></td>
+                  <td colspan="4" style="padding:6px"><div class="bar bar-deal">Парафія Св. Миколая · угода 141/02/09</div></td>
+                  <td colspan="3" style="padding:6px"></td></tr>
+                <tr data-in="g4" data-busy="0" hidden><td><div class="prod-n">Глибинний вібратор Enar AVMU</div><div class="prod-m">INV-0121 · 2 з 2 вільно</div></td>
+                  <td colspan="7" style="padding:6px"><div class="bar bar-free">вільний весь період</div></td></tr>
+
+              </tbody>
+            </table>
+            <div class="tl-more" id="calMore">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span id="calMoreT">Показано лише зайняті позиції. Ще <b>182 інструменти</b> вільні весь період.</span>
+              <button class="btn btn-sm" style="margin-left:auto" data-cm-go="all">Показати всі</button>
+            </div>
+          </div>
+
+          <div class="legend">
+            <span><i style="background:var(--info)"></i>Угода в роботі</span>
+            <span><i style="background:var(--warn)"></i>Бронь</span>
+            <span><i style="background:var(--crit)"></i>Прострочено</span>
+            <span><i style="background:var(--line)"></i>Вільно</span>
+            <span style="margin-left:auto">Позиції з кількістю (ліси, опалубка) — один рядок зі шкалою завантаження, а не 24 однакові рядки</span>
+          </div>
+          <p class="hint">196 інструментів ніколи не висять списком. За замовчуванням видно тільки те, що зайняте цього тижня — це 10–20 рядків. Решта — через категорію, пошук або перевірку доступності вгорі.</p>
+        </div>
+      </section>
+
+      <!-- ═══ УГОДА ═══ -->
+      <section class="page" id="p-deal">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn btn-q" data-go="deals">← До списку</button>
+          <div>
+            <div style="display:flex;align-items:baseline;gap:9px">
+              <span class="num" style="font-size:18px;font-weight:600">142/03/09/2026</span>
+              <span class="chip chip-rent">оренда</span><span class="chip chip-shop">магазин</span>
+            </div>
+            <div class="prod-m">Створено 03.09.2026 · Ковальчук Андрій Петрович · ФОП Панкратьєв М. О.</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <span class="pill p-ok" style="align-self:center">Збережено</span>
+            <button class="btn">Зберегти</button>
+          </div>
+        </div>
+
+        <div class="steps" style="margin-bottom:18px">
+          <div class="step done"><i>✓</i>Новий</div>
+          <div class="step done"><i>✓</i>Рахунок</div>
+          <div class="step now"><i>3</i>Оплачено</div>
+          <div class="step"><i>4</i>Видано</div>
+          <div class="step"><i>5</i>Повернуто</div>
+          <div class="step"><i>6</i>Виконано</div>
+        </div>
+
+        <div class="grid3">
+          <!-- client -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-h"><h2>Клієнт / Орендар</h2>
+                <span class="pill p-ok" style="margin-left:auto">З бази</span></div>
+              <div class="card-b" style="padding-top:4px">
+                <dl style="margin:0">
+                  <div class="fld"><dt>П.І.Б.</dt><dd>Ковальчук Андрій Петрович</dd></div>
+                  <div class="fld"><dt>Телефон</dt><dd class="mono">+380 67 214 88 03</dd></div>
+                  <div class="fld"><dt>Паспорт</dt><dd class="mono">АА 482119 · 14.03.2019</dd></div>
+                  <div class="fld"><dt>ІПН</dt><dd class="mono">3204118876</dd></div>
+                  <div class="fld"><dt>Майданчик</dt><dd>вул. Академіка Заболотного, 37</dd></div>
+                  <div class="fld"><dt>Знижка</dt><dd>5 % <span class="dim">— застосовано до угоди</span></dd></div>
+                  <div class="fld"><dt>Відповідальний</dt><dd>Гончар Віталій · <span class="mono">+380 67 900 41 12</span></dd></div>
+                </dl>
+                <div style="display:flex;gap:6px;margin-top:12px">
+                  <button class="btn btn-sm" data-go="clients">Відкрити картку</button>
+                  <button class="btn btn-sm">Редагувати</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h2>Доставка та оплата</h2></div>
+              <div class="card-b" style="padding-top:4px">
+                <dl style="margin:0">
+                  <div class="fld"><dt>Продавець</dt><dd>ФОП Панкратьєв М. О.</dd></div>
+                  <div class="fld"><dt>Доставка</dt><dd>Самовивіз · Васильківська, 34</dd></div>
+                  <div class="fld"><dt>Оплата</dt><dd>Безготівковий розрахунок</dd></div>
+                  <div class="fld"><dt>Видача</dt><dd class="mono">07.09.2026, 09:00</dd></div>
+                  <div class="fld"><dt>Застава</dt><dd class="num">12 000 ₴ <span class="dim">· внесено</span></dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <!-- items -->
+          <div class="card">
+            <div class="card-h"><h2>Позиції</h2><span class="count">4</span>
+              <button class="btn btn-sm" style="margin-left:auto">＋ Додати</button></div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--line-2)">
+              <div style="display:flex;align-items:flex-start;gap:11px">
+                <div class="thumb" style="background:#6B4E3D">ВТ</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:500">Вібротрамбовка Wacker BS 60-4</span><span class="chip chip-rent">оренда</span></div>
+                  <div class="prod-m wrapm">INV-0142 · с/н 20418877 · 1 шт · 07.09 → 14.09 · 7 діб</div>
+                  <div class="kit" style="margin-top:6px">Комплект: <b>шланг 3 м</b>, <b>каністра 5 л</b>, <b>ключ 17</b> · Стан: <span style="color:var(--ok)">робочий, подряпини на кожусі</span></div>
+                </div>
+                <div class="tal deal-price"><div class="num" style="font-weight:600">8 400 ₴</div><div class="prod-m">1 200 ₴/доба</div></div>
+              </div>
+            </div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--line-2)">
+              <div style="display:flex;align-items:flex-start;gap:11px">
+                <div class="thumb" style="background:#4A5A6B">ПФ</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:500">Перфоратор Bosch GBH 5-40 DCE</span><span class="chip chip-rent">оренда</span></div>
+                  <div class="prod-m wrapm">INV-0231 · с/н 91744203 · 1 шт · 07.09 → 14.09 · 7 діб</div>
+                  <div class="kit" style="margin-top:6px">Комплект: <b>бур 24×400</b>, <b>піка</b>, <b>кейс</b> · Стан: <span style="color:var(--ok)">робочий</span></div>
+                </div>
+                <div class="tal deal-price"><div class="num" style="font-weight:600">4 900 ₴</div><div class="prod-m">700 ₴/доба</div></div>
+              </div>
+            </div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--line-2)">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div class="thumb" style="background:#8A6A4B">ЛМ</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:500">Ламінат Kronospan Castello 8 мм</span><span class="chip chip-shop">магазин</span></div>
+                  <div class="prod-m wrapm">KRN-8814 · 8 уп. × 2.22 м² = 17.76 м²</div>
+                </div>
+                <div class="tal deal-price"><div class="num" style="font-weight:600">14 208 ₴</div><div class="prod-m">800 ₴/уп.</div></div>
+              </div>
+            </div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--line-2)">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div class="thumb" style="background:#5B6B4A">ПЛ</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:500">Плінтус Arbiton LM70</span><span class="chip chip-shop">магазин</span></div>
+                  <div class="prod-m wrapm">ARB-LM70 · 14 шт × 2.5 м</div>
+                </div>
+                <div class="tal deal-price"><div class="num" style="font-weight:600">4 620 ₴</div><div class="prod-m">330 ₴/шт</div></div>
+              </div>
+            </div>
+
+            <div style="padding:13px 16px;background:var(--surface-2);border-radius:0 0 8px 8px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);padding:2px 0"><span>Підсумок</span><span class="num">32 128 ₴</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);padding:2px 0"><span>Знижка клієнта 5 %</span><span class="num">−1 606 ₴</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:2px 0"><span>у т. ч. ПДВ 20 %</span><span class="num">5 087 ₴</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding-top:7px;margin-top:5px;border-top:1px solid var(--line)"><span>Разом</span><span class="num">30 522 ₴</span></div>
+            </div>
+          </div>
+
+          <!-- docs -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-h"><h2>Документи</h2></div>
+              <div class="doc"><div class="doc-t"><strong>Рахунок</strong><span>v2 · 03.09.2026</span></div>
+                <div class="doc-a"><button class="ico" title="Сформувати заново"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/></svg></button>
+                <button class="ico" title="Завантажити"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg></button></div></div>
+              <div class="doc"><div class="doc-t"><strong>Рахунок на заставу</strong><span>v1 · 03.09.2026</span></div>
+                <div class="doc-a"><button class="ico" title="Сформувати заново"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/></svg></button>
+                <button class="ico" title="Завантажити"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg></button></div></div>
+              <div class="doc"><div class="doc-t"><strong>Договір оренди</strong><span>v1 · 03.09.2026</span></div>
+                <div class="doc-a"><button class="ico" title="Завантажити"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg></button></div></div>
+              <div class="doc"><div class="doc-t"><strong>Протокол (Додаток №1)</strong><span class="dim">ще не сформовано</span></div>
+                <div class="doc-a"><button class="btn btn-sm">Сформувати</button></div></div>
+              <div class="doc"><div class="doc-t"><strong>Акт повернення-огляду</strong><span class="dim">доступний після видачі</span></div>
+                <div class="doc-a"><button class="btn btn-sm" disabled style="opacity:.45;cursor:default">Сформувати</button></div></div>
+            </div>
+            <div class="note">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+              <span>Документи в тому порядку, в якому вони реально виникають. Недоступні поки для них немає підстави — замість шести однакових кнопок «Сформувати».</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ КЛІЄНТИ ═══ -->
+      <section class="page" id="p-clients">
+        <div class="tools">
+          <label class="search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input placeholder="П.І.Б., телефон, email…" aria-label="Пошук клієнтів">
+          </label>
+          <select class="sel"><option>Всі клієнти</option><option>З претензіями</option><option>Зі знижкою</option><option>Активна оренда</option></select>
+          <button class="btn btn-p" style="margin-left:auto">＋ Новий клієнт</button>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Клієнт</th><th style="width:170px">Телефон</th><th style="width:90px" class="tal">Знижка</th><th style="width:120px" class="tal">Угод</th><th style="width:130px" class="tal">Оборот</th><th style="width:160px">Стан</th></tr></thead>
+            <tbody>
+              <tr class="clik" data-go="deal"><td><div style="font-weight:500">Ковальчук Андрій Петрович</div><div class="prod-m">вул. Академіка Заболотного, 37</div></td>
+                <td class="mono">+380 67 214 88 03</td><td class="tal num">5 %</td><td class="tal num">11</td><td class="tal num">214 800 ₴</td>
+                <td><span class="pill p-crit">Прострочена оренда</span></td></tr>
+              <tr class="clik" data-go="deal"><td><div style="font-weight:500">ТОВ «Будсервіс Плюс»</div><div class="prod-m">ЄДРПОУ 41882073</div></td>
+                <td class="mono">+380 50 337 04 91</td><td class="tal num">10 %</td><td class="tal num">27</td><td class="tal num">641 200 ₴</td>
+                <td><span class="pill p-crit">Прострочена оренда</span></td></tr>
+              <tr class="clik" data-go="deal"><td><div style="font-weight:500">Мельник Олег Ігорович</div><div class="prod-m">вул. Стеценка, 12а</div></td>
+                <td class="mono">+380 96 402 15 58</td><td class="tal num">—</td><td class="tal num">4</td><td class="tal num">72 300 ₴</td>
+                <td><span class="pill p-info">Оренда активна</span></td></tr>
+              <tr class="clik" data-go="deal"><td><div style="font-weight:500">Ткаченко Влада Сергіївна</div><div class="prod-m">вул. Бульварно-Кудрявська, 6</div></td>
+                <td class="mono">+380 63 118 77 40</td><td class="tal num">3 %</td><td class="tal num">2</td><td class="tal num">98 460 ₴</td>
+                <td><span class="pill p-neu">Без активних</span></td></tr>
+              <tr class="clik" data-go="deal"><td><div style="font-weight:500">Парафія Св. Миколая</div><div class="prod-m">Претензія: затримка оплати 12 діб</div></td>
+                <td class="mono">+380 44 501 22 17</td><td class="tal num">—</td><td class="tal num">3</td><td class="tal num">51 900 ₴</td>
+                <td><span class="pill p-warn">Претензії</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">Оборот, кількість угод і стан — у самому списку. Раніше це було видно тільки якщо провалитись у картку.</p>
+      </section>
+
+      <!-- ═══ СКЛАД ═══ -->
+      <section class="page" id="p-stock">
+        <div class="tabs" id="stockTabs">
+          <button class="tab on" data-st="bal">Залишки</button>
+          <button class="tab" data-st="log">Журнал</button>
+          <button class="tab" data-st="wh">Склади <span class="c">1</span></button>
+        </div>
+
+        <div id="stBal">
+          <div class="tools">
+            <div class="seg">
+              <button class="on">Основний склад</button><button>Склад №2 (Васильківська)</button><button>У ремонті</button>
+            </div>
+          </div>
+          <div class="tools">
+            <label class="search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input placeholder="Назва, SKU, інв. №, серійний…" aria-label="Пошук на складі">
+            </label>
+            <select class="sel"><option>Будь-який стан</option><option>Вільний</option><option>В оренді</option><option>Немає вільних</option><option>Потребує ремонту</option><option>На ремонті</option></select>
+            <select class="sel"><option>Всі категорії</option><option>Ущільнення ґрунту</option><option>Шліфування</option><option>Опалубка та ліси</option></select>
+            <select class="sel"><option>У каталозі: всі</option><option>Показані</option><option>Приховані</option></select>
+            <button class="btn btn-p" style="margin-left:auto">＋ Новий інструмент</button>
+          </div>
+
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th>Інструмент</th><th style="width:160px">Стан</th>
+                <th style="width:230px" class="tal">Кількість</th>
+                <th style="width:110px" class="tal">Ціна / доба</th><th style="width:110px">У каталозі</th><th style="width:38px"></th>
+              </tr></thead>
+              <tbody id="stockBody">
+                <tr class="clik" data-row="0"><td><div class="prod"><div class="thumb" style="background:#6B4E3D">ВТ</div><div class="prod-t"><div class="prod-n">Вібротрамбовка Wacker Neuson BS 60-4</div><div class="prod-m">INV-0142 · WCK-BS604</div></div></div></td>
+                  <td><span class="pill p-info">В оренді</span></td>
+                  <td><div class="qty" style="justify-content:flex-end"><div><b>2</b><small>на складі</small></div><div><b>2</b><small>в оренді</small></div><div class="free zero"><b>0</b><small>вільно</small></div></div></td>
+                  <td class="tal num">1 200 ₴</td><td><span class="pill p-ok">Показано</span></td><td class="dim">›</td></tr>
+
+                <tr class="clik" data-row="1"><td><div class="prod"><div class="thumb" style="background:#4A6B5A">ШМ</div><div class="prod-t"><div class="prod-n">Шліфмашина по бетону Husqvarna PG 450</div><div class="prod-m">INV-0088 · HQV-PG450</div></div></div></td>
+                  <td><span class="pill p-crit">Прострочено</span></td>
+                  <td><div class="qty" style="justify-content:flex-end"><div><b>1</b><small>на складі</small></div><div><b>1</b><small>в оренді</small></div><div class="free zero"><b>0</b><small>вільно</small></div></div></td>
+                  <td class="tal num">1 600 ₴</td><td><span class="pill p-ok">Показано</span></td><td class="dim">›</td></tr>
+
+                <tr class="clik" data-row="2"><td><div class="prod"><div class="thumb" style="background:#4A5A6B">ПФ</div><div class="prod-t"><div class="prod-n">Перфоратор Bosch GBH 5-40 DCE</div><div class="prod-m">INV-0231 · BSH-GBH540</div></div></div></td>
+                  <td><span class="pill p-ok">Вільний</span></td>
+                  <td><div class="qty" style="justify-content:flex-end"><div><b>4</b><small>на складі</small></div><div><b>1</b><small>в оренді</small></div><div class="free"><b>3</b><small>вільно</small></div></div></td>
+                  <td class="tal num">700 ₴</td><td><span class="pill p-ok">Показано</span></td><td class="dim">›</td></tr>
+
+                <tr class="clik" data-row="3"><td><div class="prod"><div class="thumb" style="background:#7A5B6B">БЗ</div><div class="prod-t"><div class="prod-n">Бетонозмішувач Limex 165 LS</div><div class="prod-m">INV-0054 · LMX-165LS</div></div></div></td>
+                  <td><span class="pill p-warn">Мало вільних</span></td>
+                  <td><div class="qty" style="justify-content:flex-end"><div><b>3</b><small>на складі</small></div><div><b>2</b><small>в оренді</small></div><div class="free"><b>1</b><small>вільно</small></div></div></td>
+                  <td class="tal num">450 ₴</td><td><span class="pill p-ok">Показано</span></td><td class="dim">›</td></tr>
+
+                <tr class="clik" data-row="4"><td><div class="prod"><div class="thumb" style="background:#6B5A3D">РШ</div><div class="prod-t"><div class="prod-n">Різак швів Norton Clipper CS 451</div><div class="prod-m">INV-0309 · NRT-CS451</div></div></div></td>
+                  <td><span class="pill p-warn">Потребує ремонту</span></td>
+                  <td><div class="qty" style="justify-content:flex-end"><div><b>1</b><small>на складі</small></div><div><b>0</b><small>в оренді</small></div><div class="free zero"><b>0</b><small>вільно</small></div></div></td>
+                  <td class="tal num">1 350 ₴</td><td><span class="pill p-neu">Приховано</span></td><td class="dim">›</td></tr>
+
+                <tr class="clik" data-row="5"><td><div class="prod"><div class="thumb" style="background:#5B6B4A">ЛР</div><div class="prod-t"><div class="prod-n">Ліси риштувальні, секція 2×3 м</div><div class="prod-m">INV-0410 · LRS-2X3</div></div></div></td>
+                  <td><span class="pill p-warn">Мало вільних</span></td>
+                  <td><div class="qty" style="justify-content:flex-end"><div><b>18</b><small>на складі</small></div><div><b>16</b><small>в оренді</small></div><div class="free"><b>2</b><small>вільно</small></div></div></td>
+                  <td class="tal num">90 ₴</td><td><span class="pill p-ok">Показано</span></td><td class="dim">›</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">Було 12 колонок і горизонтальний скрол. Стало 6 — бо «К-сть / Резерв / Всього од.» це не три колонки, а одна відповідь: скільки є, скільки зайнято, скільки можна віддати. Клік по рядку — усі дії в панелі справа.</p>
+        </div>
+
+        <div id="stLog" hidden>
+          <div class="tools">
+            <select class="sel"><option>Всі дії</option><option>Переміщення</option><option>Ремонт</option><option>Зміна кількості</option><option>Видача / повернення</option></select>
+            <select class="sel"><option>Всі склади</option><option>Основний склад</option><option>Склад №2</option><option>У ремонті</option></select>
+            <select class="sel"><option>Всі користувачі</option><option>Микола П.</option><option>Антон М.</option></select>
+            <button class="btn" style="margin-left:auto">Експорт</button>
+          </div>
+          <div class="tw"><table>
+            <thead><tr><th style="width:130px">Час</th><th style="width:120px">Дія</th><th>Що сталось</th><th style="width:130px">Хто</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">07.09 · 08:41</td><td><span class="chip chip-rent">Видача</span></td><td>Вібротрамбовка Wacker BS 60-4 <span class="dim">· 1 шт · Основний склад → угода 142/03/09</span></td><td>Микола П.</td></tr>
+              <tr><td class="mono">06.09 · 17:12</td><td><span class="chip">Переміщення</span></td><td>Різак Norton CS 451 <span class="dim">· 1 шт · Основний склад → У ремонті</span></td><td>Антон М.</td></tr>
+              <tr><td class="mono">06.09 · 16:55</td><td><span class="chip">Кількість</span></td><td>Ліси риштувальні <span class="dim">· 20 → 18 шт · Основний склад</span></td><td>Антон М.</td></tr>
+              <tr><td class="mono">05.09 · 14:22</td><td><span class="chip">Склад</span></td><td>Запит на видалення складу «Склад №2 (Васильківська)»</td><td>Антон М.</td></tr>
+              <tr><td class="mono">05.09 · 11:03</td><td><span class="chip chip-shop">Повернення</span></td><td>Віброплита Zitrek CNP 20-1 <span class="dim">· 1 шт · угода 136/22/08 → Основний склад</span></td><td>Микола П.</td></tr>
+            </tbody>
+          </table></div>
+          <p class="hint">Тип дії став окремою колонкою і фільтром. Раніше журнал був стрічкою тексту, в якій «переміщення» від «ремонту» відрізнити фільтром було неможливо.</p>
+        </div>
+
+        <div id="stWh" hidden>
+          <div class="note" style="margin-bottom:14px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+            <span><b>1 запит на видалення складу чекає вашого рішення.</b> Раніше ця черга жила на <span class="mono">/admin/admin</span> — сторінці, на яку не вело жодне посилання в меню.</span>
+          </div>
+          <div class="tw"><table>
+            <thead><tr><th>Склад</th><th style="width:110px" class="tal">Позицій</th><th style="width:110px" class="tal">Одиниць</th><th style="width:150px">Стан</th><th style="width:230px">Дії</th></tr></thead>
+            <tbody>
+              <tr><td><div style="font-weight:500">Основний склад</div><div class="prod-m">вул. Васильківська, 34</div></td><td class="tal num">86</td><td class="tal num">412</td><td><span class="pill p-ok">Активний</span></td><td><button class="btn btn-sm">Редагувати</button></td></tr>
+              <tr style="background:var(--warn-bg)"><td><div style="font-weight:500">Склад №2 (Васильківська)</div><div class="prod-m">Запит на видалення від Антон М. · 05.09</div></td><td class="tal num">12</td><td class="tal num">31</td><td><span class="pill p-warn">Запит на видалення</span></td>
+                <td><div style="display:flex;gap:6px"><button class="btn btn-sm btn-p">Підтвердити</button><button class="btn btn-sm">Відхилити</button></div></td></tr>
+              <tr><td><div style="font-weight:500">У ремонті</div><div class="prod-m">Службовий · не видаляється</div></td><td class="tal num">3</td><td class="tal num">3</td><td><span class="pill p-neu">Службовий</span></td><td class="dim">—</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ═══ КАТАЛОГ ═══ -->
+      <section class="page" id="p-catalog">
+        <div class="tabs" id="catTabs">
+          <button class="tab on" data-ct="tools">Інструмент <span class="c">64</span></button>
+          <button class="tab" data-ct="goods">Товари <span class="c">218</span></button>
+          <button class="tab" data-ct="tax">Категорії та бренди</button>
+        </div>
+        <div class="note" style="margin-bottom:14px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          <span>Каталог відповідає лише за <b>картку</b>: як позиція виглядає на сайті. Скільки її фізично є — тільки на «Складі». Раніше залишок можна було правити в обох місцях і числа розходились.</span>
+        </div>
+        <div id="catTools">
+          <div class="tools">
+            <label class="search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input placeholder="Назва, SKU, інв. №…" aria-label="Пошук у каталозі">
+            </label>
+            <select class="sel"><option>Всі категорії</option><option>Ущільнення ґрунту</option><option>Шліфування</option><option>Опалубка та ліси</option></select>
+            <select class="sel"><option>Всі бренди</option><option>Wacker Neuson</option><option>Husqvarna</option><option>Bosch</option></select>
+            <select class="sel"><option>У каталозі: всі</option><option>На сайті</option><option>Приховані</option></select>
+            <button class="btn btn-p" style="margin-left:auto">＋ Нова картка</button>
+          </div>
+          <div class="tw"><table>
+            <thead><tr><th>Картка</th><th style="width:200px">Категорія / бренд</th><th style="width:150px" class="tal">Тариф</th><th style="width:110px" class="tal">Вільно</th><th style="width:120px">На сайті</th><th style="width:110px">Фото</th></tr></thead>
+            <tbody>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#6B4E3D">ВТ</div><div class="prod-t"><div class="prod-n">Вібротрамбовка Wacker Neuson BS 60-4</div><div class="prod-m">WCK-BS604</div></div></div></td>
+                <td>Ущільнення ґрунту<div class="prod-m">Wacker Neuson</div></td><td class="tal"><div class="num">1 200 ₴</div><div class="prod-m">від 900 ₴ за 7+ діб</div></td><td class="tal num" style="color:var(--crit)">0</td><td><span class="pill p-ok">Показано</span></td><td class="dim">6 фото</td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#4A6B5A">ШМ</div><div class="prod-t"><div class="prod-n">Шліфмашина по бетону Husqvarna PG 450</div><div class="prod-m">HQV-PG450</div></div></div></td>
+                <td>Шліфування<div class="prod-m">Husqvarna</div></td><td class="tal"><div class="num">1 600 ₴</div><div class="prod-m">від 1 250 ₴ за 7+ діб</div></td><td class="tal num" style="color:var(--crit)">0</td><td><span class="pill p-ok">Показано</span></td><td class="dim">9 фото</td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#4A5A6B">ПФ</div><div class="prod-t"><div class="prod-n">Перфоратор Bosch GBH 5-40 DCE</div><div class="prod-m">BSH-GBH540</div></div></div></td>
+                <td>Буріння та довбання<div class="prod-m">Bosch</div></td><td class="tal"><div class="num">700 ₴</div><div class="prod-m">від 540 ₴ за 7+ діб</div></td><td class="tal num">3</td><td><span class="pill p-ok">Показано</span></td><td class="dim">4 фото</td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#6B5A3D">РШ</div><div class="prod-t"><div class="prod-n">Різак швів Norton Clipper CS 451</div><div class="prod-m">NRT-CS451</div></div></div></td>
+                <td>Різання<div class="prod-m">Norton Clipper</div></td><td class="tal"><div class="num">1 350 ₴</div><div class="prod-m">від 1 000 ₴ за 7+ діб</div></td><td class="tal num" style="color:var(--crit)">0</td><td><span class="pill p-neu">Приховано</span></td><td class="dim">3 фото</td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#8A7A5B">ОП</div><div class="prod-t"><div class="prod-n">Опалубка стінова 1.2 × 3.0 м</div><div class="prod-m">OPL-1230</div></div></div></td>
+                <td>Опалубка та ліси<div class="prod-m">—</div></td><td class="tal"><div class="num">140 ₴</div><div class="prod-m">від 105 ₴ за 7+ діб</div></td><td class="tal num">24</td><td><span class="pill p-ok">Показано</span></td><td style="color:var(--crit)">немає</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div id="catGoods" hidden>
+          <div class="tools">
+            <label class="search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input placeholder="Назва або SKU…" aria-label="Пошук товарів">
+            </label>
+            <select class="sel"><option>Всі категорії</option><option>Паркетна дошка</option><option>Ламінат</option><option>Вінілова підлога</option><option>Підвіконня</option><option>Плінтуси</option><option>Стінові панелі</option></select>
+            <button class="btn btn-p" style="margin-left:auto">＋ Новий товар</button>
+          </div>
+          <div class="tw"><table>
+            <thead><tr><th>Товар</th><th style="width:190px">Категорія / бренд</th><th style="width:130px" class="tal">Ціна</th><th style="width:110px" class="tal">Залишок</th><th style="width:110px">Мітка</th></tr></thead>
+            <tbody>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#8A6A4B">ПД</div><div class="prod-t"><div class="prod-n">Паркетна дошка Barlinek Dąb Bianco</div><div class="prod-m">BRL-DB-BNC</div></div></div></td><td>Паркетна дошка<div class="prod-m">Barlinek</div></td><td class="tal"><div class="num">1 530 ₴</div><div class="prod-m">за м²</div></td><td class="tal num">96 м²</td><td><span class="chip">SALE</span></td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#7A6B4A">ЛМ</div><div class="prod-t"><div class="prod-n">Ламінат Kronospan Castello 8 мм</div><div class="prod-m">KRN-8814</div></div></div></td><td>Ламінат<div class="prod-m">Kronospan</div></td><td class="tal"><div class="num">360 ₴</div><div class="prod-m">за м²</div></td><td class="tal num">440 м²</td><td class="dim">—</td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#5B6B6B">ВП</div><div class="prod-t"><div class="prod-n">Вінілова підлога Wineo 800 Wood</div><div class="prod-m">WIN-800W</div></div></div></td><td>Вінілова підлога<div class="prod-m">Wineo</div></td><td class="tal"><div class="num">1 180 ₴</div><div class="prod-m">за м²</div></td><td class="tal num">212 м²</td><td><span class="chip">NEW</span></td></tr>
+              <tr class="clik"><td><div class="prod"><div class="thumb" style="background:#6B6B5A">ПВ</div><div class="prod-t"><div class="prod-n">Підвіконня Danke Standard 300 мм</div><div class="prod-m">DNK-ST300</div></div></div></td><td>Підвіконня<div class="prod-m">Danke</div></td><td class="tal"><div class="num">640 ₴</div><div class="prod-m">за пог. м · матриця цін</div></td><td class="tal num">78 м</td><td class="dim">—</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div id="catTax" hidden>
+          <div class="grid2">
+            <div class="card">
+              <div class="card-h"><h2>Категорії оренди</h2><span class="count">4 групи · 18</span><button class="btn btn-sm" style="margin-left:auto">＋ Додати</button></div>
+              <div class="tw" style="border:none;border-radius:0"><table>
+                <thead><tr><th>Назва</th><th style="width:180px">Група</th><th style="width:110px">На сайті</th></tr></thead>
+                <tbody>
+                  <tr><td>Ущільнення ґрунту</td><td><span class="chip">Земляні роботи</span></td><td><span class="pill p-ok">Так</span></td></tr>
+                  <tr><td>Шліфування</td><td><span class="chip">Обробка поверхонь</span></td><td><span class="pill p-ok">Так</span></td></tr>
+                  <tr><td>Різання</td><td><span class="chip">Обробка поверхонь</span></td><td><span class="pill p-ok">Так</span></td></tr>
+                  <tr><td>Опалубка та ліси</td><td><span class="chip">Монтажне устаткування</span></td><td><span class="pill p-neu">Ні</span></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h2>Бренди</h2><span class="count">11</span><button class="btn btn-sm" style="margin-left:auto">＋ Додати</button></div>
+              <div class="tw" style="border:none;border-radius:0"><table>
+                <thead><tr><th>Назва</th><th style="width:90px">Магазин</th><th style="width:90px">Оренда</th></tr></thead>
+                <tbody>
+                  <tr><td>Wacker Neuson</td><td class="dim">—</td><td><span class="pill p-ok">Так</span></td></tr>
+                  <tr><td>Husqvarna</td><td class="dim">—</td><td><span class="pill p-ok">Так</span></td></tr>
+                  <tr><td>Barlinek</td><td><span class="pill p-ok">Так</span></td><td class="dim">—</td></tr>
+                  <tr><td>Kronospan</td><td><span class="pill p-ok">Так</span></td><td class="dim">—</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+          <p class="hint">Група категорії — вибір зі списку, а не вільний текст у кожному рядку. Друкарка більше не створює нову групу.</p>
+        </div>
+      </section>
+
+      <!-- ═══ БЛОГ ═══ -->
+      <section class="page" id="p-blog">
+        <div class="tools">
+          <label class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input placeholder="Заголовок статті…" aria-label="Пошук статей"></label>
+          <select class="sel"><option>Всі статуси</option><option>Опубліковано</option><option>Чернетка</option></select>
+          <button class="btn btn-p" style="margin-left:auto">＋ Нова стаття</button>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Заголовок</th><th style="width:190px">Категорія</th><th style="width:130px">Дата</th><th style="width:140px">Статус</th></tr></thead>
+          <tbody>
+            <tr class="clik"><td>Як обрати ламінат для квартири з теплою підлогою</td><td>Поради</td><td class="mono">28.08.2026</td><td><span class="pill p-ok">Опубліковано</span></td></tr>
+            <tr class="clik"><td>Шліфування бетонної стяжки: коли це справді потрібно</td><td>Технології</td><td class="mono">14.08.2026</td><td><span class="pill p-ok">Опубліковано</span></td></tr>
+            <tr class="clik"><td>Оренда віброплити: що перевірити перед видачею</td><td>Оренда</td><td class="mono">05.09.2026</td><td><span class="pill p-neu">Чернетка</span></td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint">Додано статус публікації — зараз стаття потрапляє на сайт одразу після збереження, чернетки не існує.</p>
+      </section>
+
+      <!-- ═══ ТАБЕЛЬ ═══ -->
+      <section class="page" id="p-timesheet">
+        <div class="tools">
+          <select class="sel"><option>Вересень 2026</option><option>Серпень 2026</option></select>
+          <select class="sel"><option>Підрозділ: МАКС І АНТОН</option><option>Підрозділ: БРИГАДА №2</option></select>
+          <span class="pill p-warn" style="align-self:center">Є незбережені зміни</span>
+          <div style="margin-left:auto;display:flex;gap:8px"><button class="btn">Excel (.xlsx)</button><button class="btn btn-p">Зберегти табель</button></div>
+        </div>
+        <div class="tw"><table style="min-width:700px">
+          <thead><tr><th style="width:210px">Співробітник</th><th style="text-align:center">1 вт</th><th style="text-align:center">2 ср</th><th style="text-align:center">3 чт</th><th style="text-align:center">4 пт</th><th style="text-align:center;background:var(--line-2)">5 сб</th><th style="text-align:center;background:var(--line-2)">6 нд</th><th style="text-align:center">7 пн</th><th style="width:100px" class="tal">Годин</th></tr></thead>
+          <tbody>
+            <tr><td>Максим Гончаренко <span class="prod-m">голова</span></td>
+              <td class="mono" style="text-align:center;font-size:12px">08:00<br>17:00</td><td class="mono" style="text-align:center;font-size:12px">08:15<br>17:00</td><td class="mono" style="text-align:center;font-size:12px">08:00<br>16:30</td><td class="mono" style="text-align:center;font-size:12px">08:00<br>17:00</td><td style="background:var(--line-2)"></td><td style="background:var(--line-2)"></td><td class="mono" style="text-align:center;font-size:12px">08:00<br>—</td><td class="tal num">34:45</td></tr>
+            <tr><td>Антон Мельниченко</td>
+              <td class="mono" style="text-align:center;font-size:12px">08:05<br>17:00</td><td class="mono" style="text-align:center;font-size:12px">08:00<br>17:10</td><td class="mono" style="text-align:center;font-size:12px">—<br>—</td><td class="mono" style="text-align:center;font-size:12px">08:00<br>17:00</td><td style="background:var(--line-2)"></td><td style="background:var(--line-2)"></td><td class="mono" style="text-align:center;font-size:12px">08:10<br>—</td><td class="tal num">26:55</td></tr>
+            <tr><td>Ігор Савченко <span class="prod-m">без акаунта</span></td>
+              <td class="mono" style="text-align:center;font-size:12px">09:00<br>18:00</td><td class="mono" style="text-align:center;font-size:12px">09:00<br>18:00</td><td class="mono" style="text-align:center;font-size:12px">09:00<br>18:00</td><td class="mono" style="text-align:center;font-size:12px">09:00<br>17:00</td><td style="background:var(--line-2)"></td><td style="background:var(--line-2)"></td><td class="mono" style="text-align:center;font-size:12px">09:00<br>—</td><td class="tal num">35:00</td></tr>
+          </tbody>
+        </table></div>
+        <p class="hint">Час вводиться як <span class="mono">08:30</span> одним полем, а не двома по два символи. З’явилась колонка «Годин» — табель нарешті рахує.</p>
+      </section>
+
+      <!-- ═══ КОМПАНІЯ ═══ -->
+      <section class="page" id="p-company">
+        <div class="tabs" id="coTabs">
+          <button class="tab on" data-co="u">Користувачі <span class="c">2</span></button>
+          <button class="tab" data-co="s">Підрозділи</button>
+          <button class="tab" data-co="l">Юрособи</button>
+        </div>
+        <div id="coU">
+          <div class="note" style="margin-bottom:14px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+            <span>2 користувачі чекають підтвердження. Роль призначається один раз — у діалозі схвалення, тими самими назвами, що й у списку.</span>
+          </div>
+          <div class="tw"><table>
+            <thead><tr><th>Користувач</th><th style="width:220px">Email</th><th style="width:230px">Роль</th><th style="width:140px">Статус</th><th style="width:180px">Дії</th></tr></thead>
+            <tbody>
+              <tr style="background:var(--warn-bg)"><td>Олег Мельник</td><td class="mono">o.melnyk@gmail.com</td><td><select class="sel" style="width:100%"><option>— оберіть роль —</option><option>Менеджер оренди</option><option>Менеджер магазину</option><option>Менеджер магазину та оренди</option><option>ПАН ПІВДЕНЬБУД</option></select></td><td><span class="pill p-warn">Очікує</span></td><td><div style="display:flex;gap:6px"><button class="btn btn-sm btn-p">Схвалити</button><button class="btn btn-sm act-dz">Видалити</button></div></td></tr>
+              <tr style="background:var(--warn-bg)"><td>Влада Ткаченко</td><td class="mono">v.tkachenko@gmail.com</td><td><select class="sel" style="width:100%"><option>— оберіть роль —</option><option>Менеджер оренди</option><option>Менеджер магазину</option><option>Менеджер магазину та оренди</option><option>ПАН ПІВДЕНЬБУД</option></select></td><td><span class="pill p-warn">Очікує</span></td><td><div style="display:flex;gap:6px"><button class="btn btn-sm btn-p">Схвалити</button><button class="btn btn-sm act-dz">Видалити</button></div></td></tr>
+              <tr><td>Микола Панкратьєв</td><td class="mono">nikolay4pankratiev@gmail.com</td><td><span class="chip">Власник</span></td><td><span class="pill p-ok">Активний</span></td><td class="dim">—</td></tr>
+              <tr><td>Антон Мельниченко</td><td class="mono">anton.m@panparket.ua</td><td><select class="sel" style="width:100%"><option selected>Менеджер оренди</option><option>Менеджер магазину</option><option>Менеджер магазину та оренди</option><option>ПАН ПІВДЕНЬБУД</option></select></td><td><span class="pill p-ok">Активний</span></td><td><button class="btn btn-sm">Заблокувати</button></td></tr>
+              <tr><td>Максим Гончаренко</td><td class="mono">maks.h@panparket.ua</td><td><select class="sel" style="width:100%"><option>Менеджер оренди</option><option>Менеджер магазину</option><option>Менеджер магазину та оренди</option><option selected>ПАН ПІВДЕНЬБУД</option></select></td><td><span class="pill p-ok">Активний</span></td><td><button class="btn btn-sm">Заблокувати</button></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div id="coS" hidden>
+          <div class="tools"><button class="btn btn-p" style="margin-left:auto">＋ Створити підрозділ</button></div>
+          <div class="tw"><table>
+            <thead><tr><th>Підрозділ</th><th style="width:230px">Голова</th><th style="width:110px" class="tal">Людей</th><th style="width:180px">Табель за вересень</th></tr></thead>
+            <tbody>
+              <tr class="clik"><td style="font-weight:500">МАКС І АНТОН</td><td>Максим Гончаренко</td><td class="tal num">3</td><td><span class="pill p-warn">Не збережено</span></td></tr>
+              <tr class="clik"><td style="font-weight:500">БРИГАДА №2</td><td>Ігор Савченко</td><td class="tal num">5</td><td><span class="pill p-ok">Збережено 06.09</span></td></tr>
+            </tbody>
+          </table></div>
+          <p class="hint">Видно, чий табель уже зданий, — раніше це можна було дізнатись лише відкривши кожен місяць вручну.</p>
+        </div>
+        <div id="coL" hidden>
+          <div class="tw"><table>
+            <thead><tr><th>Юрособа</th><th style="width:170px">ІПН / ЄДРПОУ</th><th style="width:110px">ПДВ</th><th style="width:140px">За замовч.</th></tr></thead>
+            <tbody>
+              <tr><td>ФОП Панкратьєв М. О.</td><td class="mono">3204118876</td><td><span class="pill p-neu">Без ПДВ</span></td><td><span class="pill p-ok">Так</span></td></tr>
+              <tr><td>ФОП Панкратьєв Михайло</td><td class="mono">3311094452</td><td><span class="pill p-neu">Без ПДВ</span></td><td class="dim">—</td></tr>
+              <tr><td>ФОП Панкратьєв О. М.</td><td class="mono">2988170034</td><td><span class="pill p-neu">Без ПДВ</span></td><td class="dim">—</td></tr>
+              <tr><td>ТОВ «ПАН-ПІВДЕНЬБУД»</td><td class="mono">41882073</td><td><span class="pill p-info">З ПДВ 20 %</span></td><td class="dim">—</td></tr>
+            </tbody>
+          </table></div>
+          <p class="hint">Раніше цей список був захардкожений у <span class="mono">constants/sellers.js</span> — щоб змінити адресу орендодавця в договорі, треба було правити код.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DRAWER ═══ -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Картка позиції на складі">
+  <div class="drawer-h">
+    <div class="thumb" id="dwThumb" style="width:42px;height:42px;font-size:12px;background:#6B4E3D">ВТ</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:14.5px" id="dwName">Вібротрамбовка Wacker Neuson BS 60-4</div>
+      <div class="prod-m" id="dwMeta">INV-0142 · WCK-BS604 · Основний склад</div>
+    </div>
+    <button class="ico" id="dwClose" aria-label="Закрити"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="drawer-b">
+    <div class="drawer-sec">
+      <div class="qty" style="justify-content:space-between">
+        <div style="text-align:left"><b id="dwQ1">2</b><small>на цьому складі</small></div>
+        <div><b id="dwQ2">2</b><small>в оренді</small></div>
+        <div class="free"><b id="dwQ3">0</b><small>вільно</small></div>
+        <div><b id="dwQ4">2</b><small>всього по складах</small></div>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <p class="sec-lbl">Дії</p>
+      <div class="acts">
+        <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h13m0 0l-4-4m4 4l-4 4"/></svg>Перемістити</button>
+        <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 105.5 5.2l-8.4 8.4a2 2 0 11-2.8-2.8l8.4-8.4z"/></svg>Відправити в ремонт</button>
+        <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>Змінити кількість</button>
+        <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>Картка в каталозі</button>
+        <button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/></svg>Прибрати з сайту</button>
+        <button class="btn act-dz"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Списати зі складу</button>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <p class="sec-lbl">Зараз в оренді</p>
+      <div style="display:flex;flex-direction:column;gap:8px" id="dwDeals">
+        <button class="btn" style="justify-content:space-between;width:100%" data-go="deal">
+          <span>Угода 142/03/09 · Ковальчук А. П.</span><span class="pill p-info">до 14.09</span></button>
+        <button class="btn" style="justify-content:space-between;width:100%" data-go="deal">
+          <span>Угода 138/28/08 · Ковальчук А. П.</span><span class="pill p-crit">прострочено</span></button>
+      </div>
+    </div>
+    <div class="drawer-sec">
+      <p class="sec-lbl">Картка</p>
+      <dl style="margin:0">
+        <div class="fld"><dt>Серійний №</dt><dd class="mono">20418877</dd></div>
+        <div class="fld"><dt>Технічний стан</dt><dd>Робочий · подряпини на кожусі</dd></div>
+        <div class="fld"><dt>Комплект</dt><dd>шланг 3 м, каністра 5 л, ключ 17</dd></div>
+        <div class="fld"><dt>Вартість заміни</dt><dd class="num">86 000 ₴</dd></div>
+        <div class="fld"><dt>Застава</dt><dd class="num">12 000 ₴</dd></div>
+        <div class="fld"><dt>Вага</dt><dd class="num">68 кг</dd></div>
+        <div class="fld"><dt>Мін. залишок</dt><dd class="num">1</dd></div>
+      </dl>
+    </div>
+    <div class="drawer-sec">
+      <p class="sec-lbl">Останні події</p>
+      <div style="font-size:12.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:7px">
+        <div><span class="mono dim">07.09 08:41</span> · Видано за угодою 142/03/09 <span class="dim">· Микола П.</span></div>
+        <div><span class="mono dim">04.09 10:15</span> · Мала повернутись за угодою 138/28/08 <span class="dim">· авто</span></div>
+        <div><span class="mono dim">28.08 09:30</span> · Видано за угодою 138/28/08 <span class="dim">· Антон М.</span></div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ DIFF PANEL ═══ -->
+<aside class="diff" id="diffPanel" hidden aria-label="Що змінилось">
+  <div class="drawer-h">
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:14.5px">Що змінилось</div>
+      <div class="prod-m" id="diffFor">на цьому екрані</div>
+    </div>
+    <button class="ico" id="diffClose" aria-label="Закрити"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="diff-b" id="diffBody"></div>
+</aside>
+
+<script>
+(function(){
+  const NAV = [
+    {id:'desk',      t:'Робочий стіл', p:'/admin',            roles:['owner','rent'], badge:'8',
+     icon:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'},
+    {id:'deals',     t:'Угоди',        p:'/admin/deals',      roles:['owner','rent'], badge:'2',
+     icon:'<path d="M4 6h16M4 12h16M4 18h10"/>'},
+    {id:'clients',   t:'Клієнти',      p:'/admin/clients',    roles:['owner','rent'],
+     icon:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0112 0M16.5 5.2a3.2 3.2 0 010 5.6M18 20a5.6 5.6 0 00-2-4"/>'},
+    {id:'stock',     t:'Склад',        p:'/admin/stock',      roles:['owner','rent'], badge:'1',
+     icon:'<path d="M3 9l9-5 9 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M9 21v-7h6v7"/>'},
+    {id:'catalog',   t:'Каталог',      p:'/admin/catalog',    roles:['owner','rent'],
+     icon:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>'},
+    {id:'blog',      t:'Блог',         p:'/admin/blog',       roles:['owner'],
+     icon:'<path d="M5 4h11l4 4v12H5z"/><path d="M9 12h7M9 16h5"/>'},
+    {id:'timesheet', t:'Табель',       p:'/admin/timesheet',  roles:['owner'],
+     icon:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'},
+    {id:'company',   t:'Компанія',     p:'/admin/company',    roles:['owner'], badge:'2',
+     icon:'<path d="M4 21V6l7-3v18M11 21h9V10l-9-3"/><path d="M15 13h2M15 17h2"/>'},
+  ];
+  const TITLES = {desk:'Робочий стіл',deals:'Угоди',deal:'Угода 142/03/09/2026',clients:'Клієнти',stock:'Склад',catalog:'Каталог',blog:'Блог',timesheet:'Табель',company:'Компанія'};
+  const PATHS  = {desk:'/admin',deals:'/admin/deals',deal:'/admin/deals/142',clients:'/admin/clients',stock:'/admin/stock',catalog:'/admin/catalog',blog:'/admin/blog',timesheet:'/admin/timesheet',company:'/admin/company'};
+
+  const DIFF = {
+    desk:[
+      ['Дашборд — 7 плиток із цифрами, з яких клікається рівно одна','Список того, що потребує дії, і кожен рядок веде туди, де це вирішується'],
+      ['Три різні дашборди для трьох ролей із розбіжними підписами тих самих метрик','Один екран; менеджер оренди бачить той самий список, лише коротший'],
+      ['Виручка рахує і скасовані замовлення','Скасовані виключені'],
+      ['Про запити на видалення складу та нових користувачів ніде не повідомлялось','Обидва — рядки в «Потребує уваги»'],
+    ],
+    deals:[
+      ['Три списки: «Замовлення», «Заявки оренди», «Календар» — три різні URL для однієї угоди','Одна таблиця; тип угоди — фільтр, не окремий розділ'],
+      ['«Магазин / Оренда» рахувалось на клієнті — вантажився ввесь каталог товарів','Тип угоди — поле; каталог не потрібен, щоб показати список'],
+      ['Кнопка створення в одній вкладці — вгорі, в іншій — збоку','Одна кнопка «Нова угода» на своєму місці'],
+      ['Фільтри губились при переході в угоду і назад','Фільтри в URL — повернення не скидає пошук'],
+      ['Календар — місячна сітка з ≤3 чипами в клітинці','Ресурсна шкала «інструмент × дні», за замовчуванням тільки зайняті — 10–20 рядків, а не 196'],
+      ['Щоб дізнатись «чи вільна ця штука з 12 по 19» — треба було переглядати сітку очима','Перевірка доступності вгорі: інструмент + дати + кількість → відповідь'],
+      ['Ліси й опалубка — це десятки однакових одиниць, кожна окремим рядком','Кількісні позиції — один рядок зі шкалою завантаження по днях'],
+    ],
+    deal:[
+      ['Замовлення і заявка оренди — дві сутності, два URL, дві кнопки збереження','Одна угода; оренда — секція всередині, з тими самими серійниками й комплектом'],
+      ['Два статуси на одному екрані: статус замовлення і статус заявки','Один ланцюжок стану, де видно, що вже зроблено і що далі'],
+      ['Дані клієнта в трьох місцях: замовлення, заявка, база — синхронізація вручну','Один клієнт, одна прив’язка'],
+      ['Шість однакових кнопок «Сформувати» без порядку','Документи в порядку виникнення; недоступні, поки для них немає підстави'],
+      ['«Створити заявку оренди» — клік по заголовку згортайки','Оренда з’являється сама, щойно в угоді є позиція з каталогу оренди'],
+    ],
+    clients:[
+      ['Форма клієнта продубльована в списку і в картці — два місця правки','Одна форма'],
+      ['Скільки клієнт приніс і чи є в нього активна оренда — видно лише всередині картки','Оборот, кількість угод і стан — колонки в списку'],
+      ['Історія оренди і історія магазину — два незв’язані блоки','Одна історія угод'],
+      ['Рядок клікабельний і водночас має три кнопки — постійні промахи','Клік по рядку відкриває картку; дії — в картці'],
+    ],
+    stock:[
+      ['12 колонок, з них три числові поспіль: «К-сть», «Резерв», «Всього од.»','6 колонок; кількість — одна відповідь: на складі / в оренді / вільно'],
+      ['«К-сть» просить підтвердження, «Резерв» і «Мін.» зберігаються мовчки','Однакове підтвердження для всіх змін кількості'],
+      ['Ключові дії заховані в модалці «Робота з товаром»','Клік по рядку — панель справа з усіма діями одразу'],
+      ['«Відправити в ремонт» немає в інтерфейсі, хоча API існує','Є, поруч із «Повернути з ремонту»'],
+      ['Логіка ремонту прив’язана до назви складу «У ремонті» — перейменували й зламали','Ремонт — стан позиції, не назва складу'],
+      ['Черга запитів на видалення складу — на /admin/admin, куди не веде жодне посилання','Вкладка «Склади» + рядок на робочому столі'],
+      ['Журнал — стрічка тексту без типу події','Тип дії — колонка і фільтр'],
+    ],
+    catalog:[
+      ['Каталог інструменту показувався на трьох екранах із різними правилами відсічення','Один каталог; «Склад» відповідає за кількість, «Каталог» — за картку'],
+      ['Залишок редагувався і в картці товару, і на складі — числа розходились','Залишок тільки на складі'],
+      ['Категорії магазину захардкожені в AdminProducts, хоча є довідник','Один довідник'],
+      ['Група категорії оренди — вільний текст у кожному рядку','Вибір зі списку'],
+      ['Розділ «Каталог інструментів» починався з абзацу про те, чого тут зробити не можна','Абзац не потрібен'],
+    ],
+    blog:[
+      ['Немає чернеток — стаття публікується одразу після збереження','Статус публікації'],
+      ['Дата в іншому форматі, ніж на решті екранів','Один формат дд.мм.рррр скрізь'],
+    ],
+    timesheet:[
+      ['Година і хвилина — два поля по два символи, до 62 полів на людину за місяць','Одне поле 08:30'],
+      ['Немає підсумку годин — табель не рахує','Колонка «Годин»'],
+      ['Зміна місяця мовчки затирала незбережене','Попередження про незбережені зміни'],
+      ['Один-єдиний таб «Табель» у таб-барі','Таб-бару немає'],
+    ],
+    company:[
+      ['Роль називалась трьома різними способами: в кнопках схвалення, в селекті і в бейджі','Одна назва ролі скрізь'],
+      ['«Відхилити» фізично видаляло користувача','Дія називається тим, що робить'],
+      ['Юрособи-орендодавці захардкожені в constants/sellers.js','Довідник в інтерфейсі'],
+      ['Видалення підрозділу мовчки міняло роль голови','Наслідок показаний до підтвердження'],
+      ['Налаштування і Користувачі змонтовані по двох маршрутах кожен','Один маршрут'],
+    ],
+  };
+
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  let role='owner', page='desk';
+
+  function icon(d){return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';}
+
+  function renderNav(){
+    $('#nav').innerHTML = NAV.filter(n=>n.roles.includes(role)).map(n=>
+      '<button class="nav-item'+((page===n.id||(page==='deal'&&n.id==='deals'))?' on':'')+'" data-go="'+n.id+'">'+
+      icon(n.icon)+'<span>'+n.t+'</span>'+(n.badge?'<span class="nav-badge">'+n.badge+'</span>':'')+'</button>'
+    ).join('');
+  }
+
+  function go(id){
+    if(!TITLES[id]) return;
+    const nav = NAV.find(n=>n.id===id);
+    if(nav && !nav.roles.includes(role) && id!=='deal') return;
+    page=id;
+    $$('.page').forEach(p=>p.classList.remove('on'));
+    const el=$('#p-'+id); if(el) el.classList.add('on');
+    $('#ttl').textContent=TITLES[id];
+    $('#pth').textContent=PATHS[id];
+    renderNav();
+    closeDrawer();
+    if(!$('#diffPanel').hidden) fillDiff();
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+
+  document.addEventListener('click',e=>{
+    const g=e.target.closest('[data-go]');
+    if(g){ go(g.dataset.go); return; }
+    const r=e.target.closest('[data-row]');
+    if(r){ openDrawer(r.dataset.row); return; }
+  });
+
+  // role
+  $$('.role-btns button').forEach(b=>b.addEventListener('click',()=>{
+    $$('.role-btns button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    role=b.dataset.role;
+    if(role==='rent'){
+      $('#ava').textContent='А'; $('#uname').textContent='Антон Мельниченко'; $('#urole').textContent='Менеджер оренди';
+    } else {
+      $('#ava').textContent='М'; $('#uname').textContent='Микола Панкратьєв'; $('#urole').textContent='Власник';
+    }
+    const cur=NAV.find(n=>n.id===page);
+    if(page!=='deal' && cur && !cur.roles.includes(role)) go('desk'); else renderNav();
+  }));
+
+  // tabs
+  function tabs(barSel, key, map){
+    const bar=$(barSel); if(!bar) return;
+    bar.addEventListener('click',e=>{
+      const t=e.target.closest('.tab'); if(!t) return;
+      bar.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+      t.classList.add('on');
+      const v=t.dataset[key];
+      Object.entries(map).forEach(([k,sel])=>{ const n=$(sel); if(n) n.hidden = (k!==v); });
+    });
+  }
+  tabs('#dealTabs','dt',{all:'#dealList',shop:'#dealList',rent:'#dealList',cal:'#dealCal'});
+  $('#dealTabs').addEventListener('click',e=>{
+    const t=e.target.closest('.tab'); if(!t) return;
+    $('#dealList').hidden = (t.dataset.dt==='cal');
+  });
+  // calendar: modes + collapsible groups
+  let calMode='busy', openGrps=new Set(['g1','g2','g3','g4']);
+  function renderCal(){
+    $$('#calBody tr.grp').forEach(g=>{
+      const id=g.dataset.grp, isOpen=openGrps.has(id);
+      g.classList.toggle('open', isOpen);
+      $$('#calBody tr[data-in="'+id+'"]').forEach(r=>{
+        r.hidden = !isOpen || (calMode==='busy' && r.dataset.busy!=='1');
+      });
+    });
+    const t=$('#calMoreT'), btn=$('#calMore .btn');
+    if(calMode==='busy'){ t.innerHTML='Показано лише зайняті позиції. Ще <b>182 інструменти</b> вільні весь період.'; btn.hidden=false; }
+    else if(calMode==='cat'){ t.innerHTML='<b>196 інструментів</b> у 12 категоріях — розгорніть потрібну.'; btn.hidden=true; }
+    else { t.innerHTML='Показано всі <b>196</b> позицій. У реальній базі це довгий список — тому це не режим за замовчуванням.'; btn.hidden=true; }
+  }
+  function setCalMode(m){
+    calMode=m;
+    openGrps = new Set(m==='cat' ? [] : ['g1','g2','g3','g4']);
+    $$('#calMode button').forEach(b=>b.classList.toggle('on', b.dataset.cm===m));
+    renderCal();
+  }
+  $('#calMode').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-cm]'); if(b) setCalMode(b.dataset.cm);
+  });
+  document.addEventListener('click',e=>{
+    const g=e.target.closest('#calBody tr.grp');
+    if(g){ const id=g.dataset.grp; openGrps.has(id)?openGrps.delete(id):openGrps.add(id); renderCal(); return; }
+    const m=e.target.closest('[data-cm-go]');
+    if(m) setCalMode(m.dataset.cmGo);
+  });
+  setCalMode('busy');
+
+  tabs('#stockTabs','st',{bal:'#stBal',log:'#stLog',wh:'#stWh'});
+  tabs('#catTabs','ct',{tools:'#catTools',goods:'#catGoods',tax:'#catTax'});
+  tabs('#coTabs','co',{u:'#coU',s:'#coS',l:'#coL'});
+
+  // drawer
+  const ROWS=[
+    {n:'Вібротрамбовка Wacker Neuson BS 60-4',m:'INV-0142 · WCK-BS604 · Основний склад',c:'#6B4E3D',ini:'ВТ',q:[2,2,0,2]},
+    {n:'Шліфмашина по бетону Husqvarna PG 450',m:'INV-0088 · HQV-PG450 · Основний склад',c:'#4A6B5A',ini:'ШМ',q:[1,1,0,1]},
+    {n:'Перфоратор Bosch GBH 5-40 DCE',m:'INV-0231 · BSH-GBH540 · Основний склад',c:'#4A5A6B',ini:'ПФ',q:[4,1,3,6]},
+    {n:'Бетонозмішувач Limex 165 LS',m:'INV-0054 · LMX-165LS · Основний склад',c:'#7A5B6B',ini:'БЗ',q:[3,2,1,3]},
+    {n:'Різак швів Norton Clipper CS 451',m:'INV-0309 · NRT-CS451 · Основний склад',c:'#6B5A3D',ini:'РШ',q:[1,0,0,1]},
+    {n:'Ліси риштувальні, секція 2×3 м',m:'INV-0410 · LRS-2X3 · Основний склад',c:'#5B6B4A',ini:'ЛР',q:[18,16,2,24]},
+  ];
+  function openDrawer(i){
+    const d=ROWS[+i]||ROWS[0];
+    $('#dwName').textContent=d.n; $('#dwMeta').textContent=d.m;
+    $('#dwThumb').textContent=d.ini; $('#dwThumb').style.background=d.c;
+    ['#dwQ1','#dwQ2','#dwQ3','#dwQ4'].forEach((s,k)=>$(s).textContent=d.q[k]);
+    const free=$('#dwQ3').parentElement;
+    free.classList.toggle('zero', d.q[2]===0);
+    $$('#stockBody tr').forEach(tr=>tr.classList.toggle('sel-row', tr.dataset.row===String(i)));
+    $('#diffPanel').hidden=true;
+    $('#drawer').hidden=false; $('#scrim').hidden=false;
+  }
+  function closeDrawer(){
+    $('#drawer').hidden=true;
+    if($('#diffPanel').hidden) $('#scrim').hidden=true;
+    $$('#stockBody tr').forEach(tr=>tr.classList.remove('sel-row'));
+  }
+  $('#dwClose').addEventListener('click',closeDrawer);
+  $('#scrim').addEventListener('click',()=>{closeDrawer();closeDiff();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeDiff();}});
+
+  // diff
+  function fillDiff(){
+    const key = page;
+    const rows = DIFF[key]||[];
+    $('#diffFor').textContent = TITLES[key];
+    $('#diffBody').innerHTML = rows.length ? rows.map(([w,n])=>
+      '<div class="dr"><div class="was"><span class="tag tag-was">БУЛО</span><span>'+w+'</span></div>'+
+      '<div class="now"><span class="tag tag-now">СТАЛО</span><span>'+n+'</span></div></div>').join('')
+      : '<div class="dr"><div class="was">Для цього екрана нотаток немає.</div></div>';
+  }
+  $('#diffBtn').addEventListener('click',()=>{
+    if($('#diffPanel').hidden){ closeDrawer(); fillDiff(); $('#diffPanel').hidden=false; $('#scrim').hidden=false; }
+    else closeDiff();
+  });
+  function closeDiff(){ $('#diffPanel').hidden=true; if($('#drawer').hidden) $('#scrim').hidden=true; }
+  $('#diffClose').addEventListener('click',closeDiff);
+
+  // theme
+  $('#themeBtn').addEventListener('click',()=>{
+    const r=document.documentElement;
+    const cur=r.getAttribute('data-theme');
+    const sysDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = cur==='dark' || (!cur && sysDark);
+    r.setAttribute('data-theme', isDark?'light':'dark');
+  });
+
+  renderNav();
+})();
+</script>
+
+</body>
+</html>

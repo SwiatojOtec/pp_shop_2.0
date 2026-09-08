@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { clientsApi, rentalApplicationsApi } from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
 import { parseDiscountPercent } from '../amounts/orderAmounts';
 import {
@@ -26,6 +27,7 @@ export function useRentalApplication(id, isNew, options = {}) {
     } = options;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { showToast } = useToast();
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
@@ -286,11 +288,11 @@ export function useRentalApplication(id, isNew, options = {}) {
         try {
             await doSave();
         } catch (err) {
-            alert(`Помилка збереження: ${err.message}`);
+            showToast(`Помилка збереження: ${err.message}`, 'warning');
         } finally {
             setSaving(false);
         }
-    }, [status, notes, rentStartTime, orderRentStartTime, effectiveClient, effectiveClientId, effectiveResponsible, items, isNew, id, navigate, effectiveDiscountType, effectiveDiscountValue, embedded, onSaved]);
+    }, [status, notes, rentStartTime, orderRentStartTime, effectiveClient, effectiveClientId, effectiveResponsible, items, isNew, id, navigate, effectiveDiscountType, effectiveDiscountValue, embedded, onSaved, showToast]);
 
     return {
         loading,

@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
 import { productsApi } from '../../services/api';
-import { AdminPageHeader, AdminFilters, AdminTable } from '../../components/admin';
+import PageHeader from '../../features/admin/ui/PageHeader';
+import Toolbar from '../../features/admin/ui/Toolbar';
+import DataTable from '../../features/admin/ui/DataTable';
 import './Admin.css';
 
 export default function AdminRent() {
@@ -73,11 +75,8 @@ export default function AdminRent() {
         {
             key: 'image',
             label: 'Фото',
-            width: '64px',
             render: (val, row) => (
-                val
-                    ? <img src={val} alt={row.name} className="admin-table-img" />
-                    : <span style={{ color: '#d1d5db' }}>—</span>
+                val ? <img src={val} alt={row.name} className="admin-table-img" /> : <span className="text-gray-300">—</span>
             ),
         },
         {
@@ -85,7 +84,7 @@ export default function AdminRent() {
             label: 'SKU',
             render: (v) => (v ? <code className="admin-code">{v}</code> : '—'),
         },
-        { key: 'name', label: 'Назва', render: (v) => <span style={{ fontWeight: 600 }}>{v}</span> },
+        { key: 'name', label: 'Назва', render: (v) => <span className="font-semibold">{v}</span> },
         {
             key: 'price',
             label: 'Ціна/доба',
@@ -95,37 +94,36 @@ export default function AdminRent() {
             key: 'quantityAvailable',
             label: 'На складі',
             render: (v) => (
-                <span style={{ fontWeight: 700, color: v <= 2 ? '#dc2626' : '#16a34a' }}>
+                <span className={`font-bold ${v <= 2 ? 'text-red-600' : 'text-green-600'}`}>
                     {typeof v === 'number' ? `${v} шт` : '—'}
                 </span>
             ),
         },
         { key: 'category', label: 'Категорія', render: (v) => v || '—' },
         { key: 'brand', label: 'Бренд', render: (v) => v || '—' },
+    ], []);
+
+    const zeroColumns = useMemo(() => [
+        { key: 'name', label: 'Назва', render: (v) => <span className="font-semibold">{v}</span> },
+        { key: 'sku', label: 'SKU', render: (v) => (v ? <code className="admin-code">{v}</code> : '—') },
         {
-            key: 'id',
-            label: 'Дії',
-            width: '52px',
-            render: (id) => (
-                <div className="table-actions" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className="action-btn edit" title="Редагувати" onClick={() => navigate(`/admin/rent/${id}`)}>
-                        <Edit2 size={16} />
-                    </button>
-                </div>
-            ),
+            key: 'quantityAvailable',
+            label: 'Вільно',
+            render: (v) => (typeof v === 'number' ? `${v} шт` : '—'),
         },
-    ], [navigate]);
+        { key: 'showInRentCatalog', label: 'У каталозі', render: (v) => (v !== false ? 'Так' : 'Ні') },
+    ], []);
 
     return (
         <div>
-            <AdminPageHeader
+            <PageHeader
                 title="Каталог інструментів"
                 subtitle="Інструменти, опубліковані в клієнтській оренді"
-                actions={
-                    <Link to="/admin/warehouses/positions" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+                actions={(
+                    <button type="button" className="ds-btn ds-btn--secondary" onClick={() => navigate('/admin/stock')}>
                         <Plus size={16} /> Додати зі складу
-                    </Link>
-                }
+                    </button>
+                )}
             />
 
             <p className="admin-page-hint">
@@ -133,58 +131,31 @@ export default function AdminRent() {
                 Повне видалення картки — кнопка «Видалити картку» на сторінці редагування інструмента; картки з 0 вільних (не на сайті) — у блоці нижче.
             </p>
 
-            <div style={{ marginBottom: '18px' }}>
+            <div className="mb-4">
                 <button
                     type="button"
-                    className="btn-secondary"
+                    className="ds-btn ds-btn--secondary"
                     onClick={toggleZeroBlock}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}
                 >
                     {zeroBlockOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     Картки без вільної наявності (не в каталозі на сайті)
-                    {zeroRows.length > 0 && <span style={{ color: '#6b7280', fontWeight: 600 }}> — {zeroRows.length}</span>}
+                    {zeroRows.length > 0 && <span className="text-gray-500 font-semibold"> — {zeroRows.length}</span>}
                 </button>
                 {zeroBlockOpen && (
-                    <div style={{ marginTop: '12px', border: '1px solid var(--admin-border)', borderRadius: '10px', overflow: 'hidden', background: '#fafafa' }}>
-                        {zeroLoading ? (
-                            <div style={{ padding: '20px', color: '#9ca3af' }}>Завантаження...</div>
-                        ) : zeroRows.length === 0 ? (
-                            <div style={{ padding: '20px', color: '#9ca3af' }}>Таких карток немає.</div>
-                        ) : (
-                            <div className="admin-table-container">
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Назва</th>
-                                            <th>SKU</th>
-                                            <th>Вільно</th>
-                                            <th>У каталозі</th>
-                                            <th style={{ textAlign: 'right' }}>Дії</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {zeroRows.map((p) => (
-                                            <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/rent/${p.id}`)}>
-                                                <td style={{ fontWeight: 600 }}>{p.name}</td>
-                                                <td>{p.sku ? <code className="admin-code">{p.sku}</code> : '—'}</td>
-                                                <td>{typeof p.quantityAvailable === 'number' ? `${p.quantityAvailable} шт` : '—'}</td>
-                                                <td>{p.showInRentCatalog !== false ? 'Так' : 'Ні'}</td>
-                                                <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                                                    <button type="button" className="action-btn edit" title="Редагувати / видалити" onClick={() => navigate(`/admin/rent/${p.id}`)}>
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                    <div className="mt-3">
+                        <DataTable
+                            columns={zeroColumns}
+                            rows={zeroRows}
+                            loading={zeroLoading}
+                            onRowClick={(row) => navigate(`/admin/catalog/tools/${row.id}`)}
+                            emptyIcon={Wrench}
+                            emptyTitle="Таких карток немає"
+                        />
                     </div>
                 )}
             </div>
 
-            <AdminFilters
+            <Toolbar
                 search={search}
                 onSearch={setSearch}
                 placeholder="Пошук за назвою або SKU..."
@@ -197,12 +168,13 @@ export default function AdminRent() {
                 onFilter={(key, value) => { if (key === 'category') setCategory(value); }}
             />
 
-            <AdminTable
+            <DataTable
                 columns={columns}
                 rows={filtered}
                 loading={loading}
-                empty="Інструментів у каталозі поки немає"
-                onRowClick={(row) => navigate(`/admin/rent/${row.id}`)}
+                onRowClick={(row) => navigate(`/admin/catalog/tools/${row.id}`)}
+                emptyIcon={Wrench}
+                emptyTitle="Інструментів у каталозі поки немає"
             />
         </div>
     );

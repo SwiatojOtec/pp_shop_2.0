@@ -255,7 +255,7 @@ export default function ProductEdit({ context = 'products' }) {
             ? safeAdminReturnPath(location.state.returnTo)
             : null;
         if (fromState) return fromState;
-        return isRentContext ? '/admin/rent' : '/admin/products';
+        return isRentContext ? '/admin/catalog/tools' : '/admin/catalog/goods';
     }
 
     async function handleSubmit(e) {
@@ -328,7 +328,7 @@ export default function ProductEdit({ context = 'products' }) {
         setDeleteLoading(true);
         try {
             await productsApi.remove(id);
-            navigate(isRentContext ? '/admin/rent' : '/admin/products');
+            navigate(isRentContext ? '/admin/catalog/tools' : '/admin/catalog/goods');
         } catch (err) {
             alert(err.message || 'Не вдалося видалити товар. Можливі зв’язані замовлення або заявки — спробуйте приховати картку з каталогу.');
         } finally {
@@ -339,7 +339,7 @@ export default function ProductEdit({ context = 'products' }) {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    if (loading) return <div className="admin-content">Завантаження...</div>;
+    if (loading) return <div>Завантаження...</div>;
 
     const isSillCategory = formData.category === 'Підвіконня';
 
@@ -347,7 +347,7 @@ export default function ProductEdit({ context = 'products' }) {
         <div className="product-edit-page">
             {/* Breadcrumbs */}
             <div className="admin-breadcrumbs">
-                <Link to={isRentContext ? '/admin/rent' : '/admin/products'}>
+                <Link to={isRentContext ? '/admin/catalog/tools' : '/admin/catalog/goods'}>
                     {isRentContext ? 'Оренда' : 'Товари'}
                 </Link>
                 <ChevronRight size={14} />

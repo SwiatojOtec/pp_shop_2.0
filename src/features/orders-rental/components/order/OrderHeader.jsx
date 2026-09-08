@@ -1,11 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Save, Trash2 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
-import { Badge } from '../../../../components/ui/badge';
+import StatusBadge from '../../../admin/ui/StatusBadge';
 import { parseDiscountPercent } from '../../amounts/orderAmounts';
 import {
-    ORDER_STATUS_VARIANT,
-    getOrderStatusLabel,
     formatOrderNumberDisplay,
     formatOrderDate,
 } from '../../amounts/orderHelpers';
@@ -41,7 +39,7 @@ export default function OrderHeader({
                 <button
                     type="button"
                     className="od-back"
-                    onClick={() => navigate('/admin/orders')}
+                    onClick={() => navigate('/admin/deals')}
                     title="До списку"
                 >
                     <ArrowLeft size={18} />
@@ -51,9 +49,7 @@ export default function OrderHeader({
                     <h1 className="od-title">
                         {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
                     </h1>
-                    <Badge variant={ORDER_STATUS_VARIANT[order.status] || 'secondary'}>
-                        {getOrderStatusLabel(order.status)}
-                    </Badge>
+                    <StatusBadge domain="order" status={order.status} />
                     <span className="deal-header__date">
                         Створено {formatOrderDate(order.createdAt)}
                     </span>
