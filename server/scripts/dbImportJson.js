@@ -13,7 +13,6 @@
  * Запуск:  node scripts/dbImportJson.js <path-to-json-folder> [--allow-remote]
  */
 
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const sequelize = require('../config/db');

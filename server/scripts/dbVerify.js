@@ -5,26 +5,7 @@
  * Запуск: npm run db:verify  (з папки server/)
  */
 
-require('dotenv').config();
-const { Sequelize } = require('sequelize');
-
-function createSequelize() {
-    if (process.env.DATABASE_URL) {
-        return new Sequelize(process.env.DATABASE_URL, {
-            dialect: 'postgres',
-            logging: false,
-            dialectOptions: {
-                ssl: { require: true, rejectUnauthorized: false },
-            },
-        });
-    }
-    return new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        dialect: 'postgres',
-        logging: false,
-    });
-}
+const sequelize = require('../config/db');
 
 const TABLES = [
     'Products',
@@ -57,7 +38,6 @@ async function countTable(sequelize, table) {
 }
 
 async function run() {
-    const sequelize = createSequelize();
     try {
         await sequelize.authenticate();
         console.log('DB connection: OK\n');
@@ -83,7 +63,7 @@ async function run() {
 
         const products = snapshot.Products?.count ?? 0;
         if (products === 0) {
-            console.warn('\n⚠ Products count is 0. Check DATABASE_URL in .env before any migration.');
+            console.warn('\n⚠ Products count is 0. Check which database this is (ALLOW_PROD_DB, server/.env.local) before any migration.');
         } else {
             console.log(`\n✓ Products in DB: ${products} (data looks present)`);
         }

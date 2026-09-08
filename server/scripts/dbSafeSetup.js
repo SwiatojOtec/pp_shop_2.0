@@ -12,15 +12,20 @@
  * Запуск: npm run db:safe-setup  (з папки server/)
  */
 
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 require('dotenv').config();
 const { execSync } = require('child_process');
-const path = require('path');
 const { Sequelize } = require('sequelize');
 
 const BASELINE = '20240101000000-initial-baseline.js';
 
+// Safe by default (docs/admin-redesign/03-screens.md, "Робота з базою") —
+// same ALLOW_PROD_DB gate as config/db.js. This script opens/closes its own
+// connections a few times (to shell out to db:verify/db:backup in between),
+// so it can't just reuse the shared singleton from config/db.js.
 function createSequelize() {
-    if (process.env.DATABASE_URL) {
+    if (process.env.ALLOW_PROD_DB === '1') {
         return new Sequelize(process.env.DATABASE_URL, {
             dialect: 'postgres',
             logging: false,
@@ -29,12 +34,17 @@ function createSequelize() {
             },
         });
     }
-    return new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        dialect: 'postgres',
-        logging: false,
-    });
+    return new Sequelize(
+        process.env.DB_NAME || 'pp_shop_dev',
+        process.env.DB_USER || 'postgres',
+        process.env.DB_PASSWORD || 'postgres',
+        {
+            host: process.env.DB_HOST || 'localhost',
+            port: process.env.DB_PORT || 5432,
+            dialect: 'postgres',
+            logging: false,
+        }
+    );
 }
 
 async function countProducts(sequelize) {

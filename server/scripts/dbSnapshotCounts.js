@@ -4,10 +4,9 @@
  * Корисно порівняти до/після змін.
  */
 
-require('dotenv').config();
+const sequelize = require('../config/db');
 const fs = require('fs');
 const path = require('path');
-const { Sequelize } = require('sequelize');
 
 const TABLES = [
     'Products', 'Orders', 'Clients', 'RentalApplications',
@@ -15,24 +14,7 @@ const TABLES = [
     'Warehouses', 'InventoryItems', 'WarehouseEvents', 'Users', 'BlogPosts',
 ];
 
-function createSequelize() {
-    if (process.env.DATABASE_URL) {
-        return new Sequelize(process.env.DATABASE_URL, {
-            dialect: 'postgres',
-            logging: false,
-            dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },
-        });
-    }
-    return new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        dialect: 'postgres',
-        logging: false,
-    });
-}
-
 async function run() {
-    const sequelize = createSequelize();
     await sequelize.authenticate();
 
     const counts = { at: new Date().toISOString() };

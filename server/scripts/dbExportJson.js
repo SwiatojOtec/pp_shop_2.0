@@ -4,10 +4,9 @@
  * Works without pg_dump. Use to restore with db:import-json.
  */
 
-require('dotenv').config();
+const seq = require('../config/db');
 const fs = require('fs');
 const path = require('path');
-const { Sequelize } = require('sequelize');
 
 const TABLES = [
     'Users', 'Categories', 'RentCategories', 'Brands', 'Currencies',
@@ -15,20 +14,6 @@ const TABLES = [
     'Warehouses', 'InventoryItems', 'WarehouseEvents',
     'Subdivisions', 'SubdivisionMembers', 'TimesheetEntries', 'SequelizeMeta',
 ];
-
-function createSequelize() {
-    if (process.env.DATABASE_URL) {
-        return new Sequelize(process.env.DATABASE_URL, {
-            dialect: 'postgres',
-            logging: false,
-            dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },
-        });
-    }
-    return new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-        host: process.env.DB_HOST, port: process.env.DB_PORT,
-        dialect: 'postgres', logging: false,
-    });
-}
 
 async function tableExists(seq, name) {
     const [[row]] = await seq.query(
@@ -38,7 +23,6 @@ async function tableExists(seq, name) {
 }
 
 async function run() {
-    const seq = createSequelize();
     await seq.authenticate();
     console.log('Connected. Exporting...\n');
 
