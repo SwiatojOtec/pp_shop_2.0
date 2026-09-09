@@ -5,11 +5,18 @@ const Product = require('../models/Product');
 const { transliterate } = require('../utils/transliterate');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
-// Get all rent categories
+// Get all rent categories, with how many products use each one
 router.get('/', async (req, res) => {
     try {
         const categories = await RentCategory.findAll({ order: [['name', 'ASC']] });
-        res.json(categories);
+        const counts = await Product.findAll({
+            attributes: ['category', [Product.sequelize.fn('COUNT', Product.sequelize.col('id')), 'count']],
+            where: { isRent: true },
+            group: ['category'],
+            raw: true,
+        });
+        const countByName = new Map(counts.map((c) => [c.category, Number(c.count)]));
+        res.json(categories.map((c) => ({ ...c.toJSON(), productCount: countByName.get(c.name) || 0 })));
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -60,9 +67,11 @@ router.put('/:id', authMiddleware, requireRole(['owner', 'rent', 'pivdenbud', 's
         if (!category) return res.status(404).json({ message: 'Category not found' });
 
         const { name, group } = req.body;
-        if (name) {
+        if (name && name !== category.name) {
+            const previousName = category.name;
             category.name = name;
             category.slug = transliterate(name);
+            await Product.update({ category: name }, { where: { category: previousName, isRent: true } });
         }
         if (group !== undefined) {
             category.group = group || null;

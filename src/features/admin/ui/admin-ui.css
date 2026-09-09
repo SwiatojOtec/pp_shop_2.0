@@ -489,6 +489,56 @@
     justify-content: flex-end;
 }
 
+/* ── Switch ─────────────────────────────────────────────────── */
+
+.ds-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.ds-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.ds-switch-track {
+    position: absolute;
+    inset: 0;
+    background: var(--ds-border-strong);
+    border-radius: var(--ds-radius-full);
+    cursor: pointer;
+    transition: background var(--ds-duration-fast) var(--ds-ease);
+}
+
+.ds-switch-track::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--ds-surface);
+    border-radius: 50%;
+    transition: transform var(--ds-duration-fast) var(--ds-ease);
+}
+
+.ds-switch input:checked + .ds-switch-track {
+    background: var(--ds-success);
+}
+
+.ds-switch input:checked + .ds-switch-track::before {
+    transform: translateX(14px);
+}
+
+.ds-switch input:disabled + .ds-switch-track {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ── Card ───────────────────────────────────────────────────── */
 
 .ds-card {

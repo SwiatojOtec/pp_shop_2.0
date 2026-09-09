@@ -1,35 +1,30 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Package } from 'lucide-react';
-import { productsApi } from '../../services/api';
+import { productsApi, categoriesApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import PageHeader from '../../features/admin/ui/PageHeader';
 import Toolbar from '../../features/admin/ui/Toolbar';
 import DataTable from '../../features/admin/ui/DataTable';
 import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
-import './Admin.css';
-
-const CATEGORY_OPTIONS = [
-    { value: 'Паркетна Дошка',    label: 'Паркетна Дошка' },
-    { value: 'Ламінат',           label: 'Ламінат' },
-    { value: 'Вінілова підлога',  label: 'Вінілова підлога' },
-    { value: 'Підвіконня',        label: 'Підвіконня' },
-    { value: 'Стінові панелі',    label: 'Стінові панелі' },
-    { value: 'Плінтуса',          label: 'Плінтуса' },
-    { value: 'Оренда інструменту',label: 'Оренда інструменту' },
-];
+import CatalogBanner from '../../features/admin/catalog/CatalogBanner';
+import '../../features/admin/catalog/catalog.css';
 
 export default function AdminProducts() {
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const [products, setProducts]       = useState([]);
-    const [loading, setLoading]         = useState(true);
-    const [search, setSearch]           = useState('');
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
     const [filterCategory, setCategory] = useState('');
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    useEffect(() => { loadProducts(); }, []);
+    useEffect(() => {
+        loadProducts();
+        categoriesApi.list().then((data) => setCategories(Array.isArray(data) ? data : [])).catch(() => setCategories([]));
+    }, []);
 
     async function loadProducts() {
         setLoading(true);
@@ -37,7 +32,7 @@ export default function AdminProducts() {
             const data = await productsApi.list({ isRent: false });
             setProducts(Array.isArray(data) ? data : []);
         } catch (err) {
-            console.error('Помилка завантаження товарів:', err);
+            showToast(err.message || 'Не вдалося завантажити товари', 'warning');
             setProducts([]);
         } finally {
             setLoading(false);
@@ -58,6 +53,11 @@ export default function AdminProducts() {
         }
     }
 
+    const categoryOptions = useMemo(
+        () => categories.map((c) => ({ value: c.name, label: c.name })),
+        [categories]
+    );
+
     const filtered = useMemo(() => products.filter((p) => {
         const matchSearch = !search
             || p.name?.toLowerCase().includes(search.toLowerCase())
@@ -68,26 +68,50 @@ export default function AdminProducts() {
 
     const columns = useMemo(() => [
         {
-            key: 'image',
-            label: 'Фото',
-            render: (val, row) => <img src={val} alt={row.name} className="admin-table-img" />,
+            key: 'name',
+            label: 'Товар',
+            render: (name, row) => (
+                <div className="catalog-row">
+                    {row.image
+                        ? <img src={row.image} alt={name} className="catalog-row__thumb" />
+                        : <div className="catalog-row__thumb catalog-row__thumb--empty"><Package size={16} /></div>}
+                    <div>
+                        <div className="catalog-row__name">{name}</div>
+                        {row.sku && <div className="mono catalog-row__sku">{row.sku}</div>}
+                    </div>
+                </div>
+            ),
         },
         {
-            key: 'sku',
-            label: 'SKU',
-            render: (val) => (val ? <code className="admin-code">{val}</code> : '—'),
+            key: 'category',
+            label: 'Категорія / бренд',
+            render: (category, row) => (
+                <div>
+                    <div>{category || '—'}</div>
+                    {row.brand && <div className="catalog-row__brand">{row.brand}</div>}
+                </div>
+            ),
         },
-        { key: 'name', label: 'Назва' },
         {
             key: 'price',
             label: 'Ціна',
-            render: (val) => (val != null ? `${val} ₴` : '—'),
+            align: 'right',
+            render: (val) => <span className="num">{val != null ? `${val} ₴` : '—'}</span>,
         },
-        { key: 'category', label: 'Категорія' },
+        {
+            key: 'quantityAvailable',
+            label: 'Залишок',
+            align: 'right',
+            render: (val) => (
+                <span className={`num${val == null || val <= 0 ? ' catalog-row__stock--out' : ''}`}>
+                    {val != null ? val : '—'}
+                </span>
+            ),
+        },
         {
             key: 'badge',
             label: 'Мітка',
-            render: (val) => (val ? <span className={`status-badge ${val.toLowerCase()}`}>{val}</span> : null),
+            render: (val) => (val ? <span className="ds-badge ds-badge--accent">{val}</span> : null),
         },
         {
             key: 'id',
@@ -96,7 +120,7 @@ export default function AdminProducts() {
             render: (id, row) => (
                 <button
                     type="button"
-                    className="action-btn delete"
+                    className="ds-icon-btn"
                     onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
                     title="Видалити"
                 >
@@ -107,7 +131,8 @@ export default function AdminProducts() {
     ], []);
 
     return (
-        <div className="admin-products">
+        <div className="catalog-list">
+            <CatalogBanner />
             <PageHeader
                 title="Товари"
                 subtitle={`${products.length} позицій`}
@@ -127,7 +152,7 @@ export default function AdminProducts() {
                         key: 'category',
                         label: 'Всі категорії',
                         value: filterCategory,
-                        options: CATEGORY_OPTIONS,
+                        options: categoryOptions,
                     },
                 ]}
                 onFilter={(_, val) => setCategory(val)}

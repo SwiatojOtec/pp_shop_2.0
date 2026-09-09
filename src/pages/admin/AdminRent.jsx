@@ -1,63 +1,44 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
+import { Plus, Wrench } from 'lucide-react';
 import { productsApi } from '../../services/api';
 import PageHeader from '../../features/admin/ui/PageHeader';
 import Toolbar from '../../features/admin/ui/Toolbar';
 import DataTable from '../../features/admin/ui/DataTable';
-import './Admin.css';
+import CatalogBanner from '../../features/admin/catalog/CatalogBanner';
+import { coerceDbRentPriceTiers } from '../../utils/rentPricing';
+import '../../features/admin/catalog/catalog.css';
+
+const AVAILABILITY_OPTIONS = [
+    { value: 'available', label: 'Є вільні' },
+    { value: 'none', label: 'Немає вільних' },
+];
 
 export default function AdminRent() {
     const navigate = useNavigate();
-    const [products, setProducts]         = useState([]);
-    const [loading, setLoading]           = useState(true);
-    const [search, setSearch]             = useState('');
-    const [filterCategory, setCategory]   = useState('');
-    const [zeroBlockOpen, setZeroBlockOpen] = useState(false);
-    const [zeroRows, setZeroRows]         = useState([]);
-    const [zeroLoading, setZeroLoading]   = useState(false);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [filterCategory, setCategory] = useState('');
+    const [filterAvailability, setFilterAvailability] = useState('');
 
     useEffect(() => { loadProducts(); }, []);
 
     async function loadProducts() {
         setLoading(true);
         try {
-            const data = await productsApi.list({ isRent: true });
-            const rows = Array.isArray(data) ? data : [];
-            setProducts(rows.filter((p) => Number(p.quantityAvailable || 0) > 0));
-        } catch (err) {
-            console.error(err);
+            const data = await productsApi.list({ isRent: true, includeHiddenRent: true });
+            setProducts(Array.isArray(data) ? data : []);
+        } catch {
             setProducts([]);
         } finally {
             setLoading(false);
         }
     }
 
-    async function loadZeroQtyRows() {
-        setZeroLoading(true);
-        try {
-            const data = await productsApi.list({ isRent: true, includeHiddenRent: true });
-            const rows = Array.isArray(data) ? data : [];
-            setZeroRows(rows.filter((p) => Number(p.quantityAvailable || 0) <= 0));
-        } catch (err) {
-            console.error(err);
-            setZeroRows([]);
-        } finally {
-            setZeroLoading(false);
-        }
-    }
-
-    function toggleZeroBlock() {
-        setZeroBlockOpen((prev) => {
-            const next = !prev;
-            if (next) loadZeroQtyRows();
-            return next;
-        });
-    }
-
     const categoryOptions = useMemo(() => {
         const cats = new Set(products.map((p) => p.category).filter(Boolean));
-        return [...cats].sort().map((c) => ({ value: c, label: c }));
+        return [...cats].sort((a, b) => a.localeCompare(b, 'uk')).map((c) => ({ value: c, label: c }));
     }, [products]);
 
     const filtered = useMemo(() => {
@@ -67,105 +48,109 @@ export default function AdminRent() {
                 || p.name?.toLowerCase().includes(q)
                 || p.sku?.toLowerCase().includes(q);
             const matchCat = !filterCategory || p.category === filterCategory;
-            return matchSearch && matchCat;
+            const available = Number(p.quantityAvailable || 0) > 0;
+            const matchAvailability = !filterAvailability
+                || (filterAvailability === 'available' && available)
+                || (filterAvailability === 'none' && !available);
+            return matchSearch && matchCat && matchAvailability;
         });
-    }, [products, search, filterCategory]);
+    }, [products, search, filterCategory, filterAvailability]);
 
     const columns = useMemo(() => [
         {
-            key: 'image',
-            label: 'Фото',
-            render: (val, row) => (
-                val ? <img src={val} alt={row.name} className="admin-table-img" /> : <span className="text-gray-300">—</span>
+            key: 'name',
+            label: 'Картка',
+            render: (name, row) => (
+                <div className="catalog-row">
+                    {row.image
+                        ? <img src={row.image} alt={name} className="catalog-row__thumb" />
+                        : <div className="catalog-row__thumb catalog-row__thumb--empty"><Wrench size={16} /></div>}
+                    <div>
+                        <div className="catalog-row__name">{name}</div>
+                        {row.sku && <div className="mono catalog-row__sku">{row.sku}</div>}
+                    </div>
+                </div>
             ),
         },
         {
-            key: 'sku',
-            label: 'SKU',
-            render: (v) => (v ? <code className="admin-code">{v}</code> : '—'),
+            key: 'category',
+            label: 'Категорія / бренд',
+            render: (category, row) => (
+                <div>
+                    <div>{category || '—'}</div>
+                    {row.brand && <div className="catalog-row__brand">{row.brand}</div>}
+                </div>
+            ),
         },
-        { key: 'name', label: 'Назва', render: (v) => <span className="font-semibold">{v}</span> },
         {
             key: 'price',
-            label: 'Ціна/доба',
-            render: (v) => (v != null ? `${v} ₴` : '—'),
+            label: 'Тариф',
+            align: 'right',
+            render: (price, row) => {
+                const tiers = coerceDbRentPriceTiers(row.rentPriceTiers);
+                const weekPlus = tiers?.find((t) => t.minDays === 7)?.pricePerDay;
+                return (
+                    <div>
+                        <div className="num">{price != null ? `${price} ₴/доба` : '—'}</div>
+                        {weekPlus != null && weekPlus !== price && (
+                            <div className="catalog-row__brand">від {weekPlus} ₴ за 7+ діб</div>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             key: 'quantityAvailable',
-            label: 'На складі',
+            label: 'Вільно',
+            align: 'right',
             render: (v) => (
-                <span className={`font-bold ${v <= 2 ? 'text-red-600' : 'text-green-600'}`}>
+                <span className={`num${!v || v <= 0 ? ' catalog-row__stock--out' : ''}`}>
                     {typeof v === 'number' ? `${v} шт` : '—'}
                 </span>
             ),
         },
-        { key: 'category', label: 'Категорія', render: (v) => v || '—' },
-        { key: 'brand', label: 'Бренд', render: (v) => v || '—' },
-    ], []);
-
-    const zeroColumns = useMemo(() => [
-        { key: 'name', label: 'Назва', render: (v) => <span className="font-semibold">{v}</span> },
-        { key: 'sku', label: 'SKU', render: (v) => (v ? <code className="admin-code">{v}</code> : '—') },
         {
-            key: 'quantityAvailable',
-            label: 'Вільно',
-            render: (v) => (typeof v === 'number' ? `${v} шт` : '—'),
+            key: 'showInRentCatalog',
+            label: 'На сайті',
+            render: (v) => <span className={`ds-badge ds-badge--${v !== false ? 'success' : 'neutral'}`}>{v !== false ? 'Так' : 'Ні'}</span>,
         },
-        { key: 'showInRentCatalog', label: 'У каталозі', render: (v) => (v !== false ? 'Так' : 'Ні') },
+        {
+            key: 'images',
+            label: 'Фото',
+            render: (images) => {
+                const count = Array.isArray(images) ? images.length : 0;
+                return count > 0
+                    ? <span>{count}</span>
+                    : <span className="catalog-row__stock--out">немає</span>;
+            },
+        },
     ], []);
 
     return (
-        <div>
+        <div className="catalog-list">
+            <CatalogBanner />
             <PageHeader
-                title="Каталог інструментів"
-                subtitle="Інструменти, опубліковані в клієнтській оренді"
+                title="Інструмент"
+                subtitle={`${products.length} карток`}
                 actions={(
-                    <button type="button" className="ds-btn ds-btn--secondary" onClick={() => navigate('/admin/stock')}>
-                        <Plus size={16} /> Додати зі складу
+                    <button type="button" className="ds-btn ds-btn--primary" onClick={() => navigate('/admin/catalog/tools/new')}>
+                        <Plus size={16} /> Нова картка
                     </button>
                 )}
             />
-
-            <p className="admin-page-hint">
-                Тут лише позиції з наявністю на складі. Нові інструменти додаються на складі; видимість у каталозі — на сторінці «Склад — позиції» або в картці товару.
-                Повне видалення картки — кнопка «Видалити картку» на сторінці редагування інструмента; картки з 0 вільних (не на сайті) — у блоці нижче.
-            </p>
-
-            <div className="mb-4">
-                <button
-                    type="button"
-                    className="ds-btn ds-btn--secondary"
-                    onClick={toggleZeroBlock}
-                >
-                    {zeroBlockOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                    Картки без вільної наявності (не в каталозі на сайті)
-                    {zeroRows.length > 0 && <span className="text-gray-500 font-semibold"> — {zeroRows.length}</span>}
-                </button>
-                {zeroBlockOpen && (
-                    <div className="mt-3">
-                        <DataTable
-                            columns={zeroColumns}
-                            rows={zeroRows}
-                            loading={zeroLoading}
-                            onRowClick={(row) => navigate(`/admin/catalog/tools/${row.id}`)}
-                            emptyIcon={Wrench}
-                            emptyTitle="Таких карток немає"
-                        />
-                    </div>
-                )}
-            </div>
 
             <Toolbar
                 search={search}
                 onSearch={setSearch}
                 placeholder="Пошук за назвою або SKU..."
-                filters={categoryOptions.length > 0 ? [{
-                    key: 'category',
-                    label: 'Всі категорії',
-                    value: filterCategory,
-                    options: categoryOptions,
-                }] : []}
-                onFilter={(key, value) => { if (key === 'category') setCategory(value); }}
+                filters={[
+                    { key: 'availability', label: 'Вільно: всі', value: filterAvailability, options: AVAILABILITY_OPTIONS },
+                    ...(categoryOptions.length > 0 ? [{ key: 'category', label: 'Всі категорії', value: filterCategory, options: categoryOptions }] : []),
+                ]}
+                onFilter={(key, value) => {
+                    if (key === 'category') setCategory(value);
+                    if (key === 'availability') setFilterAvailability(value);
+                }}
             />
 
             <DataTable

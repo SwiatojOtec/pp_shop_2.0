@@ -1,18 +1,62 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, FolderTree, Award, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Trash2, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { categoriesApi, rentCategoriesApi, brandsApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import PageHeader from '../../features/admin/ui/PageHeader';
 import Tabs from '../../features/admin/ui/Tabs';
 import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
-import './Admin.css';
+import Switch from '../../features/admin/ui/Switch';
+import CatalogBanner from '../../features/admin/catalog/CatalogBanner';
+import '../../features/admin/catalog/catalog.css';
 
 const TABS = [
     { value: 'categories', label: 'Категорії' },
     { value: 'brands', label: 'Бренди' },
 ];
 
-export default function AdminSettings() {
+const NEW_GROUP_VALUE = '__new__';
+
+/** <select> of existing groups + "Нова група" → reveals a text input. */
+function GroupPicker({ value, groups, onChange, placeholder = 'Група' }) {
+    const [creating, setCreating] = useState(false);
+
+    if (creating || (value && !groups.includes(value))) {
+        return (
+            <input
+                type="text"
+                defaultValue={value}
+                autoFocus={creating}
+                placeholder="Нова назва групи..."
+                className="catalog-input"
+                onBlur={(e) => {
+                    setCreating(false);
+                    onChange(e.target.value.trim());
+                }}
+            />
+        );
+    }
+
+    return (
+        <select
+            className="catalog-select"
+            value={value || ''}
+            onChange={(e) => {
+                if (e.target.value === NEW_GROUP_VALUE) {
+                    setCreating(true);
+                    return;
+                }
+                onChange(e.target.value);
+            }}
+        >
+            <option value="">{placeholder}</option>
+            {groups.map((g) => (
+                <option key={g} value={g}>{g}</option>
+            ))}
+            <option value={NEW_GROUP_VALUE}>+ Нова група</option>
+        </select>
+    );
+}
+
+export default function AdminCategories() {
     const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState('categories');
     const [categories, setCategories] = useState([]);
@@ -23,7 +67,7 @@ export default function AdminSettings() {
     const [newRentGroup, setNewRentGroup] = useState('');
     const [newBrand, setNewBrand] = useState({ name: '', logo: '' });
     const [openRentGroups, setOpenRentGroups] = useState({});
-    const [deleteTarget, setDeleteTarget] = useState(null); // { kind, id, label }
+    const [deleteTarget, setDeleteTarget] = useState(null); // { kind, id, label, count }
     const [deleteBusy, setDeleteBusy] = useState(false);
 
     useEffect(() => {
@@ -41,12 +85,16 @@ export default function AdminSettings() {
             setRentCategories(Array.isArray(rentCats) ? rentCats : []);
             setBrands(Array.isArray(brandRows) ? brandRows : []);
         } catch (err) {
-            console.error('Error fetching settings data:', err);
+            showToast(err.message || 'Не вдалося завантажити довідники', 'warning');
         }
     };
 
-    // Category Handlers
-    const handleAddCategory = async (e) => {
+    const rentGroupNames = useMemo(
+        () => [...new Set(rentCategories.map((c) => c.group).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'uk')),
+        [rentCategories]
+    );
+
+    async function handleAddCategory(e) {
         e.preventDefault();
         if (!newCategory.trim()) return;
         try {
@@ -56,10 +104,30 @@ export default function AdminSettings() {
         } catch (err) {
             showToast(err.message || 'Не вдалося додати категорію', 'warning');
         }
-    };
+    }
 
-    // Rent Category Handlers
-    const handleAddRentCategory = async (e) => {
+    async function handleRenameCategory(id, name) {
+        const trimmed = name.trim();
+        const current = categories.find((c) => c.id === id);
+        if (!trimmed || trimmed === current?.name) return;
+        try {
+            await categoriesApi.update(id, { name: trimmed });
+            fetchData();
+        } catch (err) {
+            showToast(err.message || 'Не вдалося перейменувати категорію', 'warning');
+        }
+    }
+
+    async function handleToggleCategory(id, value) {
+        try {
+            await categoriesApi.patch(id, { isActive: value });
+            setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, isActive: value } : c)));
+        } catch (err) {
+            showToast(err.message || 'Помилка при зміні статусу категорії', 'warning');
+        }
+    }
+
+    async function handleAddRentCategory(e) {
         e.preventDefault();
         if (!newRentCategory.trim()) return;
         try {
@@ -73,19 +141,27 @@ export default function AdminSettings() {
         } catch (err) {
             showToast(err.message || 'Не вдалося додати категорію оренди', 'warning');
         }
-    };
+    }
 
-    const handleUpdateRentCategoryGroup = async (id, group) => {
+    async function handleUpdateRentCategoryGroup(id, group) {
         try {
-            await rentCategoriesApi.update(id, { group });
+            await rentCategoriesApi.update(id, { group: group || null });
             fetchData();
         } catch (err) {
             showToast(err.message || 'Не вдалося оновити групу', 'warning');
         }
-    };
+    }
 
-    // Brand Handlers
-    const handleAddBrand = async (e) => {
+    async function handleToggleRentCategory(id, value) {
+        try {
+            await rentCategoriesApi.patch(id, { isActive: value });
+            setRentCategories((prev) => prev.map((c) => (c.id === id ? { ...c, isActive: value } : c)));
+        } catch (err) {
+            showToast(err.message || 'Помилка при зміні статусу категорії', 'warning');
+        }
+    }
+
+    async function handleAddBrand(e) {
         e.preventDefault();
         if (!newBrand.name.trim()) return;
         try {
@@ -95,25 +171,16 @@ export default function AdminSettings() {
         } catch (err) {
             showToast(err.message || 'Не вдалося додати бренд', 'warning');
         }
-    };
+    }
 
-    const handleToggleRentCategory = async (id, value) => {
-        try {
-            await rentCategoriesApi.patch(id, { isActive: value });
-            setRentCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: value } : c));
-        } catch (err) {
-            showToast(err.message || 'Помилка при зміні статусу категорії', 'warning');
-        }
-    };
-
-    const handleToggleBrand = async (id, field, value) => {
+    async function handleToggleBrand(id, field, value) {
         try {
             await brandsApi.patch(id, { [field]: value });
-            setBrands(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
+            setBrands((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
         } catch (err) {
             showToast(err.message || 'Не вдалося оновити бренд', 'warning');
         }
-    };
+    }
 
     async function handleConfirmDelete() {
         if (!deleteTarget) return;
@@ -140,53 +207,66 @@ export default function AdminSettings() {
         }, {})
     );
 
-    return (
-        <div className="admin-settings-page">
-            <PageHeader title="Налаштування" subtitle="Категорії, бренди та оренда" />
+    const deleteMessage = deleteTarget
+        ? `Видалити «${deleteTarget.label}»?${deleteTarget.count ? ` Її використовують ${deleteTarget.count} карток(и) — вони залишаться з цією назвою в полі категорії.` : ''} Цю дію не можна скасувати.`
+        : '';
 
+    return (
+        <div className="catalog-taxonomy">
+            <CatalogBanner />
             <Tabs tabs={TABS} value={activeTab} onChange={setActiveTab} />
 
             {activeTab === 'categories' && (
-                <div className="admin-section bg-white p-6 rounded-xl border border-[var(--admin-border)] mt-4">
-                    <div className="grid grid-cols-2 gap-8">
-                        <div>
-                            <div className="flex items-center gap-2 mb-5">
-                                <FolderTree size={20} />
-                                <h2 className="text-[1.1rem] m-0 font-extrabold">Категорії магазину</h2>
-                            </div>
-
-                            <form onSubmit={handleAddCategory} className="flex gap-2 mb-6">
+                <div className="catalog-taxonomy-grid">
+                    <div className="ds-card">
+                        <div className="ds-card-h"><h2>Категорії магазину</h2></div>
+                        <div className="ds-card-b">
+                            <form onSubmit={handleAddCategory} className="catalog-add-row">
                                 <input
                                     type="text"
                                     placeholder="Назва нової категорії..."
                                     value={newCategory}
                                     onChange={(e) => setNewCategory(e.target.value)}
-                                    className="flex-1 p-3 rounded-lg border border-gray-300"
+                                    className="catalog-input"
                                 />
-                                <button type="submit" className="btn btn-primary">
-                                    <Plus size={20} /> Додати
+                                <button type="submit" className="ds-btn ds-btn--primary">
+                                    <Plus size={16} /> Додати
                                 </button>
                             </form>
 
-                            <table className="admin-table">
+                            <table className="ds-table">
                                 <thead>
                                     <tr>
-                                        <th>Назва</th>
-                                        <th>Slug</th>
-                                        <th className="text-right">Дії</th>
+                                        <th className="ds-table-th">Назва</th>
+                                        <th className="ds-table-th ds-table-th--center">На сайті</th>
+                                        <th className="ds-table-th ds-table-th--right">Дії</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {categories.map(cat => (
-                                        <tr key={cat.id}>
-                                            <td className="font-semibold">{cat.name}</td>
-                                            <td>{cat.slug}</td>
-                                            <td className="text-right">
+                                    {categories.map((cat) => (
+                                        <tr className="ds-table-row" key={cat.id}>
+                                            <td className="ds-table-td">
+                                                <input
+                                                    type="text"
+                                                    defaultValue={cat.name}
+                                                    className="catalog-input catalog-input--inline"
+                                                    onBlur={(e) => handleRenameCategory(cat.id, e.target.value)}
+                                                />
+                                            </td>
+                                            <td className="ds-table-td ds-table-td--center">
+                                                <Switch
+                                                    checked={cat.isActive !== false}
+                                                    onChange={(v) => handleToggleCategory(cat.id, v)}
+                                                    label={`На сайті: ${cat.name}`}
+                                                />
+                                            </td>
+                                            <td className="ds-table-td ds-table-td--right">
                                                 <button
-                                                    onClick={() => setDeleteTarget({ kind: 'category', id: cat.id, label: cat.name })}
-                                                    className="action-btn delete"
+                                                    type="button"
+                                                    className="ds-icon-btn"
+                                                    onClick={() => setDeleteTarget({ kind: 'category', id: cat.id, label: cat.name, count: cat.productCount })}
                                                 >
-                                                    <Trash2 size={18} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </td>
                                         </tr>
@@ -194,89 +274,90 @@ export default function AdminSettings() {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
 
-                        <div>
-                            <div className="flex items-center gap-2 mb-5">
-                                <FolderTree size={20} />
-                                <h2 className="text-[1.1rem] m-0 font-extrabold">Категорії оренди</h2>
-                            </div>
-
-                            <form onSubmit={handleAddRentCategory} className="grid grid-cols-[2fr_1fr_auto] gap-2 mb-6">
+                    <div className="ds-card">
+                        <div className="ds-card-h"><h2>Категорії оренди</h2></div>
+                        <div className="ds-card-b">
+                            <form onSubmit={handleAddRentCategory} className="catalog-add-row catalog-add-row--rent">
                                 <input
                                     type="text"
                                     placeholder="Назва нової категорії оренди..."
                                     value={newRentCategory}
                                     onChange={(e) => setNewRentCategory(e.target.value)}
-                                    className="p-3 rounded-lg border border-gray-300"
+                                    className="catalog-input"
                                 />
-                                <input
-                                    type="text"
-                                    placeholder="Група (напр. Монтажне устаткування)"
+                                <GroupPicker
                                     value={newRentGroup}
-                                    onChange={(e) => setNewRentGroup(e.target.value)}
-                                    className="p-3 rounded-lg border border-gray-300"
+                                    groups={rentGroupNames}
+                                    onChange={setNewRentGroup}
+                                    placeholder="Без групи"
                                 />
-                                <button type="submit" className="btn btn-primary">
-                                    <Plus size={20} /> Додати
+                                <button type="submit" className="ds-btn ds-btn--primary">
+                                    <Plus size={16} /> Додати
                                 </button>
                             </form>
 
                             {rentGroups.map(([groupName, items]) => {
                                 const isOpen = openRentGroups[groupName] ?? true;
                                 return (
-                                    <div key={groupName} className="mb-4 border border-[var(--admin-border)] rounded-[10px] overflow-hidden">
+                                    <div key={groupName} className="catalog-group">
                                         <button
                                             type="button"
-                                            onClick={() => setOpenRentGroups(prev => ({ ...prev, [groupName]: !isOpen }))}
-                                            className="w-full flex justify-between items-center px-4 py-2.5 bg-slate-50 border-none cursor-pointer font-bold"
+                                            onClick={() => setOpenRentGroups((prev) => ({ ...prev, [groupName]: !isOpen }))}
+                                            className="catalog-group__head"
                                         >
                                             <span>{groupName}</span>
-                                            <ChevronDown
-                                                size={16}
-                                                className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                                            />
+                                            <ChevronDown size={16} className={`catalog-group__chevron${isOpen ? ' is-open' : ''}`} />
                                         </button>
                                         {isOpen && (
-                                            <table className="admin-table border-t border-[var(--admin-border)]">
+                                            <table className="ds-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>Назва</th>
-                                                        <th>Slug</th>
-                                                        <th>Група</th>
-                                                        <th className="text-center">На сайті</th>
-                                                        <th className="text-right">Дії</th>
+                                                        <th className="ds-table-th">Назва</th>
+                                                        <th className="ds-table-th">Група</th>
+                                                        <th className="ds-table-th ds-table-th--center">На сайті</th>
+                                                        <th className="ds-table-th ds-table-th--right">Дії</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {items.map(cat => (
-                                                        <tr key={cat.id}>
-                                                            <td className="font-semibold">{cat.name}</td>
-                                                            <td>{cat.slug}</td>
-                                                            <td>
+                                                    {items.map((cat) => (
+                                                        <tr className="ds-table-row" key={cat.id}>
+                                                            <td className="ds-table-td">
                                                                 <input
                                                                     type="text"
-                                                                    defaultValue={cat.group || ''}
-                                                                    onBlur={(e) => handleUpdateRentCategoryGroup(cat.id, e.target.value)}
-                                                                    placeholder="Група..."
-                                                                    className="px-2 py-1.5 rounded-md border border-gray-300 w-full"
+                                                                    defaultValue={cat.name}
+                                                                    className="catalog-input catalog-input--inline"
+                                                                    onBlur={(e) => {
+                                                                        const name = e.target.value.trim();
+                                                                        if (name && name !== cat.name) {
+                                                                            rentCategoriesApi.update(cat.id, { name }).then(fetchData).catch((err) => showToast(err.message || 'Не вдалося перейменувати', 'warning'));
+                                                                        }
+                                                                    }}
                                                                 />
                                                             </td>
-                                                            <td className="text-center">
-                                                                <label className="brand-toggle">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={cat.isActive !== false}
-                                                                        onChange={e => handleToggleRentCategory(cat.id, e.target.checked)}
-                                                                    />
-                                                                    <span className="brand-toggle-slider" />
-                                                                </label>
+                                                            <td className="ds-table-td">
+                                                                <GroupPicker
+                                                                    value={cat.group || ''}
+                                                                    groups={rentGroupNames}
+                                                                    onChange={(g) => handleUpdateRentCategoryGroup(cat.id, g)}
+                                                                    placeholder="Без групи"
+                                                                />
                                                             </td>
-                                                            <td className="text-right">
+                                                            <td className="ds-table-td ds-table-td--center">
+                                                                <Switch
+                                                                    checked={cat.isActive !== false}
+                                                                    onChange={(v) => handleToggleRentCategory(cat.id, v)}
+                                                                    label={`На сайті: ${cat.name}`}
+                                                                />
+                                                            </td>
+                                                            <td className="ds-table-td ds-table-td--right">
                                                                 <button
-                                                                    onClick={() => setDeleteTarget({ kind: 'rentCategory', id: cat.id, label: cat.name })}
-                                                                    className="action-btn delete"
+                                                                    type="button"
+                                                                    className="ds-icon-btn"
+                                                                    onClick={() => setDeleteTarget({ kind: 'rentCategory', id: cat.id, label: cat.name, count: cat.productCount })}
                                                                 >
-                                                                    <Trash2 size={18} />
+                                                                    <Trash2 size={16} />
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -293,92 +374,85 @@ export default function AdminSettings() {
             )}
 
             {activeTab === 'brands' && (
-                <div className="admin-section bg-white p-6 rounded-xl border border-[var(--admin-border)] mt-4">
-                    <div className="flex items-center gap-2 mb-5">
-                        <Award size={20} />
-                        <h2 className="text-[1.1rem] m-0 font-extrabold">Управління брендами</h2>
-                    </div>
+                <div className="ds-card">
+                    <div className="ds-card-h"><h2>Бренди</h2></div>
+                    <div className="ds-card-b">
+                        <form onSubmit={handleAddBrand} className="catalog-add-row catalog-add-row--brand">
+                            <input
+                                type="text"
+                                placeholder="Назва бренду..."
+                                value={newBrand.name}
+                                onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
+                                className="catalog-input"
+                            />
+                            <input
+                                type="text"
+                                placeholder="URL логотипу..."
+                                value={newBrand.logo}
+                                onChange={(e) => setNewBrand({ ...newBrand, logo: e.target.value })}
+                                className="catalog-input"
+                            />
+                            <button type="submit" className="ds-btn ds-btn--primary">
+                                <Plus size={16} /> Додати
+                            </button>
+                        </form>
 
-                    <form onSubmit={handleAddBrand} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-6">
-                        <input
-                            type="text"
-                            placeholder="Назва бренду..."
-                            value={newBrand.name}
-                            onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
-                            className="p-3 rounded-lg border border-gray-300"
-                        />
-                        <input
-                            type="text"
-                            placeholder="URL логотипу..."
-                            value={newBrand.logo}
-                            onChange={(e) => setNewBrand({ ...newBrand, logo: e.target.value })}
-                            className="p-3 rounded-lg border border-gray-300"
-                        />
-                        <button type="submit" className="btn btn-primary">
-                            <Plus size={20} /> Додати
-                        </button>
-                    </form>
-
-                    <table className="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Лого</th>
-                                <th>Назва</th>
-                                <th className="text-center">Магазин</th>
-                                <th className="text-center">Оренда</th>
-                                <th className="text-right">Дії</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {brands.map(brand => (
-                                <tr key={brand.id}>
-                                    <td>
-                                        {brand.logo ? (
-                                            <img src={brand.logo} alt={brand.name} className="h-[30px] max-w-[100px] object-contain" />
-                                        ) : (
-                                            <ImageIcon size={20} className="text-gray-300" />
-                                        )}
-                                    </td>
-                                    <td className="font-semibold">{brand.name}</td>
-                                    <td className="text-center">
-                                        <label className="brand-toggle">
-                                            <input
-                                                type="checkbox"
-                                                checked={!!brand.isShop}
-                                                onChange={e => handleToggleBrand(brand.id, 'isShop', e.target.checked)}
-                                            />
-                                            <span className="brand-toggle-slider" />
-                                        </label>
-                                    </td>
-                                    <td className="text-center">
-                                        <label className="brand-toggle">
-                                            <input
-                                                type="checkbox"
-                                                checked={!!brand.isRent}
-                                                onChange={e => handleToggleBrand(brand.id, 'isRent', e.target.checked)}
-                                            />
-                                            <span className="brand-toggle-slider" />
-                                        </label>
-                                    </td>
-                                    <td className="text-right">
-                                        <button
-                                            onClick={() => setDeleteTarget({ kind: 'brand', id: brand.id, label: brand.name })}
-                                            className="action-btn delete"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
+                        <table className="ds-table">
+                            <thead>
+                                <tr>
+                                    <th className="ds-table-th">Лого</th>
+                                    <th className="ds-table-th">Назва</th>
+                                    <th className="ds-table-th ds-table-th--center">Магазин</th>
+                                    <th className="ds-table-th ds-table-th--center">Оренда</th>
+                                    <th className="ds-table-th ds-table-th--right">Дії</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {brands.map((brand) => (
+                                    <tr className="ds-table-row" key={brand.id}>
+                                        <td className="ds-table-td">
+                                            {brand.logo ? (
+                                                <img src={brand.logo} alt={brand.name} className="catalog-brand-logo" />
+                                            ) : (
+                                                <ImageIcon size={18} className="catalog-brand-logo-placeholder" />
+                                            )}
+                                        </td>
+                                        <td className="ds-table-td">{brand.name}</td>
+                                        <td className="ds-table-td ds-table-td--center">
+                                            <Switch
+                                                checked={!!brand.isShop}
+                                                onChange={(v) => handleToggleBrand(brand.id, 'isShop', v)}
+                                                label={`Магазин: ${brand.name}`}
+                                            />
+                                        </td>
+                                        <td className="ds-table-td ds-table-td--center">
+                                            <Switch
+                                                checked={!!brand.isRent}
+                                                onChange={(v) => handleToggleBrand(brand.id, 'isRent', v)}
+                                                label={`Оренда: ${brand.name}`}
+                                            />
+                                        </td>
+                                        <td className="ds-table-td ds-table-td--right">
+                                            <button
+                                                type="button"
+                                                className="ds-icon-btn"
+                                                onClick={() => setDeleteTarget({ kind: 'brand', id: brand.id, label: brand.name })}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
             <ConfirmDialog
                 open={!!deleteTarget}
                 title="Видалити?"
-                message={deleteTarget ? `Видалити «${deleteTarget.label}»? Цю дію не можна скасувати.` : ''}
+                message={deleteMessage}
                 confirmText="Видалити"
                 loading={deleteBusy}
                 onConfirm={handleConfirmDelete}

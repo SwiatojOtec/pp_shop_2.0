@@ -16,6 +16,15 @@ const Category = sequelize.define('Category', {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
+    /** Показувати ProductPriceMatrix у картці товару цієї категорії (раніше — за назвою "Підвіконня"). */
+    usesPriceMatrix: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 });
 

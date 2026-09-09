@@ -149,6 +149,7 @@ export const categoriesApi = {
     list: () => apiGet('/api/categories'),
     create: (data) => apiPost('/api/categories', data),
     update: (id, data) => apiPut(`/api/categories/${id}`, data),
+    patch: (id, data) => apiPatch(`/api/categories/${id}`, data),
     remove: (id) => apiDelete(`/api/categories/${id}`),
 };
 

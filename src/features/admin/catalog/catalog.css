@@ -1,0 +1,165 @@
+.catalog-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: var(--ds-space-2) var(--ds-space-3);
+    margin-bottom: var(--ds-space-3);
+    background: var(--ds-info-soft);
+    color: var(--ds-info);
+    border-radius: var(--ds-radius-sm);
+    font-size: 0.85rem;
+}
+
+/* ── Категорії та бренди ────────────────────────────────────── */
+
+.catalog-taxonomy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.catalog-taxonomy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: var(--ds-space-4);
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .catalog-taxonomy-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.catalog-add-row {
+    display: flex;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-4);
+}
+
+.catalog-add-row--rent {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+}
+
+.catalog-add-row--brand {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+}
+
+.catalog-input,
+.catalog-select {
+    padding: 8px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.88rem;
+    font-family: var(--ds-font);
+    flex: 1;
+    min-width: 0;
+}
+
+.catalog-input--inline {
+    border-color: transparent;
+    background: transparent;
+    padding: 6px 8px;
+    width: 100%;
+}
+
+.catalog-input--inline:hover,
+.catalog-input--inline:focus {
+    border-color: var(--ds-border);
+    background: var(--ds-surface);
+}
+
+.catalog-group {
+    margin-bottom: var(--ds-space-3);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    overflow: hidden;
+}
+
+.catalog-group:last-child {
+    margin-bottom: 0;
+}
+
+.catalog-group__head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px var(--ds-space-3);
+    background: var(--ds-surface-sunken);
+    border: none;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ds-text);
+    font-family: var(--ds-font);
+}
+
+.catalog-group__chevron {
+    color: var(--ds-text-subtle);
+    transition: transform 0.15s;
+}
+
+.catalog-group__chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.catalog-brand-logo {
+    height: 26px;
+    max-width: 90px;
+    object-fit: contain;
+}
+
+.catalog-brand-logo-placeholder {
+    color: var(--ds-text-subtle);
+}
+
+/* ── Product lists (Інструмент / Товари) ───────────────────────── */
+
+.catalog-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-3);
+}
+
+.catalog-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.catalog-row__thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--ds-radius-sm);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--ds-surface-sunken);
+}
+
+.catalog-row__thumb--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ds-text-subtle);
+}
+
+.catalog-row__name {
+    font-weight: 600;
+    color: var(--ds-text);
+}
+
+.catalog-row__sku,
+.catalog-row__brand {
+    font-size: 0.78rem;
+    color: var(--ds-text-subtle);
+}
+
+.catalog-row__stock--out {
+    color: var(--ds-danger);
+    font-weight: 700;
+}
