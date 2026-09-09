@@ -1,11 +1,14 @@
 const { Op } = require('sequelize');
 const RentalBooking = require('../../../models/RentalBooking');
 const RentalApplication = require('../../../models/RentalApplication');
+const Order = require('../../../models/Order');
 const Product = require('../../../models/Product');
 const { normalizeUaPhone } = require('../../../utils/phoneUtils');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
-const { createApplication, toIsoDate } = require('./rentalApplicationService');
+const { toIsoDate } = require('./rentalApplicationService');
+const { saveDealWithRentalApplication } = require('./orderRentalService');
+const { generateOrderNumber } = require('../utils/orderNumbering');
 const { getPhysicalQuantityByProduct } = require('../../../services/inventoryService');
 
 const ACTIVE_APP_STATUSES = ['draft', 'booked', 'active', 'overdue'];
@@ -302,7 +305,15 @@ async function listCalendarEvents({ from, to } = {}) {
     return { from: rangeFrom, to: rangeTo, events, productTotals };
 }
 
-async function convertBookingToApplication(id, createdBy = null) {
+/**
+ * Booking → deal (docs/admin-redesign/05-fixes.md, п.2). Used to create only
+ * a RentalApplication with no Order, which is exactly how the 11 orphaned
+ * "заявка без угоди" rows in the deals list came to exist — this creates the
+ * Order directly (an "Угода" from the very first save), then lets
+ * saveDealWithRentalApplication generate the linked application the same
+ * way any other rent deal does, so nothing new is orphaned going forward.
+ */
+async function convertBookingToOrder(id, createdBy = null) {
     const row = await RentalBooking.findByPk(id);
     if (!row) return null;
     if (row.status !== HOLD_STATUS) {
@@ -325,56 +336,58 @@ async function convertBookingToApplication(id, createdBy = null) {
     const pricePerDay = getRentPricePerDayFromTiers(rentPriceTiers, catalogPrice, days);
     const replacementCost = parseFloat(product.replacementCost || 0) || 0;
     const depositPercent = DEFAULT_RENTAL_DEPOSIT_PERCENT;
-    const depositAmount = (replacementCost * qty * (depositPercent / 100)).toFixed(2);
-    const totalRental = (days * pricePerDay * qty).toFixed(2);
 
     const clientName = (row.clientName || '').trim() || 'Клієнт (з календаря)';
     const clientPhone = (row.clientPhone || '').trim() || '0000000000';
 
-    const application = await createApplication({
-        status: 'draft',
-        clientName,
-        clientPhone,
-        notes: row.note || '',
-        rentFrom: row.rentFrom,
-        rentTo: row.rentTo,
+    const orderNumber = await generateOrderNumber();
+    const order = await Order.create({
+        orderNumber,
+        customerName: clientName,
+        customerPhone: clientPhone,
+        deliveryMethod: 'pickup',
+        paymentMethod: 'invoice',
+        status: 'new',
+        totalAmount: (days * pricePerDay * qty).toFixed(2),
         items: [{
-            productId: product.id,
+            id: product.id,
             name: product.name,
+            sku: product.sku || '',
+            price: catalogPrice,
+            quantity: qty,
+            unit: product.unit || 'шт',
+            packSize: product.packSize || 1,
+            isRent: true,
+            catalogPrice,
+            rentPriceTiers,
+            rentFrom: row.rentFrom,
+            rentTo: row.rentTo,
+            rentDays: days,
             serialNumber: product.serialNumber || '',
             inventoryNumber: product.inventoryNumber || '',
             technicalCondition: product.technicalCondition || '',
-            unit: product.unit || 'шт',
-            quantity: qty,
             weightTotal: product.weightTotal || '',
             replacementCostPerUnit: replacementCost,
             replacementCostTotal: replacementCost * qty,
             depositPercent,
-            depositAmount,
-            catalogPrice,
-            rentPriceTiers,
-            pricePerDay,
-            rentFrom: row.rentFrom,
-            rentTo: row.rentTo,
-            days,
-            totalRental,
+            depositAmount: (replacementCost * qty * (depositPercent / 100)).toFixed(2),
             kitItems: Array.isArray(product.kitItems) ? product.kitItems : [],
         }],
-        totalAmount: totalRental,
-        depositAmount,
-        discountType: 'fixed',
-        discountValue: 0,
-        discountAmount: 0,
-    }, createdBy);
+    });
+
+    const { order: savedOrder, rentalApplication } = await saveDealWithRentalApplication(order.id, {}, {}, createdBy);
+    if (row.note && rentalApplication?.id) {
+        await RentalApplication.update({ notes: row.note }, { where: { id: rentalApplication.id } });
+    }
 
     await row.update({
         status: 'converted',
-        rentalApplicationId: application.id,
+        rentalApplicationId: rentalApplication?.id || null,
     });
     await row.reload();
 
     return {
-        application,
+        order: savedOrder,
         booking: serializeBooking(row, product),
     };
 }
@@ -387,6 +400,6 @@ module.exports = {
     cancelBooking,
     deleteBooking,
     listCalendarEvents,
-    convertBookingToApplication,
+    convertBookingToOrder,
     serializeBooking,
 };

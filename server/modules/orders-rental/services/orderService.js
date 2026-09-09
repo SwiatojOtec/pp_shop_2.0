@@ -237,13 +237,23 @@ function buildOrderRow(o, rentIds, todayIso) {
     };
 }
 
-function buildApplicationRow(a, todayIso) {
+async function loadClientsById(clientIds) {
+    const ids = [...new Set((clientIds || []).filter(Boolean))];
+    if (!ids.length) return new Map();
+    const clients = await Client.findAll({ where: { id: ids }, attributes: ['id', 'fullName'] });
+    return new Map(clients.map((c) => [c.id, c]));
+}
+
+function buildApplicationRow(a, todayIso, clientById = new Map()) {
     return {
         kind: 'application',
         id: a.id,
         clientId: a.clientId,
         number: a.applicationNumber || `#${a.id}`,
-        customerName: a.clientName,
+        // Заявка зберігає clientName окремо від Client; якщо вона порожня
+        // (звична причина — старі заявки з календаря), беремо ім'я з
+        // прив'язаного клієнта замість голого «—» (05-fixes.md, п.2).
+        customerName: a.clientName || clientById.get(a.clientId)?.fullName || '',
         customerPhone: a.clientPhone,
         items: a.items || [],
         totalAmount: a.totalAmount,
@@ -272,9 +282,10 @@ async function getAllDealRows() {
 
     const linkedAppIds = new Set(orders.map((o) => o.rentalApplicationId).filter(Boolean));
     const apps = await RentalApplication.findAll();
+    const clientById = await loadClientsById(apps.map((a) => a.clientId));
     const appRows = apps
         .filter((a) => !linkedAppIds.has(a.id))
-        .map((a) => buildApplicationRow(a, todayIso));
+        .map((a) => buildApplicationRow(a, todayIso, clientById));
 
     return [...orderRows, ...appRows];
 }
@@ -305,9 +316,10 @@ async function listDeals({ q = '', status = '', type = 'all', page = 1, limit = 
 
     const linkedAppIds = new Set(orders.map((o) => o.rentalApplicationId).filter(Boolean));
     const apps = await RentalApplication.findAll({ order: [['createdAt', 'DESC']] });
+    const clientById = await loadClientsById(apps.map((a) => a.clientId));
     const appRows = apps
         .filter((a) => !linkedAppIds.has(a.id))
-        .map((a) => buildApplicationRow(a, todayIso));
+        .map((a) => buildApplicationRow(a, todayIso, clientById));
 
     const all = [...orderRows, ...appRows].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 

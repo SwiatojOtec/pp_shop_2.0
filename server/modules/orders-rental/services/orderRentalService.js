@@ -1,12 +1,13 @@
 const sequelize = require('../../../config/db');
 const Order = require('../../../models/Order');
 const Product = require('../../../models/Product');
+const Client = require('../../../models/Client');
 const RentalApplication = require('../../../models/RentalApplication');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { recalculateProductQuantity } = require('../../../services/inventoryService');
 const { parseDiscountPercent, roundMoney } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
-const { generateAppNumber } = require('../utils/orderNumbering');
+const { generateAppNumber, generateOrderNumber } = require('../utils/orderNumbering');
 const { recalcRentQuantitiesForItemsLists, shouldBeOverdue } = require('./rentalApplicationService');
 
 /** Inclusive calendar days: 11.08 → 15.08 = 5. */
@@ -351,9 +352,131 @@ async function saveDealWithRentalApplication(orderId, orderPatch, dealExtras = {
     });
 }
 
+/** Inverse of deriveRentalStatusFromDealStage — starting point for a deal
+ *  created from an existing application's status (05-fixes.md, п.2). */
+function deriveDealStatusFromRentalStatus(rentalStatus) {
+    switch (rentalStatus) {
+        case 'booked': return 'paid';
+        case 'active':
+        case 'overdue': return 'issued';
+        case 'returned': return 'returned';
+        case 'cancelled': return 'cancelled';
+        default: return 'new'; // draft
+    }
+}
+
+/**
+ * Reverse of buildRentItemsFromOrder: turns an orphaned application's own
+ * items (enrichment already filled in — serial, condition, kit, deposit)
+ * into order items, so the new deal doesn't start with an empty list.
+ */
+function buildOrderItemsFromApplication(items, productsById) {
+    return (items || []).map((line) => {
+        const product = productsById.get(Number(line.productId)) || {};
+        const qty = Math.max(1, Number(line.quantity) || 1);
+        const catalogPrice = parseFloat(line.catalogPrice || product.price || 0) || 0;
+        const replacementCostPerUnit = parseFloat(line.replacementCostPerUnit || product.replacementCost || 0) || 0;
+        return {
+            id: Number(line.productId),
+            name: line.name || product.name || '',
+            sku: product.sku || '',
+            price: catalogPrice,
+            quantity: qty,
+            unit: line.unit || product.unit || 'шт',
+            packSize: product.packSize || 1,
+            isRent: true,
+            catalogPrice,
+            rentPriceTiers: coerceDbRentPriceTiers(line.rentPriceTiers || product.rentPriceTiers),
+            rentFrom: line.rentFrom || '',
+            rentTo: line.rentTo || '',
+            rentDays: Number(line.days) || 1,
+            serialNumber: line.serialNumber || product.serialNumber || '',
+            inventoryNumber: line.inventoryNumber || product.inventoryNumber || '',
+            technicalCondition: line.technicalCondition || product.technicalCondition || '',
+            weightTotal: line.weightTotal || product.weightTotal || '',
+            replacementCostPerUnit,
+            replacementCostTotal: parseFloat(line.replacementCostTotal || replacementCostPerUnit * qty) || 0,
+            depositPercent: parseFloat(line.depositPercent) || DEFAULT_RENTAL_DEPOSIT_PERCENT,
+            depositAmount: line.depositAmount || 0,
+            kitItems: Array.isArray(line.kitItems) ? line.kitItems : (Array.isArray(product.kitItems) ? product.kitItems : []),
+        };
+    });
+}
+
+/**
+ * "Створити угоду" for an orphaned rental application (docs/admin-redesign/
+ * 05-fixes.md, п.2) — these are applications from before calendar-booking
+ * conversion created a deal directly (see convertBookingToApplication in
+ * rentalBookingService.js), so they never got an Order. Creates one, links
+ * it, and immediately re-syncs the application from that order through the
+ * normal saveDealWithRentalApplication pipeline so totals/deposit/status
+ * end up computed the same way a hand-built deal would be, not hand-rolled
+ * here.
+ */
+async function convertApplicationToOrder(applicationId, createdBy = null) {
+    const order = await sequelize.transaction(async (transaction) => {
+        const application = await RentalApplication.findByPk(applicationId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+        });
+        if (!application) {
+            const err = new Error('Заявку не знайдено');
+            err.status = 404;
+            throw err;
+        }
+
+        const alreadyLinked = await Order.findOne({ where: { rentalApplicationId: application.id }, transaction });
+        if (alreadyLinked) {
+            const err = new Error('Заявка вже прив\'язана до угоди');
+            err.status = 400;
+            throw err;
+        }
+
+        const items = Array.isArray(application.items) ? application.items : [];
+        const productIds = [...new Set(items.map((l) => Number(l.productId)).filter((id) => Number.isFinite(id) && id > 0))];
+        const products = productIds.length
+            ? await Product.findAll({ where: { id: productIds }, transaction })
+            : [];
+        const productsById = new Map(products.map((p) => [p.id, p]));
+
+        let clientName = (application.clientName || '').trim();
+        let clientEmail = application.clientEmail || null;
+        if (!clientName && application.clientId) {
+            const client = await Client.findByPk(application.clientId, { transaction });
+            clientName = client?.fullName || '';
+            clientEmail = clientEmail || client?.email || null;
+        }
+
+        const orderNumber = await generateOrderNumber();
+        const discount = application.discountType === 'percent' ? parseDiscountPercent(application.discountValue) : 0;
+
+        return Order.create({
+            orderNumber,
+            customerName: clientName || 'Клієнт',
+            customerPhone: application.clientPhone || '0000000000',
+            customerEmail: clientEmail,
+            address: application.clientAddress || null,
+            deliveryMethod: 'pickup',
+            paymentMethod: 'invoice',
+            items: buildOrderItemsFromApplication(items, productsById),
+            totalAmount: parseFloat(application.totalAmount) || 0,
+            discount,
+            clientId: application.clientId || null,
+            status: deriveDealStatusFromRentalStatus(application.status),
+            rentalApplicationId: application.id,
+            rentStartTime: application.rentStartTime || null,
+        }, { transaction });
+    });
+
+    const { order: savedOrder } = await saveDealWithRentalApplication(order.id, {}, {}, createdBy);
+    return savedOrder;
+}
+
 module.exports = {
     buildRentItemsFromOrder,
     deriveRentalStatusFromDealStage,
+    deriveDealStatusFromRentalStatus,
     createOrGetRentalApplicationFromOrder,
     saveDealWithRentalApplication,
+    convertApplicationToOrder,
 };

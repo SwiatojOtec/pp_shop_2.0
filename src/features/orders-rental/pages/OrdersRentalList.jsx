@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, ShoppingBag } from 'lucide-react';
+import { Plus, ShoppingBag, FilePlus2, Trash2 } from 'lucide-react';
 import PageHeader from '../../admin/ui/PageHeader';
 import Tabs from '../../admin/ui/Tabs';
 import Toolbar from '../../admin/ui/Toolbar';
 import DataTable from '../../admin/ui/DataTable';
 import StatusBadge from '../../admin/ui/StatusBadge';
+import ConfirmDialog from '../../admin/ui/ConfirmDialog';
 import { getStatusOptions } from '../../admin/model/status';
 import { useDealsList } from '../hooks/useDealsList';
 import { formatOrderDate } from '../amounts/orderHelpers';
-import { clientsApi } from '../../../services/api';
+import { clientsApi, rentalApplicationsApi } from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 import NewDealModal from '../components/deals/NewDealModal';
 import '../styles/deals-list.css';
 
@@ -18,13 +20,17 @@ const fmtRentTo = (iso) => (iso ? iso.split('-').reverse().join('.') : '—');
 
 export default function OrdersRentalList() {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [searchParams, setSearchParams] = useSearchParams();
     const [newDealOpen, setNewDealOpen] = useState(false);
     const [prefillClient, setPrefillClient] = useState(null);
+    const [convertingId, setConvertingId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteBusy, setDeleteBusy] = useState(false);
     const {
         rows, total, totalPages, counts, loading,
         type, status, q, page,
-        setType, setStatus, setQ, setPage,
+        setType, setStatus, setQ, setPage, reload,
     } = useDealsList();
 
     useEffect(() => {
@@ -73,12 +79,42 @@ export default function OrdersRentalList() {
         }
     }
 
+    const handleConvertToOrder = useCallback(async (row) => {
+        if (convertingId) return;
+        setConvertingId(row.id);
+        try {
+            const { order } = await rentalApplicationsApi.convertToOrder(row.id);
+            showToast('Угоду створено', 'success');
+            reload();
+            if (order?.id) navigate(`/admin/deals/${order.id}`);
+        } catch (err) {
+            showToast(err.message || 'Не вдалося створити угоду', 'warning');
+        } finally {
+            setConvertingId(null);
+        }
+    }, [convertingId, showToast, reload, navigate]);
+
+    async function confirmDeleteApplication() {
+        if (!deleteTarget) return;
+        setDeleteBusy(true);
+        try {
+            await rentalApplicationsApi.remove(deleteTarget.id);
+            showToast('Заявку видалено', 'success');
+            setDeleteTarget(null);
+            reload();
+        } catch (err) {
+            showToast(err.message || 'Не вдалося видалити заявку', 'warning');
+        } finally {
+            setDeleteBusy(false);
+        }
+    }
+
     const columns = useMemo(() => [
         {
             key: 'number',
             label: '№ / дата',
             render: (_, row) => (
-                <div>
+                <div title={row.kind === 'application' ? 'Заявка оренди без угоди — конвертуйте або видаліть' : undefined}>
                     <div className="mono">{row.number}</div>
                     <div className="deals-list__date">{formatOrderDate(row.createdAt)}</div>
                 </div>
@@ -97,15 +133,19 @@ export default function OrdersRentalList() {
         {
             key: 'items',
             label: 'Позиції',
-            render: (items) => {
+            render: (items, row) => {
                 const arr = Array.isArray(items) ? items : [];
-                const hasRent = arr.some((i) => i.isRent);
-                const hasShop = arr.some((i) => !i.isRent);
                 const preview = arr.slice(0, 2).map((i) => i.name).join(', ');
                 return (
                     <span className="deals-list__items">
-                        {hasRent && <span className="ds-badge ds-badge--info">оренда</span>}
-                        {hasShop && <span className="ds-badge ds-badge--neutral">магазин</span>}
+                        {row.kind === 'application' ? (
+                            <span className="ds-badge ds-badge--neutral">заявка</span>
+                        ) : (
+                            <>
+                                {(row.type === 'rent' || row.type === 'both') && <span className="ds-badge ds-badge--info">оренда</span>}
+                                {(row.type === 'shop' || row.type === 'both') && <span className="ds-badge ds-badge--neutral">магазин</span>}
+                            </>
+                        )}
                         {preview && <span className="deals-list__items-desc"> · {preview}{arr.length > 2 ? ` +${arr.length - 2}` : ''}</span>}
                     </span>
                 );
@@ -129,7 +169,37 @@ export default function OrdersRentalList() {
                 v ? <span className={`mono${row.isOverdue ? ' deals-list__overdue' : ''}`}>{fmtRentTo(v)}</span> : <span className="deals-list__dash">—</span>
             ),
         },
-    ], []);
+        {
+            key: 'actions',
+            label: '',
+            align: 'right',
+            render: (_, row) => {
+                if (row.kind !== 'application') return null;
+                return (
+                    <div className="deals-list__row-actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            type="button"
+                            className="ds-btn ds-btn--secondary"
+                            disabled={!!convertingId}
+                            onClick={() => handleConvertToOrder(row)}
+                            title="Перетворити заявку на угоду"
+                        >
+                            <FilePlus2 size={14} />
+                            {convertingId === row.id ? 'Створюємо…' : 'Створити угоду'}
+                        </button>
+                        <button
+                            type="button"
+                            className="ds-icon-btn ds-icon-btn--danger"
+                            onClick={() => setDeleteTarget(row)}
+                            title="Видалити заявку"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+                );
+            },
+        },
+    ], [convertingId, handleConvertToOrder]);
 
     return (
         <div>
@@ -178,6 +248,16 @@ export default function OrdersRentalList() {
                 open={newDealOpen}
                 prefillClient={prefillClient}
                 onClose={() => { setNewDealOpen(false); setPrefillClient(null); }}
+            />
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Видалити заявку?"
+                message={`Заявку ${deleteTarget?.number || ''} без прив'язаної угоди буде видалено безповоротно.`}
+                confirmText="Видалити"
+                loading={deleteBusy}
+                onConfirm={confirmDeleteApplication}
+                onCancel={() => setDeleteTarget(null)}
             />
         </div>
     );

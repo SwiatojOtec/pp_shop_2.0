@@ -5,6 +5,7 @@ const {
     updateApplication,
     deleteApplication,
 } = require('../services/rentalApplicationService');
+const { convertApplicationToOrder } = require('../services/orderRentalService');
 
 async function getAllApplications(req, res) {
     try {
@@ -54,10 +55,20 @@ async function deleteApplicationHandler(req, res) {
     }
 }
 
+async function convertApplicationToOrderHandler(req, res) {
+    try {
+        const order = await convertApplicationToOrder(req.params.id, req.user?.id || null);
+        res.status(201).json({ order });
+    } catch (err) {
+        res.status(err.status || 500).json({ message: err.message });
+    }
+}
+
 module.exports = {
     getAllApplications,
     getApplication,
     createApplicationHandler,
     updateApplicationHandler,
     deleteApplicationHandler,
+    convertApplicationToOrderHandler,
 };

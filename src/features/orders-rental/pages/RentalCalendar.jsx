@@ -90,7 +90,7 @@ export default function RentalCalendar() {
     const [convertingId, setConvertingId] = useState(null);
     const [cancelTarget, setCancelTarget] = useState(null);
     const [cancelBusy, setCancelBusy] = useState(false);
-    const [openApplicationId, setOpenApplicationId] = useState(null);
+    const [openOrderId, setOpenOrderId] = useState(null);
 
     const [checkProductId, setCheckProductId] = useState('');
     const [checkProductName, setCheckProductName] = useState('');
@@ -268,12 +268,12 @@ export default function RentalCalendar() {
         setConvertingId(bookingId);
         setError('');
         try {
-            const { application } = await rentalCalendarApi.convertBooking(bookingId);
+            const { order } = await rentalCalendarApi.convertBooking(bookingId);
             setDetailEvent(null);
             await loadEvents();
-            if (application?.id) setOpenApplicationId(application.id);
+            if (order?.id) setOpenOrderId(order.id);
         } catch (err) {
-            setError(err.message || 'Не вдалося створити заявку');
+            setError(err.message || 'Не вдалося створити угоду');
         } finally {
             setConvertingId(null);
         }
@@ -710,7 +710,7 @@ export default function RentalCalendar() {
                                             onClick={() => handleConvert(detailEvent.bookingId)}
                                         >
                                             <FilePlus2 size={14} />
-                                            {convertingId === detailEvent.bookingId ? 'Створюємо…' : 'Створити заявку'}
+                                            {convertingId === detailEvent.bookingId ? 'Створюємо…' : 'Створити угоду'}
                                         </button>
                                         <button type="button" className="ds-btn ds-btn--secondary" onClick={() => openEditHold(detailEvent)}>
                                             Змінити
@@ -751,16 +751,16 @@ export default function RentalCalendar() {
             />
 
             <ConfirmDialog
-                open={!!openApplicationId}
-                title="Заявку створено"
-                message="Заявку оренди створено з цієї брони. Відкрити її зараз?"
+                open={!!openOrderId}
+                title="Угоду створено"
+                message="Угоду оренди створено з цієї брони. Відкрити її зараз?"
                 confirmText="Відкрити"
                 danger={false}
                 onConfirm={() => {
-                    navigate(`/admin/rental-applications/${openApplicationId}`);
-                    setOpenApplicationId(null);
+                    navigate(`/admin/deals/${openOrderId}`);
+                    setOpenOrderId(null);
                 }}
-                onCancel={() => setOpenApplicationId(null)}
+                onCancel={() => setOpenOrderId(null)}
             />
         </div>
     );

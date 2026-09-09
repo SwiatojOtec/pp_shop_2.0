@@ -15,4 +15,6 @@ router.put('/:id', authMiddleware, requireRole(RENTAL_APP_ROLES), rentalApplicat
 
 router.delete('/:id', authMiddleware, requireRole(RENTAL_APP_ROLES), rentalApplicationController.deleteApplicationHandler);
 
+router.post('/:id/convert-to-order', authMiddleware, requireRole(RENTAL_APP_ROLES), rentalApplicationController.convertApplicationToOrderHandler);
+
 module.exports = router;

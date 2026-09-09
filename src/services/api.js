@@ -183,6 +183,7 @@ export const rentalApplicationsApi = {
     create: (data) => apiPost('/api/rental-applications', data),
     update: (id, data) => apiPut(`/api/rental-applications/${id}`, data),
     remove: (id) => apiDelete(`/api/rental-applications/${id}`),
+    convertToOrder: (id) => apiPost(`/api/rental-applications/${id}/convert-to-order`, {}),
 };
 
 export const rentalCalendarApi = {

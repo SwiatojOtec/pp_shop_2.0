@@ -16,6 +16,7 @@ export function useDealsList() {
     const [total, setTotal] = useState(0);
     const [counts, setCounts] = useState({ all: 0, shop: 0, rent: 0 });
     const [loading, setLoading] = useState(true);
+    const [reloadTick, setReloadTick] = useState(0);
 
     function updateParams(patch) {
         const next = new URLSearchParams(searchParams);
@@ -48,7 +49,7 @@ export function useDealsList() {
         }, q ? 300 : 0);
 
         return () => { cancelled = true; clearTimeout(timer); };
-    }, [q, status, type, page]);
+    }, [q, status, type, page, reloadTick]);
 
     const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
@@ -67,5 +68,6 @@ export function useDealsList() {
         setStatus: (value) => updateParams({ status: value }),
         setQ: (value) => updateParams({ q: value }),
         setPage: (value) => updateParams({ page: value > 1 ? String(value) : '' }),
+        reload: () => setReloadTick((n) => n + 1),
     };
 }
