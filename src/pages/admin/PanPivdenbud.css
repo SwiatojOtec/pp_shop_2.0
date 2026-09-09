@@ -119,6 +119,7 @@
     border-right: 1px solid var(--ds-border);
     text-align: center;
     font-size: var(--ds-text-xs);
+    color: var(--ds-text-subtle);
 }
 
 .timesheet-cal-th-day {
@@ -173,6 +174,7 @@
     line-height: 1.25;
     hyphens: auto;
     word-break: break-word;
+    color: var(--ds-text);
 }
 
 .timesheet-cal-hours {
@@ -190,6 +192,7 @@
     font-family: var(--ds-font-mono);
     font-variant-numeric: tabular-nums;
     font-size: 0.72rem;
+    color: var(--ds-text);
 }
 
 .timesheet-cal-cell {
@@ -263,4 +266,5 @@
     font-variant-numeric: tabular-nums;
     font-family: var(--ds-font-mono);
     display: inline-block;
+    color: var(--ds-text);
 }
