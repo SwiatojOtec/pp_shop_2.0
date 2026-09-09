@@ -40,12 +40,24 @@ const BREADCRUMB_TITLES = {
 };
 
 function pathAllowed(pathname, prefixes) {
-    return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    return prefixes.some((p) => {
+        // '/admin' is the dashboard index route, always allowed — but as a
+        // prefix it would startsWith-match every /admin/* route for every
+        // role, silently defeating the guard below. Exact match only.
+        if (p === '/admin') return pathname === '/admin' || pathname === '/admin/';
+        return pathname === p || pathname.startsWith(`${p}/`);
+    });
 }
 
 function allowedPrefixesForRole(role, isSubdivisionHead) {
     if (role === 'owner') return null;
-    return ['/admin', '/admin/profile', ...NAV_ITEMS.filter((item) => item.show(role, isSubdivisionHead)).map((item) => item.path)];
+    const prefixes = ['/admin', '/admin/profile', ...NAV_ITEMS.filter((item) => item.show(role, isSubdivisionHead)).map((item) => item.path)];
+    // Not a nav destination (no "Угоди"-style list of its own) but reachable
+    // from Угоди/Календар for whoever can already see rent deals — same
+    // audience as RENTAL_APP_ROLES server-side (server/modules/orders-rental/
+    // routes/rentalApplicationRoutes.js), which is rent access, not shop.
+    if (hasRentAccess(role)) prefixes.push('/admin/rental-applications');
+    return prefixes;
 }
 
 function getBreadcrumbTitle(pathname) {
