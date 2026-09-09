@@ -187,13 +187,10 @@ export const rentalApplicationsApi = {
 
 export const rentalCalendarApi = {
     events: (params) => apiGet('/api/rental-calendar/events', params),
-    listBookings: (params) => apiGet('/api/rental-calendar/bookings', params),
-    getBooking: (id) => apiGet(`/api/rental-calendar/bookings/${id}`),
     createBooking: (data) => apiPost('/api/rental-calendar/bookings', data),
     updateBooking: (id, data) => apiPatch(`/api/rental-calendar/bookings/${id}`, data),
     cancelBooking: (id) => apiPost(`/api/rental-calendar/bookings/${id}/cancel`, {}),
     convertBooking: (id) => apiPost(`/api/rental-calendar/bookings/${id}/convert`, {}),
-    removeBooking: (id) => apiDelete(`/api/rental-calendar/bookings/${id}`),
 };
 
 export const clientsApi = {
@@ -208,34 +205,25 @@ export const clientsApi = {
 
 export const usersApi = {
     list: () => apiGet('/api/users'),
-    get: (id) => apiGet(`/api/users/${id}`),
     update: (id, data) => apiPatch(`/api/users/${id}`, data),
     remove: (id) => apiDelete(`/api/users/${id}`),
 };
 
 export const warehousesApi = {
     list: () => apiGet('/api/warehouses'),
-    get: (id) => apiGet(`/api/warehouses/${id}`),
     create: (data) => apiPost('/api/warehouses', data),
-    update: (id, data) => apiPut(`/api/warehouses/${id}`, data),
-    remove: (id) => apiDelete(`/api/warehouses/${id}`),
     requestDelete: (id, data) => apiPost(`/api/warehouses/${id}/request-delete`, data),
 };
 
 export const inventoryApi = {
     list: (params) => apiGet('/api/inventory', params),
-    get: (id) => apiGet(`/api/inventory/${id}`),
-    create: (data) => apiPost('/api/inventory', data),
-    update: (id, data) => apiPut(`/api/inventory/${id}`, data),
     updateItem: (id, data) => apiPut(`/api/inventory/item/${id}`, data),
     deleteItem: (id) => apiDelete(`/api/inventory/item/${id}`),
-    remove: (id) => apiDelete(`/api/inventory/${id}`),
     suggest: (params) => apiGet('/api/inventory/suggest', params),
     move: (data) => apiPost('/api/inventory/move', data),
     bulkMove: (data) => apiPost('/api/inventory/bulk-move', data),
     moveToRepair: (data) => apiPost('/api/inventory/move-to-repair', data),
     restoreInStock: (data) => apiPost('/api/inventory/restore-in-stock', data),
-    events: (params) => apiGet('/api/inventory/events', params),
 };
 
 export const warehouseApi = {
@@ -249,26 +237,17 @@ export const warehouseApi = {
     rejectDeleteRequest: (id) => apiPost(`/api/warehouse/delete-requests/${id}/reject`),
 };
 
-export const currenciesApi = {
-    list: () => apiGet('/api/currencies'),
-    update: (id, data) => apiPut(`/api/currencies/${id}`, data),
-};
-
 export const timesheetApi = {
     list: (params) => apiGet('/api/timesheet', params),
     overview: (params) => apiGet('/api/timesheet/overview', params),
     saveMonth: (data) => apiPut('/api/timesheet/month', data),
-    save: (data) => apiPost('/api/timesheet', data),
-    remove: (id) => apiDelete(`/api/timesheet/${id}`),
 };
 
 export const subdivisionsApi = {
     list: () => apiGet('/api/subdivisions'),
-    get: (id) => apiGet(`/api/subdivisions/${id}`),
     create: (data) => apiPost('/api/subdivisions', data),
     update: (id, data) => apiPatch(`/api/subdivisions/${id}`, data),
     remove: (id) => apiDelete(`/api/subdivisions/${id}`),
-    members: (id) => apiGet(`/api/subdivisions/${id}/members`),
 };
 
 export const sellersApi = {

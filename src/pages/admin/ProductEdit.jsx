@@ -24,7 +24,6 @@ import {
     minRentTierPrice,
 } from '../../utils/rentPricing';
 
-import './Admin.css';
 import '../../components/admin/product/ProductEdit.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
