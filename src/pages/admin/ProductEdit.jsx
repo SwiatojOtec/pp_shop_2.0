@@ -113,7 +113,7 @@ export default function ProductEdit({ context = 'products' }) {
     // ── Data loading ─────────────────────────────────────────────────────────
 
     useEffect(() => {
-        if (isRentContext && isNew) update('unit', 'шт');
+        if (isRentContext && isNew) setFormData((prev) => ({ ...prev, unit: 'шт' }));
         loadCategories();
         loadBrands();
         if (isRentContext) loadWarehouses();
