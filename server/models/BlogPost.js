@@ -44,6 +44,13 @@ const BlogPost = sequelize.define('BlogPost', {
     isVisible: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
+    },
+    /** docs/admin-redesign/03-screens.md, «Блог»: стаття більше не йде на
+     *  сайт одразу після збереження — публікується свідомо. */
+    status: {
+        type: DataTypes.ENUM('draft', 'published'),
+        allowNull: false,
+        defaultValue: 'published'
     }
 });
 

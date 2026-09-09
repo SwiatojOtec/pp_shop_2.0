@@ -7,8 +7,7 @@ import { blogApi } from '../../services/api';
 import { transliterate } from '../../utils/transliterate';
 import { useToast } from '../../context/ToastContext';
 import PageHeader from '../../features/admin/ui/PageHeader';
-import './Admin.css';
-import './AdminBlogEdit.css';
+import '../../features/admin/blog/blog.css';
 
 export default function AdminBlogEdit() {
     const { id } = useParams();
@@ -23,6 +22,7 @@ export default function AdminBlogEdit() {
         image: '',
         excerpt: '',
         content: '',
+        status: 'draft',
         date: new Date().toISOString().split('T')[0]
     });
 
@@ -48,10 +48,11 @@ export default function AdminBlogEdit() {
             const data = await blogApi.get(id);
             setFormData({
                 ...data,
+                status: data.status || 'published',
                 date: data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0]
             });
         } catch (err) {
-            console.error('Error fetching post:', err);
+            showToast(err.message || 'Не вдалося завантажити статтю', 'warning');
         }
     };
 
@@ -76,7 +77,6 @@ export default function AdminBlogEdit() {
             }
             navigate('/admin/blog');
         } catch (err) {
-            console.error('Error saving post:', err);
             showToast(err.message || 'Помилка збереження', 'warning');
         } finally {
             setLoading(false);
@@ -101,7 +101,7 @@ export default function AdminBlogEdit() {
     ];
 
     return (
-        <div className="admin-product-edit">
+        <div className="blog-edit-page">
             <PageHeader
                 title={isNew ? 'Нова стаття' : 'Редагування статті'}
                 backTo="/admin/blog"
@@ -112,108 +112,116 @@ export default function AdminBlogEdit() {
                 )}
             />
 
-            <form id="blog-edit-form" onSubmit={handleSubmit} className="edit-form admin-form">
-                <div className="form-grid">
-                    <div className="form-section">
-                        <h3 className="form-section-title">Основна інформація</h3>
+            <form id="blog-edit-form" onSubmit={handleSubmit} className="blog-edit-grid">
+                <div className="blog-edit-section">
+                    <h3 className="blog-edit-section-title">Основна інформація</h3>
 
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Заголовок</label>
-                                <input
-                                    type="text"
-                                    name="title"
-                                    value={formData.title}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Slug (URL адреса)</label>
-                                <input
-                                    type="text"
-                                    name="slug"
-                                    value={formData.slug}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Категорія</label>
-                                <input
-                                    type="text"
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    placeholder="Наприклад: Поради, Тренди"
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Дата публікації</label>
-                                <input
-                                    type="date"
-                                    name="date"
-                                    value={formData.date}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label>URL зображення</label>
+                    <div className="blog-edit-row">
+                        <label className="blog-edit-field">
+                            Заголовок
                             <input
                                 type="text"
-                                name="image"
-                                value={formData.image}
+                                name="title"
+                                value={formData.title}
                                 onChange={handleChange}
                                 required
                             />
-                            {formData.image && (
-                                <div className="blog-edit-image-preview">
-                                    <img src={formData.image} alt="Preview" />
-                                </div>
-                            )}
-                        </div>
+                        </label>
+
+                        <label className="blog-edit-field">
+                            Slug (URL адреса)
+                            <input
+                                type="text"
+                                name="slug"
+                                value={formData.slug}
+                                onChange={handleChange}
+                                required
+                            />
+                        </label>
                     </div>
 
-                    <div className="form-section">
-                        <h3 className="form-section-title">Контент</h3>
-
-                        <div className="form-group">
-                            <label>Короткий опис (Excerpt)</label>
-                            <textarea
-                                name="excerpt"
-                                value={formData.excerpt}
+                    <div className="blog-edit-row">
+                        <label className="blog-edit-field">
+                            Категорія
+                            <input
+                                type="text"
+                                name="category"
+                                value={formData.category}
                                 onChange={handleChange}
-                                rows={3}
+                                placeholder="Наприклад: Поради, Тренди"
                                 required
-                                className="blog-edit-excerpt"
                             />
-                        </div>
+                        </label>
 
-                        <div className="form-group">
-                            <label>Повний текст статті</label>
-                            <div className="blog-edit-quill-wrap">
-                                <ReactQuill
-                                    theme="snow"
-                                    value={formData.content}
-                                    onChange={handleContentChange}
-                                    modules={modules}
-                                    formats={formats}
-                                    className="blog-edit-quill-editor"
-                                />
-                            </div>
+                        <label className="blog-edit-field">
+                            Дата публікації
+                            <input
+                                type="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleChange}
+                                required
+                            />
+                        </label>
+                    </div>
+
+                    <div className="blog-edit-row">
+                        <label className="blog-edit-field">
+                            Статус
+                            <select name="status" value={formData.status} onChange={handleChange}>
+                                <option value="draft">Чернетка</option>
+                                <option value="published">Опубліковано</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label className="blog-edit-field">
+                        URL зображення
+                        <input
+                            type="text"
+                            name="image"
+                            value={formData.image}
+                            onChange={handleChange}
+                            required
+                        />
+                    </label>
+                    {formData.image && (
+                        <div className="blog-edit-image-preview">
+                            <img src={formData.image} alt="Preview" />
+                        </div>
+                    )}
+                </div>
+
+                <div className="blog-edit-section">
+                    <h3 className="blog-edit-section-title">Контент</h3>
+
+                    <label className="blog-edit-field">
+                        Короткий опис (Excerpt)
+                        <textarea
+                            name="excerpt"
+                            value={formData.excerpt}
+                            onChange={handleChange}
+                            rows={3}
+                            required
+                            className="blog-edit-excerpt"
+                        />
+                    </label>
+
+                    <div className="blog-edit-field">
+                        <label htmlFor="blog-edit-content">Повний текст статті</label>
+                        <div className="blog-edit-quill-wrap">
+                            <ReactQuill
+                                id="blog-edit-content"
+                                theme="snow"
+                                value={formData.content}
+                                onChange={handleContentChange}
+                                modules={modules}
+                                formats={formats}
+                                className="blog-edit-quill-editor"
+                            />
                         </div>
                     </div>
                 </div>
-
             </form>
         </div>
     );

@@ -1,13 +1,40 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
 const BlogPost = require('../models/BlogPost');
+const User = require('../models/User');
 const { Op } = require('sequelize');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, JWT_SECRET } = require('../middleware/auth');
+
+const BLOG_ROLES = ['owner', 'shop_manager', 'shop_rent'];
+
+/** Публічні GET лишаються без обов'язкової авторизації (сайт), але
+ *  адмінка з тим самим токеном має бачити чернетки — тому пробуємо
+ *  розпізнати користувача, не блокуючи запит, якщо токена немає. */
+async function optionalAuth(req, res, next) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return next();
+    try {
+        const payload = jwt.verify(token, JWT_SECRET);
+        const user = await User.findByPk(payload.id);
+        if (user && user.status === 'active') {
+            req.user = { id: user.id, role: user.role };
+        }
+    } catch {
+        // невалідний токен на публічному ендпоінті — просто показуємо як гостю
+    }
+    next();
+}
+
+function canSeeDrafts(req) {
+    return !!req.user && BLOG_ROLES.includes(req.user.role === 'manager' ? 'shop_manager' : req.user.role);
+}
 
 // Get all posts
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
     try {
-        const { search, category, limit } = req.query;
+        const { search, category, status, limit } = req.query;
         const where = {};
 
         if (search) {
@@ -15,6 +42,11 @@ router.get('/', async (req, res) => {
         }
         if (category) {
             where.category = category;
+        }
+        if (canSeeDrafts(req)) {
+            if (status) where.status = status;
+        } else {
+            where.status = 'published';
         }
 
         const options = {
@@ -35,7 +67,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get single post by ID or Slug
-router.get('/:idOrSlug', async (req, res) => {
+router.get('/:idOrSlug', optionalAuth, async (req, res) => {
     try {
         const { idOrSlug } = req.params;
         let post;
@@ -46,7 +78,7 @@ router.get('/:idOrSlug', async (req, res) => {
             post = await BlogPost.findByPk(idOrSlug);
         }
 
-        if (!post) {
+        if (!post || (post.status !== 'published' && !canSeeDrafts(req))) {
             return res.status(404).json({ message: 'Post not found' });
         }
         res.json(post);

@@ -1,0 +1,105 @@
+/* Shared styles for the Блог feature — list thumbnails and the edit form. */
+
+.blog-list-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--ds-radius-md);
+    object-fit: cover;
+}
+
+.blog-list-actions {
+    display: inline-flex;
+    gap: var(--ds-space-2);
+}
+
+/* ── Edit form ── */
+
+.blog-edit-page {
+    max-width: 1080px;
+}
+
+.blog-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-5);
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .blog-edit-grid { grid-template-columns: 1fr; }
+}
+
+.blog-edit-section {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    padding: var(--ds-space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.blog-edit-section-title {
+    font-size: var(--ds-text-lg);
+    font-weight: 700;
+    margin: 0;
+    color: var(--ds-text);
+}
+
+.blog-edit-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-3);
+}
+
+@media (max-width: 560px) {
+    .blog-edit-row { grid-template-columns: 1fr; }
+}
+
+.blog-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.blog-edit-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+
+.blog-edit-field input,
+.blog-edit-field select,
+.blog-edit-field textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.blog-edit-excerpt {
+    resize: vertical;
+}
+
+.blog-edit-image-preview {
+    margin-top: 4px;
+}
+
+.blog-edit-image-preview img {
+    max-height: 160px;
+    border-radius: var(--ds-radius-md);
+}
+
+.blog-edit-quill-wrap {
+    background: var(--ds-surface);
+    border-radius: var(--ds-radius-md);
+}
+
+.blog-edit-quill-editor {
+    height: 400px;
+    margin-bottom: 50px;
+}

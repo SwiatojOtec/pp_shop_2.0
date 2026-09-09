@@ -1,6 +1,6 @@
 import { blogApi } from '../../services/api';
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, FileText } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import PageHeader from '../../features/admin/ui/PageHeader';
@@ -8,12 +8,27 @@ import Toolbar from '../../features/admin/ui/Toolbar';
 import DataTable from '../../features/admin/ui/DataTable';
 import StatusBadge from '../../features/admin/ui/StatusBadge';
 import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
-import './Admin.css';
+import '../../features/admin/blog/blog.css';
+
+const STATUS_META = {
+    published: { label: 'Опубліковано', tone: 'success' },
+    draft: { label: 'Чернетка', tone: 'neutral' },
+};
+const STATUS_OPTIONS = Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }));
+
+function fmtDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
+}
 
 export default function AdminBlog() {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const searchTerm = searchParams.get('q') || '';
+    const categoryFilter = searchParams.get('category') || '';
+    const statusFilter = searchParams.get('status') || '';
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const navigate = useNavigate();
@@ -29,17 +44,33 @@ export default function AdminBlog() {
             const data = await blogApi.list();
             setPosts(Array.isArray(data) ? data : []);
         } catch (err) {
-            console.error('Error fetching posts:', err);
+            showToast(err.message || 'Не вдалося завантажити статті', 'warning');
             setPosts([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredPosts = useMemo(
-        () => posts.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase())),
-        [posts, searchTerm]
-    );
+    function updateParams(patch) {
+        const next = new URLSearchParams(searchParams);
+        Object.entries(patch).forEach(([key, value]) => {
+            if (!value) next.delete(key);
+            else next.set(key, value);
+        });
+        setSearchParams(next, { replace: true });
+    }
+
+    const categoryOptions = useMemo(() => {
+        const set = new Set(posts.map((p) => p.category).filter(Boolean));
+        return [...set].sort((a, b) => a.localeCompare(b, 'uk')).map((c) => ({ value: c, label: c }));
+    }, [posts]);
+
+    const filteredPosts = useMemo(() => posts.filter((p) => {
+        const matchQ = !searchTerm || p.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchCategory = !categoryFilter || p.category === categoryFilter;
+        const matchStatus = !statusFilter || p.status === statusFilter;
+        return matchQ && matchCategory && matchStatus;
+    }), [posts, searchTerm, categoryFilter, statusFilter]);
 
     async function handleDeleteConfirm() {
         if (!deleteTarget) return;
@@ -59,7 +90,7 @@ export default function AdminBlog() {
         {
             key: 'image',
             label: 'Зображення',
-            render: (val, post) => <img src={val} alt={post.title} className="admin-table-img" />,
+            render: (val, post) => <img src={val} alt={post.title} className="blog-list-thumb" />,
         },
         { key: 'title', label: 'Заголовок' },
         {
@@ -68,17 +99,31 @@ export default function AdminBlog() {
             render: (val) => <StatusBadge tone="neutral" label={val} />,
         },
         {
+            key: 'status',
+            label: 'Статус',
+            render: (val) => {
+                const meta = STATUS_META[val] || STATUS_META.published;
+                return <StatusBadge tone={meta.tone} label={meta.label} />;
+            },
+        },
+        {
             key: 'date',
             label: 'Дата',
-            render: (val) => new Date(val).toLocaleDateString(),
+            render: (val) => <span className="mono">{fmtDate(val)}</span>,
         },
         {
             key: 'id',
             label: 'Дії',
             align: 'right',
             render: (_, post) => (
-                <div className="flex gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className="action-btn delete" onClick={() => setDeleteTarget(post)} title="Видалити">
+                <div className="blog-list-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                        type="button"
+                        className="ds-icon-btn"
+                        onClick={() => setDeleteTarget(post)}
+                        title="Видалити"
+                        aria-label={`Видалити статтю «${post.title}»`}
+                    >
                         <Trash2 size={15} />
                     </button>
                 </div>
@@ -87,7 +132,7 @@ export default function AdminBlog() {
     ], []);
 
     return (
-        <div className="admin-products">
+        <div>
             <PageHeader
                 title="Блог"
                 subtitle={`${filteredPosts.length} з ${posts.length} статей`}
@@ -98,7 +143,16 @@ export default function AdminBlog() {
                 )}
             />
 
-            <Toolbar search={searchTerm} onSearch={setSearchTerm} placeholder="Пошук за заголовком..." />
+            <Toolbar
+                search={searchTerm}
+                onSearch={(value) => updateParams({ q: value })}
+                placeholder="Пошук за заголовком..."
+                filters={[
+                    { key: 'category', label: 'Всі категорії', value: categoryFilter, options: categoryOptions },
+                    { key: 'status', label: 'Всі статуси', value: statusFilter, options: STATUS_OPTIONS },
+                ]}
+                onFilter={(key, value) => updateParams({ [key]: value })}
+            />
 
             <DataTable
                 columns={columns}
