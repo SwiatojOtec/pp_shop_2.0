@@ -432,7 +432,7 @@ export default function RentalCalendar() {
                                     className="order-product-suggest__item"
                                     onClick={() => { setCheckProductId(String(p.id)); setCheckProductName(p.name); setCheckProductSearch(p.name); }}
                                 >
-                                    <div className="font-semibold text-sm">{p.name}</div>
+                                    <div className="order-product-suggest__name">{p.name}</div>
                                 </div>
                             ))}
                         </div>
@@ -622,7 +622,7 @@ export default function RentalCalendar() {
                                 </button>
                             </div>
                         ) : (
-                            <div className="order-product-search-wrap rental-calendar__product-search">
+                            <div className="order-product-search-wrap">
                                 <Search size={15} className="order-product-search-icon" />
                                 <input
                                     type="text"
@@ -637,16 +637,16 @@ export default function RentalCalendar() {
                                         {suggestedProducts.map((p) => (
                                             <div key={p.id} className="order-product-suggest__item" onClick={() => selectProduct(p)}>
                                                 <div>
-                                                    <div className="font-semibold text-sm">{p.name}</div>
+                                                    <div className="order-product-suggest__name">{p.name}</div>
                                                     {(p.sku || p.inventoryNumber) && (
-                                                        <div className="text-xs text-gray-400">
+                                                        <div className="order-product-suggest__sub">
                                                             {p.sku ? `SKU: ${p.sku}` : ''}
                                                             {p.sku && p.inventoryNumber ? ' · ' : ''}
                                                             {p.inventoryNumber ? `Інв: ${p.inventoryNumber}` : ''}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className="font-bold text-[#e63946]">{p.price} ₴</span>
+                                                <span className="order-product-suggest__price">{p.price} ₴</span>
                                             </div>
                                         ))}
                                     </div>

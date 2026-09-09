@@ -1,17 +1,3 @@
-.rental-calendar {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.rental-calendar__toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
 .rental-calendar__nav {
     display: flex;
     align-items: center;
@@ -25,16 +11,16 @@
     justify-content: center;
     width: 34px;
     height: 34px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
-    color: #374151;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    background: var(--ds-surface);
+    color: var(--ds-text-muted);
     cursor: pointer;
 }
 
 .rental-calendar__nav-btn:hover,
 .rental-calendar__icon-btn:hover {
-    background: #f9fafb;
+    background: var(--ds-surface-sunken);
 }
 
 .rental-calendar__month {
@@ -44,224 +30,32 @@
     font-size: 1.05rem;
     font-weight: 700;
     text-transform: capitalize;
-    color: #111827;
+    color: var(--ds-text);
 }
 
 .rental-calendar__today-btn {
     margin-left: 4px;
     padding: 7px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    background: var(--ds-surface);
     font-size: 0.82rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ds-text-muted);
     cursor: pointer;
 }
 
-.rental-calendar__legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.rental-calendar__legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #4b5563;
-}
-
-.rental-calendar__legend-item::before {
-    content: '';
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-}
-
-.rental-calendar__legend-item--hold::before { background: #2563eb; }
-.rental-calendar__legend-item--application::before { background: #059669; }
-.rental-calendar__legend-item--overdue::before { background: #dc2626; }
-
-.rental-calendar__layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 16px;
-    align-items: start;
-}
-
-.rental-calendar__grid-wrap {
-    position: relative;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.rental-calendar__loading {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.7);
-    z-index: 2;
-    font-size: 0.9rem;
-    color: #6b7280;
-}
-
-.rental-calendar__weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.rental-calendar__weekday {
-    padding: 10px 6px;
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #6b7280;
-    text-transform: uppercase;
-}
-
-.rental-calendar__grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-}
-
-.rental-calendar__cell {
-    min-height: 96px;
-    padding: 8px;
-    border: none;
-    border-right: 1px solid #f3f4f6;
-    border-bottom: 1px solid #f3f4f6;
-    background: #fff;
-    text-align: left;
-    vertical-align: top;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.rental-calendar__cell.is-empty {
-    background: #fafafa;
-    cursor: default;
-}
-
-.rental-calendar__cell:hover:not(.is-empty) {
-    background: #f8fafc;
-}
-
-.rental-calendar__cell.is-today .rental-calendar__day-num {
-    background: #111827;
-    color: #fff;
-}
-
-.rental-calendar__cell.is-selected {
-    background: #eff6ff;
-    box-shadow: inset 0 0 0 2px #93c5fd;
-}
-
-.rental-calendar__day-num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #111827;
-}
-
-.rental-calendar__chips {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-}
-
-.rental-calendar__chip {
-    display: block;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.rental-calendar__chip--hold { background: #2563eb; }
-.rental-calendar__chip--application { background: #059669; }
-.rental-calendar__chip--overdue { background: #dc2626; }
-.rental-calendar__chip--more {
-    background: #e5e7eb;
-    color: #4b5563;
-}
-
-.rental-calendar__panel {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 14px;
-    min-height: 320px;
-}
-
-.rental-calendar__panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.rental-calendar__panel-head h4 {
-    margin: 0;
-    font-size: 1rem;
-}
-
-.rental-calendar__new-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
-    padding: 7px 10px;
-}
-
-.rental-calendar__panel-hint {
-    margin: 0;
-    color: #9ca3af;
-    font-size: 0.88rem;
-    line-height: 1.4;
-}
+/* ── Booking drawer form ──────────────────────────────────────────────── */
 
 .rental-calendar__form {
     margin: 0 0 14px;
     padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #f9fafb;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface-sunken);
     display: flex;
     flex-direction: column;
     gap: 10px;
-}
-
-.rental-calendar__form-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.rental-calendar__form-head strong {
-    color: #111827;
-    font-size: 0.95rem;
 }
 
 .rental-calendar__form-row {
@@ -281,7 +75,7 @@
 .rental-calendar__form .form-group > span {
     font-size: 0.78rem;
     font-weight: 700;
-    color: #374151;
+    color: var(--ds-text-muted);
 }
 
 .rental-calendar__form input,
@@ -289,20 +83,16 @@
 .rental-calendar__form textarea {
     width: 100%;
     padding: 8px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
     font-size: 0.88rem;
-    color: #111827;
-    background: #fff;
+    color: var(--ds-text);
+    background: var(--ds-surface);
 }
 
 .rental-calendar__form input::placeholder,
 .rental-calendar__form textarea::placeholder {
-    color: #9ca3af;
-}
-
-.rental-calendar__product-search {
-    position: relative;
+    color: var(--ds-text-subtle);
 }
 
 .rental-calendar__picked {
@@ -311,10 +101,10 @@
     justify-content: space-between;
     gap: 8px;
     padding: 8px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #fff;
-    color: #111827;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface);
+    color: var(--ds-text);
     font-size: 0.88rem;
     font-weight: 600;
 }
@@ -324,6 +114,87 @@
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* ── Product search — availability checker + booking form ────────────────
+   Reused across two spots in this file (docs/admin-redesign/05-fixes.md,
+   п.1 pattern: a component using classes with no CSS anywhere is invisible/
+   unstyled, not just low-contrast — this dropdown had no styling at all,
+   floating unpositioned text over the rest of the form). Mirrors
+   RentalApplicationForm.css's .search-dropdown for visual consistency. */
+.order-product-search-wrap {
+    position: relative;
+}
+
+.order-product-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ds-text-subtle);
+    pointer-events: none;
+}
+
+.order-product-search-input {
+    width: 100%;
+    padding: 9px 14px 9px 36px;
+    border-radius: var(--ds-radius-lg);
+    border: 1px solid var(--ds-border);
+    font-size: 0.9rem;
+    outline: none;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+}
+
+.order-product-search-input:focus {
+    border-color: var(--ds-accent);
+}
+
+.order-product-suggest {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border-subtle);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-lg);
+    z-index: 200;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.order-product-suggest__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--ds-border-subtle);
+    transition: background var(--ds-duration-fast);
+}
+
+.order-product-suggest__item:last-child { border-bottom: none; }
+.order-product-suggest__item:hover { background: var(--ds-surface-sunken); }
+
+.order-product-suggest__name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--ds-text);
+}
+
+.order-product-suggest__sub {
+    font-size: 0.75rem;
+    color: var(--ds-text-subtle);
+}
+
+.order-product-suggest__price {
+    font-weight: 700;
+    color: var(--ds-accent);
+    white-space: nowrap;
+}
+
+/* ── Event detail drawer ──────────────────────────────────────────────── */
 
 .rental-calendar__event-list {
     list-style: none;
@@ -335,33 +206,26 @@
 }
 
 .rental-calendar__event-card {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ds-border);
     border-left-width: 4px;
-    border-radius: 10px;
+    border-radius: var(--ds-radius-lg);
     padding: 10px 12px;
-    background: #fafafa;
+    background: var(--ds-surface-sunken);
 }
 
 .rental-calendar__event-card--hold { border-left-color: #2563eb; }
 .rental-calendar__event-card--application { border-left-color: #059669; }
 .rental-calendar__event-card--overdue { border-left-color: #dc2626; }
 
-.rental-calendar__event-title {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: #111827;
-    margin-bottom: 4px;
-}
-
 .rental-calendar__event-meta {
     font-size: 0.78rem;
-    color: #6b7280;
+    color: var(--ds-text-subtle);
 }
 
 .rental-calendar__event-note {
     margin-top: 6px;
     font-size: 0.8rem;
-    color: #374151;
+    color: var(--ds-text-muted);
 }
 
 .rental-calendar__event-actions {
@@ -371,28 +235,10 @@
     margin-top: 10px;
 }
 
-.rental-calendar__event-actions .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.78rem;
-    padding: 6px 10px;
-}
-
 .rental-calendar__error {
     padding: 8px 10px;
-    border-radius: 8px;
-    background: #fef2f2;
-    color: #b91c1c;
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-danger-soft);
+    color: var(--ds-danger);
     font-size: 0.82rem;
-}
-
-@media (max-width: 1100px) {
-    .rental-calendar__layout {
-        grid-template-columns: 1fr;
-    }
-
-    .rental-calendar__cell {
-        min-height: 78px;
-    }
 }
