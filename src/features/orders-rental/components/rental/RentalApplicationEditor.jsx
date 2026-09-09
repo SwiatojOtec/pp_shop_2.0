@@ -1,6 +1,5 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Save } from 'lucide-react';
 import { generateRentalPdf } from '../../documents/generateRentalPdf';
 import { buildRentalPdfPayload } from '../../documents/rentalPdfPayload';
 import { buildRentalActContractRef } from '../../documents/rentalContractRef';
@@ -15,56 +14,26 @@ import UpsellPanel from './UpsellPanel';
 import { useRentalApplication } from '../../hooks/useRentalApplication';
 import { useRentalTotals } from '../../hooks/useRentalTotals';
 import { useProductSearch } from '../../hooks/useProductSearch';
-import { getStatusOptions } from '../../../admin/model/status';
 
-export default function RentalApplicationEditor({
-    id,
-    embedded = false,
-    hideHeader = false,
-    hideToolbarSave = false,
-    hideDocumentTab = false,
-    hidePartiesTab = false,
-    enrichmentOnly = false,
-    onSaved,
-    sellerId: sellerIdProp,
-    orderDiscountPercent = null,
-    orderRentStartTime = null,
-    orderClient = null,
-    orderItems = null,
-    rentProductIds = null,
-    products = null,
-    onTotalsChange = null,
-    onRegisterSave,
-}) {
+/**
+ * Standalone rental application editor: `/admin/rental-applications/:id|new`,
+ * reached only from RentalCalendar's booking→application conversion (a
+ * booking has no order yet, so it can't go through the Deal screen). Inside
+ * a deal, item enrichment (serial/condition/kit) is edited directly on the
+ * order line — this component is not embedded there anymore
+ * (docs/admin-redesign/03-screens.md, «Угода»).
+ */
+export default function RentalApplicationEditor({ id }) {
     const isNew = !id || id === 'new';
     const printRef = useRef();
-    const [tab, setTab] = useState(hidePartiesTab ? 'items' : 'parties');
-    const activeTab = hidePartiesTab && tab === 'parties'
-        ? 'items'
-        : (hideDocumentTab && tab === 'document' ? (hidePartiesTab ? 'items' : 'parties') : tab);
+    const [tab, setTab] = useState('parties');
 
-    const app = useRentalApplication(id, isNew, {
-        embedded,
-        onSaved,
-        orderDiscountPercent,
-        orderRentStartTime,
-        orderClient,
-        orderItems,
-        rentProductIds,
-        products,
-        onTotalsChange,
-    });
+    const app = useRentalApplication(id, isNew);
     const totals = useRentalTotals(app.items, app.discountType, app.discountValue);
     const search = useProductSearch(app.items, app.setItems);
 
-    const sellerId = sellerIdProp || app.linkedOrder?.sellerId || null;
+    const sellerId = app.linkedOrder?.sellerId || null;
     const lessor = useMemo(() => getRentalLessor(sellerId), [sellerId]);
-
-    useEffect(() => {
-        if (!onRegisterSave) return undefined;
-        onRegisterSave(app.handleSave);
-        return () => onRegisterSave(null);
-    }, [onRegisterSave, app.handleSave]);
 
     const buildCurrentApplicationPayload = useCallback(() => buildRentalPdfPayload({
         applicationNumber: app.applicationNumber,
@@ -79,11 +48,11 @@ export default function RentalApplicationEditor({
         discountType: app.discountType,
         discountValue: totals.parsedDiscount,
         linkedOrder: app.linkedOrder,
-        rentStartTime: orderRentStartTime || app.rentStartTime || app.linkedOrder?.rentStartTime || '',
+        rentStartTime: app.rentStartTime || app.linkedOrder?.rentStartTime || '',
         sellerId,
     }, app.linkedOrder
-        ? { ...app.linkedOrder, rentStartTime: orderRentStartTime || app.linkedOrder.rentStartTime || app.rentStartTime || '' }
-        : (orderRentStartTime ? { rentStartTime: orderRentStartTime } : null)), [app, totals.parsedDiscount, sellerId, orderRentStartTime]);
+        ? { ...app.linkedOrder, rentStartTime: app.linkedOrder.rentStartTime || app.rentStartTime || '' }
+        : null), [app, totals.parsedDiscount, sellerId]);
 
     const currentContractRef = buildRentalActContractRef(null, {
         applicationNumber: app.applicationNumber,
@@ -113,57 +82,24 @@ export default function RentalApplicationEditor({
     }
 
     return (
-        <div className={`rental-form-page${embedded ? ' rental-form-page--embedded' : ''}`}>
-            {!hideHeader && (
-                <RentalFormHeader
-                    isNew={isNew}
-                    applicationNumber={app.applicationNumber}
-                    status={app.status}
-                    onStatusChange={app.setStatus}
-                    saving={app.saving}
-                    onSave={app.handleSave}
-                />
-            )}
-
-            {hideHeader && (
-                <div className="rental-embedded-toolbar">
-                    <span className="rental-embedded-toolbar__title">
-                        {isNew ? 'Нова заявка' : `Заявка ${app.applicationNumber}`}
-                    </span>
-                    <div className="rental-embedded-toolbar__actions">
-                        <select
-                            value={app.status}
-                            onChange={e => app.setStatus(e.target.value)}
-                            className="status-select"
-                        >
-                            {getStatusOptions('rental').map(({ value, label }) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
-                        {!hideToolbarSave && (
-                            <button
-                                type="button"
-                                onClick={app.handleSave}
-                                disabled={app.saving}
-                                className="btn btn-primary"
-                            >
-                                <Save size={16} /> {app.saving ? 'Збереження...' : 'Зберегти'}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
+        <div className="rental-form-page">
+            <RentalFormHeader
+                isNew={isNew}
+                applicationNumber={app.applicationNumber}
+                status={app.status}
+                onStatusChange={app.setStatus}
+                saving={app.saving}
+                onSave={app.handleSave}
+            />
 
             <RentalFormTabs
-                tab={activeTab}
+                tab={tab}
                 onTabChange={setTab}
                 itemsCount={app.items.length}
-                hideDocumentTab={hideDocumentTab}
-                hidePartiesTab={hidePartiesTab}
             />
 
             <div className="rental-form-body">
-                {activeTab === 'parties' && !hidePartiesTab && (
+                {tab === 'parties' && (
                     <RentalPartiesSection
                         clients={app.clients}
                         selectedClientId={app.selectedClientId}
@@ -178,7 +114,7 @@ export default function RentalApplicationEditor({
                     />
                 )}
 
-                {activeTab === 'items' && (
+                {tab === 'items' && (
                     <RentalItemsSection
                         items={app.items}
                         searchQuery={search.searchQuery}
@@ -194,12 +130,11 @@ export default function RentalApplicationEditor({
                         discountValue={app.discountValue}
                         onDiscountTypeChange={app.setDiscountType}
                         onDiscountValueChange={app.setDiscountValue}
-                        discountLocked={app.discountFromOrder || !!app.linkedOrder}
-                        enrichmentOnly={enrichmentOnly}
+                        discountLocked={!!app.linkedOrder}
                     />
                 )}
 
-                {activeTab === 'document' && !hideDocumentTab && (
+                {tab === 'document' && (
                     <RentalDocumentTab
                         applicationNumber={app.applicationNumber}
                         client={app.client}
@@ -221,37 +156,33 @@ export default function RentalApplicationEditor({
                 )}
             </div>
 
-            {!enrichmentOnly && (
-                <UpsellPanel
-                    visible={search.upsellVisible}
-                    productName={search.upsellProductName}
-                    items={app.items}
-                    upsellItems={search.upsellItems}
-                    onClose={() => search.setUpsellVisible(false)}
-                    onAddProduct={search.addUpsellProduct}
-                />
-            )}
+            <UpsellPanel
+                visible={search.upsellVisible}
+                productName={search.upsellProductName}
+                items={app.items}
+                upsellItems={search.upsellItems}
+                onClose={() => search.setUpsellVisible(false)}
+                onAddProduct={search.addUpsellProduct}
+            />
 
-            {!hideDocumentTab && (
-                <div style={{ display: 'none' }}>
-                    <RentalApplicationPrint
-                        ref={printRef}
-                        applicationNumber={app.applicationNumber}
-                        lessor={lessor}
-                        client={app.client}
-                        responsible={app.responsible}
-                        items={app.items}
-                        totalRental={totals.totalRental}
-                        totalDeposit={totals.totalDeposit}
-                        discountType={app.discountType}
-                        discountValue={totals.parsedDiscount}
-                        discountAmount={totals.discountAmount}
-                        totalRentalAfterDiscount={totals.totalRentalAfterDiscount}
-                        contractRef={currentContractRef}
-                        rentStartTime={orderRentStartTime || app.rentStartTime || app.linkedOrder?.rentStartTime || ''}
-                    />
-                </div>
-            )}
+            <div style={{ display: 'none' }}>
+                <RentalApplicationPrint
+                    ref={printRef}
+                    applicationNumber={app.applicationNumber}
+                    lessor={lessor}
+                    client={app.client}
+                    responsible={app.responsible}
+                    items={app.items}
+                    totalRental={totals.totalRental}
+                    totalDeposit={totals.totalDeposit}
+                    discountType={app.discountType}
+                    discountValue={totals.parsedDiscount}
+                    discountAmount={totals.discountAmount}
+                    totalRentalAfterDiscount={totals.totalRentalAfterDiscount}
+                    contractRef={currentContractRef}
+                    rentStartTime={app.rentStartTime || app.linkedOrder?.rentStartTime || ''}
+                />
+            </div>
         </div>
     );
 }

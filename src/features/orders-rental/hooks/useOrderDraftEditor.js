@@ -4,16 +4,18 @@ import { useToast } from '../../../context/ToastContext';
 import { resolveSellerId } from '../../../constants/sellers';
 import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
-import { buildOrderItemFromProduct, enrichOrderItemsFromProducts } from '../model/orderItems';
+import { buildOrderItemFromProduct, enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 import { calcDays } from '../model/rentalItems';
 
 export function useOrderDraftEditor({
     draft,
     setDraft,
     setOrder,
+    setLinkedRentalApp,
     products,
     rentProductIds,
     billingOptions,
+    rentalExtras,
 }) {
     const [saving, setSaving] = useState(false);
     const [dirty, setDirty] = useState(false);
@@ -38,7 +40,8 @@ export function useOrderDraftEditor({
         });
     }
 
-    async function persistDraft() {
+    /** @param {{clientPassport?, clientSiteAddress?, responsible?}} [extraRentalFields] */
+    async function persistDraft(extraRentalFields) {
         if (!draft) return null;
         const rentStartTime = (() => {
             const raw = String(draft.rentStartTime || '').trim();
@@ -50,6 +53,7 @@ export function useOrderDraftEditor({
             return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
         })();
 
+        const extras = extraRentalFields || rentalExtras || {};
         const payload = withOrderTotal({
             customerName: draft.customerName,
             customerPhone: normalizeUaPhone(draft.customerPhone),
@@ -66,17 +70,28 @@ export function useOrderDraftEditor({
             rentalApplicationId: draft.rentalApplicationId || null,
             rentStartTime,
         }, billingOptions);
+        payload.rentalApplication = {
+            clientPassport: extras.passport || '',
+            clientSiteAddress: extras.siteAddress || '',
+            responsible: Array.isArray(extras.responsible) ? extras.responsible : [],
+        };
 
-        const updated = await ordersApi.update(draft.id, payload);
+        const { order: updated, rentalApplication } = await ordersApi.update(draft.id, payload);
         setOrder(updated);
+        setLinkedRentalApp?.(rentalApplication);
         setDraft({
             ...updated,
             rentStartTime: updated.rentStartTime || rentStartTime || null,
             discount: parseDiscountPercent(updated.discount),
-            items: enrichOrderItemsFromProducts(
-                updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
-                products,
-                rentProductIds
+            items: enrichRentOrderItemsFromApplication(
+                enrichOrderItemsFromProducts(
+                    updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+                    products,
+                    rentProductIds
+                ),
+                rentProductIds,
+                rentalApplication,
+                products
             ),
         });
         setDirty(false);
@@ -106,9 +121,19 @@ export function useOrderDraftEditor({
         setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
-            const items = prev.items.map((item, i) =>
-                i === idx ? { ...item, quantity: parseFloat(qty) || 0 } : item
-            );
+            const items = prev.items.map((item, i) => {
+                if (i !== idx) return item;
+                const quantity = parseFloat(qty) || 0;
+                const next = { ...item, quantity };
+                if (item.replacementCostPerUnit !== undefined && item.replacementCostPerUnit !== '') {
+                    next.replacementCostTotal = (parseFloat(item.replacementCostPerUnit || 0) * quantity).toFixed(2);
+                    next.depositAmount = (parseFloat(next.replacementCostTotal || 0) * parseFloat(item.depositPercent || 0) / 100).toFixed(2);
+                }
+                if (item.weightPerUnit !== undefined && item.weightPerUnit !== '') {
+                    next.weightTotal = (parseFloat(item.weightPerUnit || 0) * quantity).toFixed(2);
+                }
+                return next;
+            });
             return withOrderTotal({ ...prev, items }, billingOptions);
         });
     }
@@ -130,6 +155,41 @@ export function useOrderDraftEditor({
                 };
             });
             return withOrderTotal({ ...prev, items }, billingOptions);
+        });
+    }
+
+    /** Enrichment fields (serial, condition, kit, weight, replacement cost, deposit %) — edited inline on the item row. */
+    function updateItemEnrichment(idx, field, value) {
+        setDirty(true);
+        setDraft((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.map((item, i) => {
+                if (i !== idx) return item;
+                const updated = { ...item, [field]: value };
+                if (field === 'replacementCostPerUnit') {
+                    updated.replacementCostTotal = (parseFloat(value || 0) * parseFloat(updated.quantity || 1)).toFixed(2);
+                    updated.depositAmount = (parseFloat(updated.replacementCostTotal || 0) * parseFloat(updated.depositPercent || 0) / 100).toFixed(2);
+                } else if (field === 'depositPercent') {
+                    updated.depositAmount = (parseFloat(updated.replacementCostTotal || 0) * parseFloat(value || 0) / 100).toFixed(2);
+                }
+                return updated;
+            });
+            return { ...prev, items };
+        });
+    }
+
+    function removeItemKit(idx, kitIndex) {
+        setDirty(true);
+        setDraft((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.map((item, i) => {
+                if (i !== idx) return item;
+                const kitItems = Array.isArray(item.kitItems)
+                    ? item.kitItems.filter((_, ki) => ki !== kitIndex)
+                    : [];
+                return { ...item, kitItems };
+            });
+            return { ...prev, items };
         });
     }
 
@@ -165,6 +225,8 @@ export function useOrderDraftEditor({
         removeItem,
         updateQty,
         updateRentDates,
+        updateItemEnrichment,
+        removeItemKit,
         handleSave,
         suggestedProducts,
     };

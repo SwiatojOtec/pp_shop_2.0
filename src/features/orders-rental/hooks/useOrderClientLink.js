@@ -4,12 +4,13 @@ import { useToast } from '../../../context/ToastContext';
 import { resolveSellerId } from '../../../constants/sellers';
 import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
 import { isValidUaPhone, normalizeUaPhone } from '../../../utils/phoneUtils';
-import { enrichOrderItemsFromProducts } from '../model/orderItems';
+import { enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 
 export function useOrderClientLink({
     draft,
     setDraft,
     setOrder,
+    setLinkedRentalApp,
     products,
     rentProductIds,
     billingOptions,
@@ -67,15 +68,21 @@ export function useOrderClientLink({
                 sellerId: resolveSellerId(draft.sellerId),
                 discount: clientDiscount > 0 ? clientDiscount : parseDiscountPercent(draft.discount),
             }, billingOptions);
-            const updated = await ordersApi.update(draft.id, payload);
+            const { order: updated, rentalApplication } = await ordersApi.update(draft.id, payload);
             setOrder(updated);
+            setLinkedRentalApp?.(rentalApplication);
             setDraft({
                 ...updated,
                 discount: parseDiscountPercent(updated.discount),
-                items: enrichOrderItemsFromProducts(
-                    updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
-                    products,
-                    rentProductIds
+                items: enrichRentOrderItemsFromApplication(
+                    enrichOrderItemsFromProducts(
+                        updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
+                        products,
+                        rentProductIds
+                    ),
+                    rentProductIds,
+                    rentalApplication,
+                    products
                 ),
             });
             setLinkedClient(client);

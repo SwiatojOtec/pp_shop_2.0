@@ -6,6 +6,17 @@
     overflow: hidden;
 }
 
+/* ── Utilities ──────────────────────────────────────────────── */
+
+.mono {
+    font-family: var(--ds-font-mono);
+}
+
+.num {
+    font-family: var(--ds-font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
 /* ── Buttons ────────────────────────────────────────────────── */
 
 .ds-btn {
@@ -476,6 +487,164 @@
     display: flex;
     gap: var(--ds-space-2);
     justify-content: flex-end;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+
+.ds-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+}
+
+.ds-card-h {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-3) var(--ds-space-4);
+    border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-card-h h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.ds-card-b {
+    padding: var(--ds-space-4);
+}
+
+/* ── FieldList ──────────────────────────────────────────────── */
+
+.ds-field-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-2);
+}
+
+.ds-field {
+    display: grid;
+    grid-template-columns: 128px 1fr;
+    gap: var(--ds-space-2);
+    align-items: start;
+    font-size: 0.85rem;
+}
+
+.ds-field dt {
+    color: var(--ds-text-muted);
+}
+
+.ds-field dd {
+    margin: 0;
+    color: var(--ds-text);
+    min-width: 0;
+}
+
+.ds-field input,
+.ds-field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 9px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.85rem;
+    font-family: var(--ds-font);
+}
+
+.ds-field input:focus,
+.ds-field select:focus {
+    outline: none;
+    border-color: var(--ds-accent);
+}
+
+/* ── StepChain ──────────────────────────────────────────────── */
+
+.ds-steps {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ds-step {
+    display: flex;
+    align-items: center;
+}
+
+.ds-step:not(:first-child)::before {
+    content: '';
+    width: 18px;
+    height: 1px;
+    background: var(--ds-border);
+    margin: 0 2px;
+    flex-shrink: 0;
+}
+
+.ds-step--done:not(:first-child)::before {
+    background: var(--ds-success);
+}
+
+.ds-step-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 6px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-full);
+    background: var(--ds-surface);
+    color: var(--ds-text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: var(--ds-font);
+    cursor: pointer;
+    transition: background var(--ds-duration-fast) var(--ds-ease), border-color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.ds-step-btn:disabled {
+    cursor: default;
+}
+
+.ds-step-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--ds-surface-sunken);
+    color: var(--ds-text-subtle);
+    font-size: 0.72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.ds-step--done .ds-step-btn {
+    border-color: var(--ds-success);
+    color: var(--ds-success);
+}
+
+.ds-step--done .ds-step-marker {
+    background: var(--ds-success);
+    color: var(--ds-text-inverse);
+}
+
+.ds-step--now .ds-step-btn {
+    border-color: var(--ds-accent);
+    background: var(--ds-accent-soft);
+    color: var(--ds-accent);
+}
+
+.ds-step--now .ds-step-marker {
+    background: var(--ds-accent);
+    color: var(--ds-text-inverse);
 }
 
 /* ── Drawer ─────────────────────────────────────────────────── */

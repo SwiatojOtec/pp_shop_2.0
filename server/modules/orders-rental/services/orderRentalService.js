@@ -7,6 +7,7 @@ const { recalculateProductQuantity } = require('../../../services/inventoryServi
 const { parseDiscountPercent, roundMoney } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { generateAppNumber } = require('../utils/orderNumbering');
+const { recalcRentQuantitiesForItemsLists } = require('./rentalApplicationService');
 
 /** Inclusive calendar days: 11.08 → 15.08 = 5. */
 function calcInclusiveDays(from, to) {
@@ -16,6 +17,22 @@ function calcInclusiveDays(from, to) {
     return Math.floor(ms / 86400000) + 1;
 }
 
+/** First value among `a`/`b` that isn't null/undefined/''. */
+function pickFilled(...values) {
+    for (const v of values) {
+        if (v != null && v !== '') return v;
+    }
+    return values[values.length - 1];
+}
+
+/**
+ * Builds RentalApplication.items from the order's own rent-catalog lines.
+ * Enrichment fields (serial number, condition, kit, weight, replacement cost,
+ * deposit %, rate override) are edited directly on the order line now (the
+ * Deal screen's Позиції card) — `line` is checked first, `prev` (the
+ * previously-saved application line) is a fallback for continuity, and the
+ * product catalog is the last resort.
+ */
 function buildRentItemsFromOrder(order, productsById, previousItems = []) {
     const previousByProduct = new Map();
     for (const item of previousItems || []) {
@@ -36,9 +53,7 @@ function buildRentItemsFromOrder(order, productsById, previousItems = []) {
             const prev = previousByProduct.get(Number(line.id)) || {};
             const qty = Number(line.quantity) || 1;
             const replacementCost = parseFloat(
-                prev.replacementCostPerUnit != null && prev.replacementCostPerUnit !== ''
-                    ? prev.replacementCostPerUnit
-                    : (product.replacementCost || 0)
+                pickFilled(line.replacementCostPerUnit, prev.replacementCostPerUnit, product.replacementCost, 0)
             ) || 0;
             const catalogPrice = parseFloat(product.price || prev.catalogPrice || 0) || 0;
             const rentPriceTiers = coerceDbRentPriceTiers(prev.rentPriceTiers || product.rentPriceTiers);
@@ -54,40 +69,56 @@ function buildRentItemsFromOrder(order, productsById, previousItems = []) {
                 rentDays
             );
             const depositPercent = parseFloat(
-                prev.depositPercent != null && prev.depositPercent !== ''
-                    ? prev.depositPercent
-                    : DEFAULT_RENTAL_DEPOSIT_PERCENT
+                pickFilled(line.depositPercent, prev.depositPercent, DEFAULT_RENTAL_DEPOSIT_PERCENT)
             ) || DEFAULT_RENTAL_DEPOSIT_PERCENT;
+            const resolvedPricePerDay = pickFilled(line.pricePerDay, prev.pricePerDay, pricePerDay);
 
             return {
                 productId: line.id,
                 name: line.name || product.name || prev.name || '',
-                serialNumber: prev.serialNumber || product.serialNumber || '',
-                inventoryNumber: prev.inventoryNumber || product.inventoryNumber || '',
-                technicalCondition: prev.technicalCondition || product.technicalCondition || '',
+                serialNumber: pickFilled(line.serialNumber, prev.serialNumber, product.serialNumber, ''),
+                inventoryNumber: pickFilled(line.inventoryNumber, prev.inventoryNumber, product.inventoryNumber, ''),
+                technicalCondition: pickFilled(line.technicalCondition, prev.technicalCondition, product.technicalCondition, ''),
                 unit: line.unit || product.unit || prev.unit || 'шт',
                 quantity: qty,
-                weightTotal: prev.weightTotal || product.weightTotal || '',
+                weightTotal: pickFilled(line.weightTotal, prev.weightTotal, product.weightTotal, ''),
                 replacementCostPerUnit: replacementCost,
                 replacementCostTotal: replacementCost * qty,
                 depositPercent,
                 depositAmount: (replacementCost * qty * (depositPercent / 100)).toFixed(2),
                 catalogPrice,
                 rentPriceTiers,
-                pricePerDay: prev.pricePerDay != null && prev.pricePerDay !== ''
-                    ? prev.pricePerDay
-                    : pricePerDay,
+                pricePerDay: resolvedPricePerDay,
                 rentFrom,
                 rentTo,
                 days: rentDays,
-                totalRental: (rentDays * (
-                    parseFloat(prev.pricePerDay != null && prev.pricePerDay !== '' ? prev.pricePerDay : pricePerDay) || 0
-                ) * qty).toFixed(2),
-                kitItems: Array.isArray(prev.kitItems)
-                    ? prev.kitItems
-                    : (Array.isArray(product.kitItems) ? product.kitItems : []),
+                totalRental: (rentDays * (parseFloat(resolvedPricePerDay) || 0) * qty).toFixed(2),
+                kitItems: Array.isArray(line.kitItems)
+                    ? line.kitItems
+                    : (Array.isArray(prev.kitItems)
+                        ? prev.kitItems
+                        : (Array.isArray(product.kitItems) ? product.kitItems : [])),
             };
         });
+}
+
+/**
+ * The deal's single status chain (Order.status) drives the internal
+ * RentalApplication.status — the rental app no longer has its own editable
+ * status in the Deal screen. Mapping keeps existing RentalApplication-status
+ * consumers (inventory committed-quantity calc, calendar, auto-overdue) working
+ * unchanged: paid+ reserves stock (`booked`), issued means physically out
+ * (`active`), returned/done both mean the tool is back (`returned`).
+ */
+function deriveRentalStatusFromDealStage(dealStatus) {
+    switch (dealStatus) {
+        case 'paid': return 'booked';
+        case 'issued': return 'active';
+        case 'returned':
+        case 'done': return 'returned';
+        case 'cancelled': return 'cancelled';
+        default: return 'draft'; // new, invoice
+    }
 }
 
 /**
@@ -208,6 +239,114 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
     });
 }
 
+/**
+ * The Deal screen's single "Зберегти" button — one transaction that saves the
+ * order AND (when the order has rental-catalog lines) the linked rental
+ * application, instead of two sequential requests with no rollback
+ * (docs/admin-redesign/03-screens.md, «Угода»).
+ *
+ * @param {number} orderId
+ * @param {object} orderPatch — already-whitelisted Order fields (see updateOrder)
+ * @param {{ clientPassport?: string, clientSiteAddress?: string, responsible?: Array }} dealExtras
+ *   — rental-only fields with no Order-side home; identity (name/phone/email/
+ *   address/clientId) is always mirrored from the order itself, not sent separately.
+ */
+async function saveDealWithRentalApplication(orderId, orderPatch, dealExtras = {}, createdBy = null) {
+    return sequelize.transaction(async (transaction) => {
+        const order = await Order.findByPk(orderId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+        });
+        if (!order) {
+            const err = new Error('Замовлення не знайдено');
+            err.status = 404;
+            throw err;
+        }
+
+        await order.update(orderPatch, { transaction });
+
+        const itemIds = [...new Set(
+            (order.items || []).map((line) => line.id).filter(Boolean)
+        )];
+        const products = itemIds.length
+            ? await Product.findAll({ where: { id: itemIds, isRent: true }, transaction })
+            : [];
+        const productsById = new Map(products.map((p) => [p.id, p]));
+        const hasRentItems = (order.items || []).some((line) => productsById.get(line.id)?.isRent);
+
+        let application = null;
+        let prevItems = [];
+
+        if (hasRentItems) {
+            let existing = order.rentalApplicationId
+                ? await RentalApplication.findByPk(order.rentalApplicationId, { transaction })
+                : null;
+            if (order.rentalApplicationId && !existing) {
+                await order.update({ rentalApplicationId: null }, { transaction });
+            }
+
+            prevItems = existing?.items || [];
+            const rentItems = buildRentItemsFromOrder(order, productsById, prevItems);
+            const orderDiscount = parseDiscountPercent(order.discount);
+            const totalRental = roundMoney(
+                rentItems.reduce((sum, line) => sum + (parseFloat(line.totalRental) || 0), 0)
+            );
+            const totalDeposit = roundMoney(
+                rentItems.reduce((sum, line) => sum + (parseFloat(line.depositAmount) || 0), 0)
+            );
+            const discountAmount = roundMoney(Math.min((totalRental * orderDiscount) / 100, totalRental));
+            const totalAmount = roundMoney(Math.max(totalRental - discountAmount, 0));
+            const rentFromDates = rentItems.map((l) => l.rentFrom).filter(Boolean).sort();
+            const rentToDates = rentItems.map((l) => l.rentTo).filter(Boolean).sort();
+            const status = deriveRentalStatusFromDealStage(order.status);
+
+            const fields = {
+                clientName: order.customerName || '',
+                clientPhone: order.customerPhone || '',
+                clientEmail: order.customerEmail || null,
+                clientAddress: order.address || '',
+                clientId: order.clientId || null,
+                clientPassport: dealExtras.clientPassport ?? existing?.clientPassport ?? '',
+                clientSiteAddress: dealExtras.clientSiteAddress ?? existing?.clientSiteAddress ?? '',
+                responsible: Array.isArray(dealExtras.responsible) ? dealExtras.responsible : (existing?.responsible || []),
+                items: rentItems,
+                rentFrom: rentFromDates[0] || null,
+                rentTo: rentToDates[rentToDates.length - 1] || null,
+                rentStartTime: order.rentStartTime || null,
+                depositAmount: totalDeposit,
+                discountType: 'percent',
+                discountValue: orderDiscount,
+                discountAmount,
+                totalAmount,
+                status,
+            };
+
+            if (existing) {
+                await existing.update(fields, { transaction });
+                application = existing;
+            } else {
+                const applicationNumber = await generateAppNumber();
+                application = await RentalApplication.create({
+                    ...fields,
+                    applicationNumber,
+                    createdBy,
+                }, { transaction });
+                await order.update({ rentalApplicationId: application.id }, { transaction });
+            }
+        }
+
+        await order.reload({ transaction });
+
+        const newItems = application?.items || [];
+        await recalcRentQuantitiesForItemsLists(prevItems, newItems);
+
+        return { order, rentalApplication: application ? application.toJSON() : null };
+    });
+}
+
 module.exports = {
+    buildRentItemsFromOrder,
+    deriveRentalStatusFromDealStage,
     createOrGetRentalApplicationFromOrder,
+    saveDealWithRentalApplication,
 };

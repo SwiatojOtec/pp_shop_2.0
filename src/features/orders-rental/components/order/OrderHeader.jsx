@@ -1,58 +1,63 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, Save, Trash2 } from 'lucide-react';
-import { Button } from '../../../../components/ui/button';
-import StatusBadge from '../../../admin/ui/StatusBadge';
-import { parseDiscountPercent } from '../../amounts/orderAmounts';
-import {
-    formatOrderNumberDisplay,
-    formatOrderDate,
-} from '../../amounts/orderHelpers';
-
-const money = (value) => Number(value || 0).toLocaleString('uk-UA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-});
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Check, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../../../admin/ui/ConfirmDialog';
+import StepChain from '../../../admin/ui/StepChain';
+import { getDealSteps } from '../../../admin/model/dealStatus';
+import { getSeller } from '../../../../constants/sellers';
+import { orderHasShopItems, formatOrderNumberDisplay, formatOrderDate } from '../../amounts/orderHelpers';
 
 export default function OrderHeader({
     order,
     draft,
     linkedClient,
-    linkedRentalApp,
-    orderAmounts,
-    liveDeposit = null,
-    hasRent = false,
+    hasRent,
+    rentProductIds,
     saving,
     dirty,
     justSaved,
     onSave,
     onDeleteOpen,
+    onStatusChange,
 }) {
-    const navigate = useNavigate();
-    const discount = parseDiscountPercent(draft?.discount);
-    const deposit = liveDeposit != null
-        ? Number(liveDeposit)
-        : Number(linkedRentalApp?.depositAmount || 0);
+    const [pendingStep, setPendingStep] = useState(null);
+    const steps = getDealSteps(draft.status, hasRent);
+    const currentIndex = steps.findIndex((s) => s.state === 'now');
+    const hasShop = orderHasShopItems(draft, rentProductIds);
+
+    function handleStepClick(key) {
+        const idx = steps.findIndex((s) => s.key === key);
+        if (idx < 0 || idx === currentIndex) return;
+        if (idx < currentIndex) {
+            setPendingStep(key);
+        } else {
+            onStatusChange(key);
+        }
+    }
+
+    const pendingLabel = steps.find((s) => s.key === pendingStep)?.label || '';
 
     return (
         <header className="deal-header">
             <div className="deal-header__top">
-                <button
-                    type="button"
-                    className="od-back"
-                    onClick={() => navigate('/admin/deals')}
-                    title="До списку"
-                >
+                <Link to="/admin/deals" className="ds-icon-btn" title="До списку">
                     <ArrowLeft size={18} />
-                </button>
+                </Link>
 
                 <div className="deal-header__ident">
-                    <h1 className="od-title">
-                        {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
-                    </h1>
-                    <StatusBadge domain="order" status={order.status} />
-                    <span className="deal-header__date">
+                    <div className="deal-header__title-row">
+                        <span className="deal-header__number">
+                            {formatOrderNumberDisplay(order.orderNumber || `#${order.id}`)}
+                        </span>
+                        {hasRent && <span className="ds-badge ds-badge--info">оренда</span>}
+                        {hasShop && <span className="ds-badge ds-badge--neutral">магазин</span>}
+                        {draft.status === 'cancelled' && <span className="ds-badge ds-badge--danger">Скасовано</span>}
+                    </div>
+                    <div className="deal-header__sub">
                         Створено {formatOrderDate(order.createdAt)}
-                    </span>
+                        {' · '}{linkedClient?.fullName || draft.customerName || '—'}
+                        {' · '}{getSeller(draft.sellerId).label}
+                    </div>
                 </div>
 
                 <div className="deal-header__actions">
@@ -62,49 +67,29 @@ export default function OrderHeader({
                             <Check size={14} /> Збережено
                         </span>
                     )}
-                    <Button variant="ghost" size="sm" className="text-red-500" onClick={onDeleteOpen}>
-                        <Trash2 size={14} /> Видалити
-                    </Button>
-                    <Button size="sm" onClick={onSave} disabled={saving}>
-                        <Save size={14} /> {saving ? 'Збереження…' : 'Зберегти'}
-                    </Button>
+                    <button type="button" className="ds-icon-btn" onClick={onDeleteOpen} title="Видалити угоду">
+                        <Trash2 size={16} />
+                    </button>
+                    <button type="button" className="ds-btn ds-btn--primary" onClick={onSave} disabled={saving}>
+                        {saving ? 'Збереження…' : 'Зберегти'}
+                    </button>
                 </div>
             </div>
 
-            <dl className="deal-summary">
-                <div className="deal-summary__cell">
-                    <dt>Клієнт</dt>
-                    <dd>
-                        {linkedClient ? (
-                            <Link to={`/admin/clients/${linkedClient.id}`} className="deal-summary__link">
-                                {linkedClient.fullName || draft?.customerName || '—'}
-                            </Link>
-                        ) : (
-                            draft?.customerName || '—'
-                        )}
-                    </dd>
-                </div>
-                <div className="deal-summary__cell">
-                    <dt>Сума замовлення</dt>
-                    <dd className="deal-summary__accent">{money(orderAmounts?.total)} ₴</dd>
-                </div>
-                <div className="deal-summary__cell">
-                    <dt>Знижка</dt>
-                    <dd>{discount > 0 ? `${discount}%` : 'без знижки'}</dd>
-                </div>
-                {hasRent && (
-                    <div className="deal-summary__cell">
-                        <dt>Застава</dt>
-                        <dd>{money(deposit)} ₴</dd>
-                    </div>
-                )}
-                {linkedRentalApp && (
-                    <div className="deal-summary__cell">
-                        <dt>Заявка оренди</dt>
-                        <dd>{linkedRentalApp.applicationNumber || `#${linkedRentalApp.id}`}</dd>
-                    </div>
-                )}
-            </dl>
+            <StepChain steps={steps} onSelect={handleStepClick} disabled={saving} />
+
+            <ConfirmDialog
+                open={!!pendingStep}
+                danger={false}
+                title="Повернути угоду на попередній крок?"
+                message={`Статус зміниться на «${pendingLabel}». Це не пов'язано з фактичним поверненням інструменту — переконайтесь, що це саме те, що сталось.`}
+                confirmText="Змінити"
+                onConfirm={() => {
+                    onStatusChange(pendingStep);
+                    setPendingStep(null);
+                }}
+                onCancel={() => setPendingStep(null)}
+            />
         </header>
     );
 }

@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react';
 import {
-    Files, FileText, ClipboardList, Undo2, ScrollText,
+    FileText, ClipboardList, Undo2, ScrollText,
     Download, X, RefreshCw, ChevronDown, Loader2,
 } from 'lucide-react';
 import ConfirmDialog from '../../../admin/ui/ConfirmDialog';
+import { isDealAtOrPastStep } from '../../../admin/model/dealStatus';
 
+/* Order they actually occur in a deal (docs/admin-redesign/03-screens.md, «Угода»). */
 const DOC_KINDS = [
     { type: 'invoice', label: 'Рахунок', icon: FileText, rentOnly: false },
     { type: 'deposit_invoice', label: 'Рахунок на заставу', icon: FileText, rentOnly: true },
-    { type: 'rental_application', label: 'Заявка оренди', icon: ClipboardList, rentOnly: true },
-    { type: 'rental_return_act', label: 'Акт повернення-огляду', icon: Undo2, rentOnly: true },
     { type: 'rental_contract', label: 'Договір оренди', icon: ScrollText, rentOnly: true },
     { type: 'rental_protocol', label: 'Протокол (Додаток №1)', icon: FileText, rentOnly: true },
+    { type: 'rental_application', label: 'Заявка оренди', icon: ClipboardList, rentOnly: true },
+    { type: 'rental_return_act', label: 'Акт повернення-огляду', icon: Undo2, rentOnly: true, afterStep: 'issued' },
 ];
 
 /** Older документи of the same kind are archived under a toggle instead of piling up. */
@@ -31,6 +33,7 @@ function groupDocumentsByType(documents) {
 export default function DocumentsPanel({
     draft,
     hasRent,
+    dealStatus,
     documents,
     invoiceLoading,
     depositInvoiceLoading,
@@ -78,11 +81,8 @@ export default function DocumentsPanel({
     const otherDocs = groups.get('other') || [];
 
     return (
-        <aside className="od-card od-card--docs">
-            <h2 className="od-card__title">
-                <Files size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                Документи
-            </h2>
+        <div className="ds-card deal-card deal-card--docs">
+            <div className="ds-card-h"><h2>Документи</h2></div>
 
             <ul className="doc-kinds">
                 {kinds.map((kind) => {
@@ -91,6 +91,7 @@ export default function DocumentsPanel({
                     const [latest] = versions;
                     const { onGenerate, busy, disabled } = config[type];
                     const isOpen = !!expanded[type];
+                    const hasBasis = !kind.afterStep || isDealAtOrPastStep(dealStatus, hasRent, kind.afterStep);
 
                     return (
                         <li key={type} className={`doc-kind${latest ? ' doc-kind--ready' : ''}`}>
@@ -99,7 +100,9 @@ export default function DocumentsPanel({
                                 <div className="doc-kind__body">
                                     <span className="doc-kind__label">{label}</span>
                                     <span className="doc-kind__sub">
-                                        {latest ? formatDocDateTime(latest.createdAt) : 'ще не сформовано'}
+                                        {!hasBasis
+                                            ? 'доступний після видачі'
+                                            : latest ? formatDocDateTime(latest.createdAt) : 'ще не сформовано'}
                                     </span>
                                 </div>
 
@@ -118,7 +121,7 @@ export default function DocumentsPanel({
                                         type="button"
                                         className={latest ? 'doc-icon-btn' : 'doc-kind__create'}
                                         onClick={onGenerate}
-                                        disabled={disabled}
+                                        disabled={disabled || !hasBasis}
                                         title={latest ? 'Сформувати заново' : undefined}
                                     >
                                         {busy
@@ -175,14 +178,14 @@ export default function DocumentsPanel({
             </ul>
 
             {!hasRent && (
-                <p className="od-docs-hint">
+                <p className="deal-docs-hint">
                     Документи оренди з&apos;являться, якщо в замовленні є інструменти з каталогу оренди.
                 </p>
             )}
 
             {otherDocs.length > 0 && (
-                <div className="od-docs-files">
-                    <div className="od-docs-files__label">Інші файли</div>
+                <div className="deal-docs-files">
+                    <div className="deal-docs-files__label">Інші файли</div>
                     <ul className="doc-versions">
                         {otherDocs.map((doc) => (
                             <li key={doc.id} className="doc-version">
@@ -220,6 +223,6 @@ export default function DocumentsPanel({
                 }}
                 onCancel={() => setDeleteTarget(null)}
             />
-        </aside>
+        </div>
     );
 }

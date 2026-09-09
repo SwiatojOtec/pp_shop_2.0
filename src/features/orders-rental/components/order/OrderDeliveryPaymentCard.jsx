@@ -1,80 +1,100 @@
-import { Truck } from 'lucide-react';
 import { DEFAULT_SELLER_ID, SELLER_OPTIONS, getRentalLessor } from '../../../../constants/sellers';
 import { DELIVERY_LABELS, PAYMENT_LABELS } from '../../amounts/orderHelpers';
 import { parseDiscountPercent } from '../../amounts/orderAmounts';
+
+const money = (value) => Number(value || 0).toLocaleString('uk-UA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
+
+/** Earliest rentFrom among rent lines + the deal's rentStartTime — "Видача". */
+function resolveIssueMoment(draft, rentProductIds) {
+    const dates = (draft.items || [])
+        .filter((item) => item.isRent || rentProductIds?.has?.(item.id))
+        .map((item) => item.rentFrom)
+        .filter(Boolean)
+        .sort();
+    if (!dates.length) return null;
+    const [y, m, d] = dates[0].split('-');
+    const date = `${d}.${m}.${y}`;
+    return draft.rentStartTime ? `${date}, ${draft.rentStartTime}` : date;
+}
+
+function resolveTotalDeposit(draft, rentProductIds) {
+    return (draft.items || [])
+        .filter((item) => item.isRent || rentProductIds?.has?.(item.id))
+        .reduce((sum, item) => sum + (parseFloat(item.depositAmount) || 0), 0);
+}
 
 export default function OrderDeliveryPaymentCard({
     draft,
     setField,
     hasRent = false,
+    rentProductIds,
 }) {
     const lessor = getRentalLessor(draft.sellerId || DEFAULT_SELLER_ID);
+    const issueMoment = hasRent ? resolveIssueMoment(draft, rentProductIds) : null;
+    const deposit = hasRent ? resolveTotalDeposit(draft, rentProductIds) : 0;
 
     return (
-        <div className="od-card od-card--delivery">
-            <h2 className="od-card__title">
-                <Truck size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                Умови
-            </h2>
-
-            <div className="od-readonly-row">
-                <span>Спосіб отримання</span>
-                <span>{DELIVERY_LABELS[draft.deliveryMethod] || draft.deliveryMethod || '—'}</span>
-            </div>
-            <div className="od-readonly-row">
-                <span>Оплата</span>
-                <span>{PAYMENT_LABELS[draft.paymentMethod] || draft.paymentMethod || '—'}</span>
-            </div>
-
-            <div className="order-detail-grid2 order-detail-grid2--conditions">
-                <div className="form-group">
-                    <label>Знижка, %</label>
-                    <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        value={parseDiscountPercent(draft.discount)}
-                        onChange={(e) => setField('discount', e.target.value)}
-                    />
-                    {hasRent && (
-                        <span className="form-hint">Діє і на замовлення, і на документи оренди</span>
-                    )}
-                </div>
-
-                <div className="form-group form-group--full">
-                    <label>{hasRent ? 'Орендодавець / Продавець' : 'Продавець'}</label>
-                    <select
-                        value={draft.sellerId || DEFAULT_SELLER_ID}
-                        onChange={(e) => setField('sellerId', e.target.value)}
-                    >
-                        {SELLER_OPTIONS.map((seller) => (
-                            <option key={seller.id} value={seller.id}>
-                                {seller.label}
-                            </option>
-                        ))}
-                    </select>
-                    {hasRent && (
-                        <span className="form-hint">
-                            {lessor.name} · ІПН {lessor.ipn}
-                        </span>
-                    )}
-                </div>
-
-                {hasRent && (
-                    <div className="form-group form-group--full">
-                        <label>Час початку оренди</label>
-                        <input
-                            type="time"
-                            value={draft.rentStartTime || ''}
-                            onChange={(e) => setField('rentStartTime', e.target.value || null)}
-                            onInput={(e) => setField('rentStartTime', e.target.value || null)}
-                        />
-                        <span className="form-hint">
-                            Той самий час підставиться в «Оренда по» та в документи заявки
-                        </span>
+        <div className="ds-card deal-card">
+            <div className="ds-card-h"><h2>Доставка та оплата</h2></div>
+            <div className="ds-card-b">
+                <dl className="ds-field-list">
+                    <div className="ds-field">
+                        <dt>Продавець</dt>
+                        <dd>
+                            <select value={draft.sellerId || DEFAULT_SELLER_ID} onChange={(e) => setField('sellerId', e.target.value)}>
+                                {SELLER_OPTIONS.map((seller) => (
+                                    <option key={seller.id} value={seller.id}>{seller.label}</option>
+                                ))}
+                            </select>
+                            {hasRent && <span className="deal-card__hint">{lessor.name} · ІПН {lessor.ipn}</span>}
+                        </dd>
                     </div>
-                )}
+                    <div className="ds-field">
+                        <dt>Доставка</dt>
+                        <dd>{DELIVERY_LABELS[draft.deliveryMethod] || draft.deliveryMethod || '—'}</dd>
+                    </div>
+                    <div className="ds-field">
+                        <dt>Оплата</dt>
+                        <dd>{PAYMENT_LABELS[draft.paymentMethod] || draft.paymentMethod || '—'}</dd>
+                    </div>
+                    <div className="ds-field">
+                        <dt>Знижка, %</dt>
+                        <dd>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.5"
+                                value={parseDiscountPercent(draft.discount)}
+                                onChange={(e) => setField('discount', e.target.value)}
+                            />
+                            {hasRent && <span className="deal-card__hint">Діє і на замовлення, і на документи оренди</span>}
+                        </dd>
+                    </div>
+
+                    {hasRent && (
+                        <>
+                            <div className="ds-field">
+                                <dt>Час видачі</dt>
+                                <dd>
+                                    <input
+                                        type="time"
+                                        value={draft.rentStartTime || ''}
+                                        onChange={(e) => setField('rentStartTime', e.target.value || null)}
+                                    />
+                                    {issueMoment && <span className="deal-card__hint mono">{issueMoment}</span>}
+                                </dd>
+                            </div>
+                            <div className="ds-field">
+                                <dt>Застава</dt>
+                                <dd className="num">{money(deposit)} ₴</dd>
+                            </div>
+                        </>
+                    )}
+                </dl>
             </div>
         </div>
     );

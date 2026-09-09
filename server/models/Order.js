@@ -51,9 +51,12 @@ const Order = sequelize.define('Order', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    /** Deal stage: new, invoice, paid, issued, returned, done, cancelled
+     *  (docs/admin-redesign/03-screens.md, «Угода» — one status chain).
+     *  issued/returned only apply to deals with rental items. */
     status: {
         type: DataTypes.STRING,
-        defaultValue: 'pending' // pending, processing, shipped, delivered, cancelled
+        defaultValue: 'new'
     },
     sellerId: {
         type: DataTypes.STRING,

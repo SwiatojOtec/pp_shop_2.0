@@ -54,7 +54,7 @@ function isRentBillingItem(item, rentProductIds) {
     return Array.isArray(rentProductIds) && rentProductIds.includes(item?.id);
 }
 
-function resolveOrderItemRentPricePerDay(orderItem) {
+export function resolveOrderItemRentPricePerDay(orderItem) {
     const catalogPrice = parseFloat(orderItem?.catalogPrice ?? orderItem?.price) || 0;
     const days = resolveOrderItemRentDays(orderItem);
     const tiers = coerceDbRentPriceTiers(orderItem?.rentPriceTiers);

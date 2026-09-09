@@ -17,7 +17,10 @@ const {
     formatDailyDocumentNumber,
     reserveRentalActNumber,
 } = require('../services/orderDocumentService');
-const { createOrGetRentalApplicationFromOrder } = require('../services/orderRentalService');
+const {
+    createOrGetRentalApplicationFromOrder,
+    saveDealWithRentalApplication,
+} = require('../services/orderRentalService');
 const {
     checkRentalContractReadiness,
     generateRentalContractPdf,
@@ -611,11 +614,25 @@ async function updateOrder(req, res) {
                 patch[key] = updates[key];
             }
         }
-        await order.update(patch);
-        await order.reload();
-        res.json(order);
+
+        // "Угода" (docs/admin-redesign/03-screens.md): one Save button, one
+        // transaction — when the deal has rental-catalog lines, the linked
+        // RentalApplication (item enrichment, passport/site/responsible,
+        // derived status) is saved in the same transaction as the order.
+        const dealExtras = {
+            clientPassport: req.body?.rentalApplication?.clientPassport,
+            clientSiteAddress: req.body?.rentalApplication?.clientSiteAddress,
+            responsible: req.body?.rentalApplication?.responsible,
+        };
+        const { order: updated, rentalApplication } = await saveDealWithRentalApplication(
+            order.id,
+            patch,
+            dealExtras,
+            req.user?.id || null
+        );
+        res.json({ order: updated, rentalApplication });
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(err.status || 400).json({ message: err.message });
     }
 }
 

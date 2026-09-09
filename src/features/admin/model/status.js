@@ -2,13 +2,18 @@
    "Уніфіковані статуси"). Components read label/tone from here — no status
    map should be declared anywhere else. */
 
+/* Угода (docs/admin-redesign/03-screens.md): one status chain instead of two
+   independent selects — Новий → Рахунок → Оплачено → Видано → Повернуто →
+   Виконано, plus Скасовано as a side-branch. See model/dealStatus.js for the
+   chain/step helpers. */
 export const ORDER_STATUS = {
-    pending:      { label: 'Новий',              tone: 'info' },
-    invoice_sent: { label: 'Рахунок виставлено',  tone: 'warning' },
-    paid:         { label: 'Оплачено',            tone: 'success' },
-    processing:   { label: 'В роботі',            tone: 'info' },
-    completed:    { label: 'Виконано',            tone: 'success' },
-    cancelled:    { label: 'Скасовано',           tone: 'neutral' },
+    new:       { label: 'Новий',      tone: 'info' },
+    invoice:   { label: 'Рахунок',    tone: 'warning' },
+    paid:      { label: 'Оплачено',   tone: 'success' },
+    issued:    { label: 'Видано',     tone: 'info' },
+    returned:  { label: 'Повернуто',  tone: 'info' },
+    done:      { label: 'Виконано',   tone: 'success' },
+    cancelled: { label: 'Скасовано',  tone: 'neutral' },
 };
 
 export const RENTAL_STATUS = {

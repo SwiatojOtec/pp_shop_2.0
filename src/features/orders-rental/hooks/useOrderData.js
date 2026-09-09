@@ -3,7 +3,7 @@ import { ordersApi, productsApi, rentalApplicationsApi } from '../../../services
 import { resolveSellerId } from '../../../constants/sellers';
 import { parseDiscountPercent, withOrderTotal, calcOrderAmounts } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
-import { enrichOrderItemsFromProducts } from '../model/orderItems';
+import { enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 
 export function useOrderData(id) {
     const [order, setOrder] = useState(null);
@@ -59,10 +59,15 @@ export function useOrderData(id) {
                     sellerId: resolveSellerId(orderData?.sellerId),
                     customerPhone: normalizeUaPhone(orderData?.customerPhone || ''),
                     discount: parseDiscountPercent(orderData?.discount),
-                    items: enrichOrderItemsFromProducts(
-                        orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
-                        productArr,
-                        rentIds
+                    items: enrichRentOrderItemsFromApplication(
+                        enrichOrderItemsFromProducts(
+                            orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],
+                            productArr,
+                            rentIds
+                        ),
+                        rentIds,
+                        rentalApp,
+                        productArr
                     ),
                 }, { rentProductIds: rentIds, rentalApplication: rentalApp }));
             } catch {
