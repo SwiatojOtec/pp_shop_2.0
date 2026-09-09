@@ -56,9 +56,11 @@ export default function RentalCalendar() {
     const [month, setMonth] = useState(() => startOfMonth(new Date()));
     const [mode, setMode] = useState('busy');
     const [events, setEvents] = useState([]);
+    const [productTotals, setProductTotals] = useState({});
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [collapsedCategories, setCollapsedCategories] = useState(() => new Set());
 
     const [formOpen, setFormOpen] = useState(false);
     const [form, setForm] = useState(() => emptyForm());
@@ -102,6 +104,7 @@ export default function RentalCalendar() {
         try {
             const data = await rentalCalendarApi.events(range);
             setEvents(Array.isArray(data?.events) ? data.events : []);
+            setProductTotals(data?.productTotals || {});
         } catch (err) {
             setError(err.message || 'Не вдалося завантажити календар');
             setEvents([]);
@@ -125,7 +128,28 @@ export default function RentalCalendar() {
         return () => { cancelled = true; };
     }, []);
 
-    const groups = useMemo(() => buildTimelineRows(events, products, mode), [events, products, mode]);
+    const groups = useMemo(
+        () => buildTimelineRows(events, products, mode, days, productTotals),
+        [events, products, mode, days, productTotals]
+    );
+
+    // "За категоріями" opens with every group collapsed (docs/admin-redesign/
+    // 03-screens.md, «Календар») — reset the collapse set each time that mode
+    // is (re-)entered so switching away and back doesn't remember stale state.
+    useEffect(() => {
+        if (mode !== 'categories') return;
+        setCollapsedCategories(new Set(groups.map((g) => g.category).filter(Boolean)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mode]);
+
+    function toggleCategory(category) {
+        setCollapsedCategories((prev) => {
+            const next = new Set(prev);
+            if (next.has(category)) next.delete(category);
+            else next.add(category);
+            return next;
+        });
+    }
 
     function openCreateForm(productId = '', productName = '', dayIso = '') {
         setEditingId(null);
@@ -251,16 +275,47 @@ export default function RentalCalendar() {
     const groupHeaders = [];
     const rowLabels = [];
     const bars = [];
+    const capacityCells = [];
 
     for (const group of groups) {
+        const occupied = group.rows.reduce((sum, row) => sum + (row.events?.length > 0 ? 1 : 0), 0);
+        const isCollapsed = group.category && collapsedCategories.has(group.category);
         if (group.category) {
             rowCursor += 1;
-            groupHeaders.push({ key: `g-${group.category}`, label: group.category, row: rowCursor });
+            groupHeaders.push({
+                key: `g-${group.category}`,
+                label: group.category,
+                row: rowCursor,
+                collapsed: isCollapsed,
+                occupied,
+                total: group.rows.length,
+            });
         }
+        if (isCollapsed) continue;
+
         for (const row of group.rows) {
             const startRow = rowCursor + 1;
             rowCursor += row.laneCount;
             rowLabels.push({ key: `row-${row.productId}`, row, startRow, rowSpan: row.laneCount });
+
+            if (row.trackingMode === 'quantity') {
+                days.forEach((d, dayIdx) => {
+                    const iso = toIsoDate(d);
+                    const used = row.dailyLoad.get(iso) || 0;
+                    const total = row.total || 0;
+                    const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+                    capacityCells.push({
+                        key: `${row.productId}-${iso}`,
+                        row: startRow,
+                        col: dayIdx + 2,
+                        used,
+                        total,
+                        pct,
+                    });
+                });
+                continue;
+            }
+
             for (const evt of row.events) {
                 const fromIdx = evt.rentFrom < range.from ? 0 : (dayIndexByIso.get(evt.rentFrom) ?? 0);
                 const toIdx = evt.rentTo > range.to ? numDays - 1 : (dayIndexByIso.get(evt.rentTo) ?? numDays - 1);
@@ -403,9 +458,17 @@ export default function RentalCalendar() {
                     })}
 
                     {groupHeaders.map((g) => (
-                        <div key={g.key} className="rt-group-label rt-place" style={{ '--rt-col': 1, '--rt-row': g.row, '--rt-span': numDays + 1 }}>
+                        <button
+                            type="button"
+                            key={g.key}
+                            className={`rt-group-label rt-group-label--toggle rt-place${g.collapsed ? ' rt-group-label--collapsed' : ''}`}
+                            style={{ '--rt-col': 1, '--rt-row': g.row, '--rt-span': numDays + 1 }}
+                            onClick={() => toggleCategory(g.label)}
+                        >
+                            <ChevronRight size={14} className="rt-group-chevron" />
                             {g.label}
-                        </div>
+                            <span className="rt-group-count">{g.occupied} з {g.total} зайнято</span>
+                        </button>
                     ))}
 
                     {rowLabels.map(({ key, row, startRow, rowSpan }) => (
@@ -415,7 +478,7 @@ export default function RentalCalendar() {
                         </div>
                     ))}
 
-                    {rowLabels.flatMap(({ row, startRow, rowSpan }) => (
+                    {rowLabels.filter(({ row }) => row.trackingMode !== 'quantity').flatMap(({ row, startRow, rowSpan }) => (
                         Array.from({ length: rowSpan }).flatMap((_, laneIdx) => (
                             days.map((d, dayIdx) => {
                                 const iso = toIsoDate(d);
@@ -447,6 +510,23 @@ export default function RentalCalendar() {
                             {b.evt.title || b.evt.clientName || b.evt.productName}
                         </div>
                     ))}
+
+                    {capacityCells.map((c) => {
+                        const level = c.pct >= 90 ? 'full' : c.pct >= 60 ? 'hot' : '';
+                        return (
+                            <div
+                                key={c.key}
+                                className="rt-capcell rt-place"
+                                style={{ '--rt-col': c.col, '--rt-row': c.row }}
+                                title={`${c.used}/${c.total} зайнято`}
+                            >
+                                <div className={`rt-capbar${level ? ` rt-capbar--${level}` : ''}`}>
+                                    <span style={{ height: `${c.pct}%` }} />
+                                </div>
+                                <small>{c.used}/{c.total}</small>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {!loading && !hasAnyRows && (

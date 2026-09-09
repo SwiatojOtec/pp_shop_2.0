@@ -60,13 +60,34 @@ export function assignLanes(events) {
     return { events: placed, laneCount: laneEnds.length || 1 };
 }
 
+/** Per-day committed quantity for a quantity-tracked product (ліси, опалубка —
+ *  Product.trackingMode='quantity'): one row with a fill gauge instead of one
+ *  row per physical unit. */
+function buildDailyLoad(rowEvents, days) {
+    const load = new Map();
+    for (const day of days) {
+        const iso = toIsoDate(day);
+        let sum = 0;
+        for (const evt of rowEvents) {
+            if (evt.rentFrom <= iso && evt.rentTo >= iso) sum += Math.max(1, Number(evt.quantity) || 1);
+        }
+        load.set(iso, sum);
+    }
+    return load;
+}
+
 /**
  * Builds timeline rows for the given mode.
  *   'busy'       – only tools with at least one event in the loaded range, flat
  *   'categories' – same tools, grouped under a category header row
  *   'all'        – every rentable product, occupied or not, grouped by category
+ *
+ * @param {Date[]} [days] — visible days, required for trackingMode='quantity'
+ *   rows (their fill gauge is computed per visible day, not per event span).
+ * @param {Record<number,number>} [productTotals] — physical unit totals for
+ *   quantity-tracked products, keyed by product id (server-computed).
  */
-export function buildTimelineRows(events, products, mode) {
+export function buildTimelineRows(events, products, mode, days = [], productTotals = {}) {
     const eventsByProduct = new Map();
     for (const evt of events) {
         const pid = Number(evt.productId);
@@ -80,15 +101,26 @@ export function buildTimelineRows(events, products, mode) {
     function makeRow(productId) {
         const product = productById.get(productId);
         const rowEvents = eventsByProduct.get(productId) || [];
-        const { events: laned, laneCount } = assignLanes(rowEvents);
-        return {
+        const base = {
             productId,
             name: product?.name || rowEvents[0]?.productName || `#${productId}`,
             sku: product?.sku || '',
             category: product?.category || 'Без категорії',
-            events: laned,
-            laneCount,
         };
+
+        if (product?.trackingMode === 'quantity') {
+            return {
+                ...base,
+                trackingMode: 'quantity',
+                total: productTotals[productId] ?? 0,
+                dailyLoad: buildDailyLoad(rowEvents, days),
+                events: rowEvents,
+                laneCount: 1,
+            };
+        }
+
+        const { events: laned, laneCount } = assignLanes(rowEvents);
+        return { ...base, trackingMode: 'serial', events: laned, laneCount };
     }
 
     if (mode === 'all') {

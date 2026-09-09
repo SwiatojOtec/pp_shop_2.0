@@ -6,6 +6,7 @@ const { normalizeUaPhone } = require('../../../utils/phoneUtils');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { createApplication, toIsoDate } = require('./rentalApplicationService');
+const { getPhysicalQuantityByProduct } = require('../../../services/inventoryService');
 
 const ACTIVE_APP_STATUSES = ['draft', 'booked', 'active', 'overdue'];
 const HOLD_STATUS = 'hold';
@@ -188,6 +189,7 @@ function buildAppLineEvent(app, item, productNameById) {
         status: app.status,
         productId,
         productName: item.name || productNameById.get(productId) || 'Інструмент',
+        quantity: Math.max(1, Math.floor(Number(item.quantity)) || 1),
         rentFrom,
         rentTo,
         title: app.clientName || app.applicationNumber || `Заявка #${app.id}`,
@@ -242,10 +244,16 @@ async function listCalendarEvents({ from, to } = {}) {
     const products = productIds.size
         ? await Product.findAll({
             where: { id: [...productIds] },
-            attributes: ['id', 'name'],
+            attributes: ['id', 'name', 'trackingMode'],
         })
         : [];
     const productNameById = new Map(products.map((p) => [p.id, p.name]));
+    const quantityTrackedIds = products.filter((p) => p.trackingMode === 'quantity').map((p) => p.id);
+    const physicalQuantityById = quantityTrackedIds.length ? await getPhysicalQuantityByProduct() : new Map();
+    const productTotals = {};
+    for (const pid of quantityTrackedIds) {
+        productTotals[pid] = physicalQuantityById.get(pid) || 0;
+    }
 
     const events = [];
 
@@ -257,6 +265,7 @@ async function listCalendarEvents({ from, to } = {}) {
             status: hold.status,
             productId: hold.productId,
             productName: productNameById.get(hold.productId) || 'Інструмент',
+            quantity: 1,
             rentFrom: hold.rentFrom,
             rentTo: hold.rentTo,
             title: hold.clientName || productNameById.get(hold.productId) || 'Бронь',
@@ -290,7 +299,7 @@ async function listCalendarEvents({ from, to } = {}) {
     }
 
     events.sort((a, b) => String(a.rentFrom).localeCompare(String(b.rentFrom)));
-    return { from: rangeFrom, to: rangeTo, events };
+    return { from: rangeFrom, to: rangeTo, events, productTotals };
 }
 
 async function convertBookingToApplication(id, createdBy = null) {
