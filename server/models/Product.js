@@ -111,6 +111,14 @@ const Product = sequelize.define('Product', {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
+    /** 'serial' — кожна фізична одиниця обліковується окремо (звичайний інструмент).
+     *  'quantity' — тільки загальна кількість (ліси, опалубка): у календарі один рядок
+     *  зі шкалою завантаження замість рядка на кожну одиницю. */
+    trackingMode: {
+        type: DataTypes.ENUM('serial', 'quantity'),
+        allowNull: false,
+        defaultValue: 'serial'
+    },
     /** Тарифи ₴/доба за діапазонами днів (оренда); null = одна ціна з поля price */
     rentPriceTiers: {
         type: DataTypes.JSONB,
