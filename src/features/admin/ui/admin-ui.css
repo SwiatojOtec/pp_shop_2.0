@@ -94,6 +94,11 @@
     color: var(--ds-text);
 }
 
+.ds-icon-btn--danger:hover {
+    background: var(--ds-danger-soft);
+    color: var(--ds-danger);
+}
+
 /* ── StatusBadge ────────────────────────────────────────────── */
 
 .ds-badge {

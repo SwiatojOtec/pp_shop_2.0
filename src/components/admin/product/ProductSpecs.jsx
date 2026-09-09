@@ -25,7 +25,7 @@ export default function ProductSpecs({ specs = {}, onChange }) {
         <div className="admin-section">
             <div className="section-header">
                 <Settings size={20} />
-                <h2 className="section-title" style={{ margin: 0 }}>Характеристики</h2>
+                <h2 className="section-title">Характеристики</h2>
             </div>
 
             <div className="specs-list">
@@ -34,7 +34,7 @@ export default function ProductSpecs({ specs = {}, onChange }) {
                         <span className="spec-item-text"><strong>{key}:</strong> {value}</span>
                         <button
                             type="button"
-                            className="action-btn delete"
+                            className="ds-icon-btn ds-icon-btn--danger"
                             onClick={() => removeSpec(key)}
                             title="Видалити"
                         >
@@ -62,7 +62,7 @@ export default function ProductSpecs({ specs = {}, onChange }) {
                     onChange={(e) => setNewValue(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpec())}
                 />
-                <button type="button" onClick={addSpec} className="btn-primary">
+                <button type="button" onClick={addSpec} className="ds-btn ds-btn--secondary">
                     <Plus size={18} />
                 </button>
             </div>

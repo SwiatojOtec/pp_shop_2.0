@@ -32,7 +32,7 @@ export default function ProductKitItems({ items = [], onChange }) {
                             <span className="spec-item-text">{item}</span>
                             <button
                                 type="button"
-                                className="action-btn delete"
+                                className="ds-icon-btn ds-icon-btn--danger"
                                 onClick={() => removeItem(i)}
                                 title="Видалити"
                             >
@@ -45,7 +45,7 @@ export default function ProductKitItems({ items = [], onChange }) {
                 )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="admin-add-row">
                 <input
                     type="text"
                     placeholder="Наприклад: Піка 400 мм"
@@ -54,9 +54,8 @@ export default function ProductKitItems({ items = [], onChange }) {
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') { e.preventDefault(); addItem(); }
                     }}
-                    style={{ flex: 1 }}
                 />
-                <button type="button" className="btn-primary" onClick={addItem}>
+                <button type="button" className="ds-btn ds-btn--secondary" onClick={addItem}>
                     <Plus size={18} /> Додати в комплект
                 </button>
             </div>

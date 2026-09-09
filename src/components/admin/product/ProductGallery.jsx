@@ -22,16 +22,12 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
             <h2 className="section-title">Галерея зображень</h2>
 
             {/* Main image */}
-            <div style={{ marginBottom: '30px' }}>
+            <div className="product-gallery-main">
                 <label className="form-label">Головне зображення (Thumbnail)</label>
                 <div className="image-upload-area">
                     {mainImage ? (
-                        <div style={{ position: 'relative', display: 'inline-block' }}>
-                            <img
-                                src={mainImage}
-                                alt="Preview"
-                                style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
-                            />
+                        <div className="product-gallery-main-preview">
+                            <img src={mainImage} alt="Preview" />
                             <button
                                 type="button"
                                 onClick={() => onMainChange('')}
@@ -43,8 +39,8 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
                         </div>
                     ) : (
                         <div className="image-placeholder">
-                            <ImageIcon size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />
-                            <p style={{ fontSize: '0.8rem', margin: 0 }}>Вставте посилання нижче</p>
+                            <ImageIcon size={32} className="product-gallery-placeholder-icon" />
+                            <p className="product-gallery-placeholder-text">Вставте посилання нижче</p>
                         </div>
                     )}
                     <input
@@ -52,7 +48,7 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
                         value={mainImage}
                         onChange={(e) => onMainChange(e.target.value)}
                         placeholder="URL головного зображення"
-                        style={{ width: '100%', marginTop: '15px' }}
+                        className="product-gallery-main-input"
                     />
                 </div>
             </div>
@@ -60,13 +56,15 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
             {/* Gallery */}
             <div>
                 <label className="form-label">Додаткові зображення</label>
-                <div className="image-gallery-grid">
+                <div className="admin-images-grid">
                     {images.map((img, i) => (
-                        <div key={i} className="gallery-item">
-                            <img src={img} alt={`Gallery ${i}`} />
+                        <div key={i} className="admin-image-card">
+                            <div className="admin-image-preview-btn">
+                                <img src={img} alt={`Gallery ${i}`} />
+                            </div>
                             <button
                                 type="button"
-                                className="remove-btn"
+                                className="ds-icon-btn ds-icon-btn--danger admin-image-delete-btn"
                                 onClick={() => removeImage(i)}
                                 title="Видалити"
                             >
@@ -74,18 +72,18 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
                             </button>
                         </div>
                     ))}
-                    <div className="add-image-form">
-                        <input
-                            type="text"
-                            placeholder="Вставте URL..."
-                            value={newUrl}
-                            onChange={(e) => setNewUrl(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
-                        />
-                        <button type="button" onClick={addImage} className="btn-primary" style={{ justifyContent: 'center', fontSize: '0.8rem', padding: '8px' }}>
-                            <Plus size={16} /> Додати в галерею
-                        </button>
-                    </div>
+                </div>
+                <div className="product-gallery-add-row">
+                    <input
+                        type="text"
+                        placeholder="Вставте URL..."
+                        value={newUrl}
+                        onChange={(e) => setNewUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
+                    />
+                    <button type="button" onClick={addImage} className="ds-btn ds-btn--secondary">
+                        <Plus size={16} /> Додати в галерею
+                    </button>
                 </div>
             </div>
         </div>

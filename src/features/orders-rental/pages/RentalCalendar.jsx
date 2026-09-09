@@ -545,12 +545,12 @@ export default function RentalCalendar() {
                 width="md"
                 footer={(
                     <div className="rental-calendar__form-actions">
-                        <button type="submit" form="booking-form" className="btn btn-primary" disabled={saving}>
+                        <button type="submit" form="booking-form" className="ds-btn ds-btn--primary" disabled={saving}>
                             {saving ? 'Збереження…' : 'Зберегти бронь'}
                         </button>
                         <button
                             type="button"
-                            className="btn btn-secondary"
+                            className="ds-btn ds-btn--secondary"
                             onClick={() => { setFormOpen(false); setEditingId(null); setProductSearch(''); }}
                         >
                             Скасувати
@@ -654,19 +654,19 @@ export default function RentalCalendar() {
                                     <>
                                         <button
                                             type="button"
-                                            className="btn btn-primary"
+                                            className="ds-btn ds-btn--primary"
                                             disabled={!!convertingId}
                                             onClick={() => handleConvert(detailEvent.bookingId)}
                                         >
                                             <FilePlus2 size={14} />
                                             {convertingId === detailEvent.bookingId ? 'Створюємо…' : 'Створити заявку'}
                                         </button>
-                                        <button type="button" className="btn btn-secondary" onClick={() => openEditHold(detailEvent)}>
+                                        <button type="button" className="ds-btn ds-btn--secondary" onClick={() => openEditHold(detailEvent)}>
                                             Змінити
                                         </button>
                                         <button
                                             type="button"
-                                            className="btn btn-secondary"
+                                            className="ds-btn ds-btn--secondary"
                                             onClick={() => setCancelTarget(detailEvent.bookingId)}
                                             title="Скасувати бронь"
                                         >
@@ -677,7 +677,7 @@ export default function RentalCalendar() {
                                 {detailEvent.source === 'application' && detailEvent.applicationId && (
                                     <button
                                         type="button"
-                                        className="btn btn-secondary"
+                                        className="ds-btn ds-btn--secondary"
                                         onClick={() => navigate(`/admin/rental-applications/${detailEvent.applicationId}`)}
                                     >
                                         Відкрити заявку

@@ -6,11 +6,11 @@
      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
    Outfit stays: it is the public-site face and the admin wordmark (--ds-font-brand).
 
-   Dark mode stays opt-in via [data-theme='dark'] / .ds-theme-dark, NOT
-   prefers-color-scheme — src/pages/admin/Admin.css is still light-only and
-   hardcoded, so an automatic switch leaves ds-components invisible on a light
-   shell. Enable the media query as the LAST item of крок 4, once no file
-   imports Admin.css. */
+   Dark mode follows the OS via prefers-color-scheme (крок 9.3 — Admin.css is
+   gone, nothing left uses light-only hardcoded colors). [data-theme='dark'] /
+   [data-theme='light'] on the root still force a side regardless of the OS
+   setting; .ds-theme-dark / .ds-theme-light do the same for a single
+   container (the UI sandbox, to show both palettes side by side). */
 
 :root {
   color-scheme: light;
@@ -122,6 +122,55 @@
   --ds-ease: cubic-bezier(0.2, 0.8, 0.3, 1);
   --ds-duration-fast: 120ms;
   --ds-duration-base: 180ms;
+}
+
+/* System dark mode — wins unless the user (or a container) explicitly
+   forces light via [data-theme='light'] / .ds-theme-light. Same values as
+   the manual [data-theme='dark'] block below, kept in sync by hand. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --ds-bg: #131110;
+    --ds-surface: #1b1817;
+    --ds-surface-sunken: #211e1c;
+    --ds-overlay: rgba(0, 0, 0, 0.6);
+
+    --ds-shell: #0e0c0b;
+    --ds-shell-text: #cdc5bd;
+    --ds-shell-text-dim: #7c736c;
+    --ds-shell-hover: rgba(255, 255, 255, 0.05);
+    --ds-shell-active: rgba(255, 255, 255, 0.09);
+    --ds-shell-divider: rgba(255, 255, 255, 0.07);
+
+    --ds-border: #302b27;
+    --ds-border-subtle: #28241f;
+    --ds-border-strong: #3d3831;
+
+    --ds-text: #f1ece6;
+    --ds-text-muted: #b5aba2;
+    --ds-text-subtle: #8c837b;
+    --ds-text-inverse: #17130f;
+
+    --ds-accent: #e4534e;
+    --ds-accent-hover: #ef6a65;
+    --ds-accent-soft: #33201f;
+
+    --ds-success: #5dbe8c;
+    --ds-success-soft: #16261f;
+    --ds-warning: #d3a159;
+    --ds-warning-soft: #2a2117;
+    --ds-danger: #e8756c;
+    --ds-danger-soft: #2e1b19;
+    --ds-info: #7fadd6;
+    --ds-info-soft: #18232d;
+    --ds-neutral: #9a9089;
+    --ds-neutral-soft: #252220;
+
+    --ds-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --ds-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.45);
+    --ds-shadow-lg: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  }
 }
 
 :root[data-theme='dark'],

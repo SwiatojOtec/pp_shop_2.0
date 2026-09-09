@@ -29,11 +29,10 @@ export default function ProductPriceMatrix({ matrix = [], onChange }) {
     return (
         <div className="admin-section">
             <div className="section-header">
-                <h2 className="section-title" style={{ margin: 0 }}>Матриця цін (Підвіконня)</h2>
+                <h2 className="section-title">Матриця цін (Підвіконня)</h2>
                 <button
                     type="button"
-                    className="btn-secondary"
-                    style={{ fontSize: '0.8rem', padding: '5px 10px' }}
+                    className="ds-btn ds-btn--secondary ds-btn--sm"
                     onClick={generateStandard}
                 >
                     Генерувати стандартні (100–600)
@@ -47,8 +46,8 @@ export default function ProductPriceMatrix({ matrix = [], onChange }) {
             <div className="price-matrix-list">
                 {matrix.map((row, i) => (
                     <div key={i} className="price-matrix-row">
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label style={{ fontSize: '0.7rem' }}>Ширина (мм)</label>
+                        <div className="price-matrix-field">
+                            <label>Ширина (мм)</label>
                             <input
                                 type="number"
                                 value={row.width}
@@ -56,8 +55,8 @@ export default function ProductPriceMatrix({ matrix = [], onChange }) {
                                 placeholder="150"
                             />
                         </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label style={{ fontSize: '0.7rem' }}>Ціна (₴)</label>
+                        <div className="price-matrix-field">
+                            <label>Ціна (₴)</label>
                             <input
                                 type="number"
                                 value={row.price}
@@ -67,9 +66,8 @@ export default function ProductPriceMatrix({ matrix = [], onChange }) {
                         </div>
                         <button
                             type="button"
-                            className="action-btn delete"
+                            className="ds-icon-btn ds-icon-btn--danger price-matrix-remove-btn"
                             onClick={() => removeRow(i)}
-                            style={{ alignSelf: 'flex-end', marginBottom: '1px' }}
                         >
                             <Trash2 size={16} />
                         </button>
@@ -77,7 +75,7 @@ export default function ProductPriceMatrix({ matrix = [], onChange }) {
                 ))}
             </div>
 
-            <button type="button" onClick={addRow} className="btn-secondary" style={{ width: '100%', marginTop: '10px', justifyContent: 'center' }}>
+            <button type="button" onClick={addRow} className="ds-btn ds-btn--secondary price-matrix-add-btn">
                 <Plus size={16} /> Додати розмір
             </button>
         </div>

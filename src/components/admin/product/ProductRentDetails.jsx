@@ -132,10 +132,10 @@ export default function ProductRentDetails({ formData, onChange }) {
                     {/* Competitor links */}
                     <div className="form-group">
                         <label>Конкуренти (посилання на товари)</label>
-                        <p className="section-hint" style={{ marginTop: 4, marginBottom: 8 }}>
+                        <p className="section-hint product-rent-hint">
                             Додайте URL товарів конкурентів для швидкого моніторингу ціни.
                         </p>
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <div className="admin-add-row">
                             <input
                                 type="url"
                                 value={newCompetitorUrl}
@@ -143,18 +143,18 @@ export default function ProductRentDetails({ formData, onChange }) {
                                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCompetitor())}
                                 placeholder="https://site.com/product/..."
                             />
-                            <button type="button" className="btn-primary" onClick={addCompetitor}>
+                            <button type="button" className="ds-btn ds-btn--secondary" onClick={addCompetitor}>
                                 <Plus size={16} /> Додати
                             </button>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div className="product-rent-links-list">
                             {(formData.competitorLinks || []).length > 0 ? (
                                 (formData.competitorLinks || []).map((link, idx) => (
                                     <div key={`${link}-${idx}`} className="competitor-link-row">
                                         <a href={link} target="_blank" rel="noopener noreferrer" className="competitor-link-url" title={link}>
                                             {link}
                                         </a>
-                                        <button type="button" className="action-btn delete" onClick={() => removeCompetitor(idx)}>
+                                        <button type="button" className="ds-icon-btn ds-icon-btn--danger" onClick={() => removeCompetitor(idx)}>
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
@@ -168,10 +168,10 @@ export default function ProductRentDetails({ formData, onChange }) {
                     {/* Admin photos */}
                     <div className="form-group">
                         <label>Адмінські фото (тільки для адмінки)</label>
-                        <p className="section-hint" style={{ marginTop: 4, marginBottom: 8 }}>
+                        <p className="section-hint product-rent-hint">
                             Ці фото не показуються на клієнтській частині сайту.
                         </p>
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                        <div className="admin-add-row product-rent-photo-row">
                             <input
                                 type="url"
                                 value={newAdminImageUrl}
@@ -179,7 +179,7 @@ export default function ProductRentDetails({ formData, onChange }) {
                                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addAdminImage())}
                                 placeholder="https://site.com/admin-photo.jpg"
                             />
-                            <button type="button" className="btn-primary" onClick={addAdminImage}>
+                            <button type="button" className="ds-btn ds-btn--secondary" onClick={addAdminImage}>
                                 <Plus size={16} /> Додати
                             </button>
                         </div>
@@ -197,7 +197,7 @@ export default function ProductRentDetails({ formData, onChange }) {
                                         </button>
                                         <button
                                             type="button"
-                                            className="action-btn delete admin-image-delete-btn"
+                                            className="ds-icon-btn ds-icon-btn--danger admin-image-delete-btn"
                                             onClick={() => removeAdminImage(idx)}
                                             title="Видалити фото"
                                         >
@@ -215,27 +215,19 @@ export default function ProductRentDetails({ formData, onChange }) {
 
             {/* Image preview lightbox */}
             {previewImage && (
-                <div className="admin-modal-overlay" onClick={() => setPreviewImage('')}>
-                    <div
-                        className="admin-modal-card"
-                        style={{ width: 'min(92vw, 980px)', padding: '12px' }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-                            <button className="action-btn" onClick={() => setPreviewImage('')} aria-label="Закрити">
+                <div className="product-rent-lightbox-overlay" onClick={() => setPreviewImage('')}>
+                    <div className="product-rent-lightbox-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="product-rent-lightbox-head">
+                            <button className="ds-icon-btn" onClick={() => setPreviewImage('')} aria-label="Закрити">
                                 <X size={18} />
                             </button>
                         </div>
-                        <img
-                            src={previewImage}
-                            alt="Адмінське фото"
-                            style={{ width: '100%', maxHeight: '78vh', objectFit: 'contain', borderRadius: '8px', background: '#111' }}
-                        />
+                        <img src={previewImage} alt="Адмінське фото" className="product-rent-lightbox-img" />
                         {adminImages.length > 1 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', gap: '10px' }}>
+                            <div className="product-rent-lightbox-nav">
                                 <button
                                     type="button"
-                                    className="btn-secondary"
+                                    className="ds-btn ds-btn--secondary"
                                     onClick={() => {
                                         const i = previewIndex >= 0 ? previewIndex : 0;
                                         setPreviewImage(adminImages[(i - 1 + adminImages.length) % adminImages.length]);
@@ -243,12 +235,12 @@ export default function ProductRentDetails({ formData, onChange }) {
                                 >
                                     ← Попереднє
                                 </button>
-                                <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                                <span className="product-rent-lightbox-counter">
                                     {Math.max(1, previewIndex + 1)} / {adminImages.length}
                                 </span>
                                 <button
                                     type="button"
-                                    className="btn-secondary"
+                                    className="ds-btn ds-btn--secondary"
                                     onClick={() => {
                                         const i = previewIndex >= 0 ? previewIndex : 0;
                                         setPreviewImage(adminImages[(i + 1) % adminImages.length]);

@@ -360,30 +360,29 @@ export default function ProductEdit({ context = 'products' }) {
             </div>
 
             <div className="product-edit-header product-edit-header--sticky">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <button type="button" onClick={goBack} className="action-btn" style={{ width: '40px', height: '40px' }}>
+                <div className="product-edit-header-left">
+                    <button type="button" onClick={goBack} className="ds-icon-btn">
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 className="admin-title" style={{ margin: 0 }}>
+                    <h1 className="product-edit-title">
                         {isNew
                             ? (isRentContext ? 'Додати новий інструмент' : 'Додати новий товар')
                             : (isRentContext ? 'Редагувати інструмент' : 'Редагувати товар')}
                     </h1>
                     {dirty && <span className="product-edit-dirty">Є незбережені зміни</span>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div className="product-edit-header-actions">
                     {!isNew && canDeleteProduct && (
                         <button
                             type="button"
-                            className="btn-secondary"
-                            style={{ color: '#b91c1c', borderColor: '#fecaca' }}
+                            className="ds-btn ds-btn--secondary product-edit-delete-btn"
                             onClick={() => setDeleteOpen(true)}
                             disabled={deleteLoading || saving}
                         >
                             <Trash2 size={18} /> Видалити картку
                         </button>
                     )}
-                    <button type="button" onClick={handleSubmit} className="btn-primary" disabled={saving}>
+                    <button type="button" onClick={handleSubmit} className="ds-btn ds-btn--primary" disabled={saving}>
                         <Save size={18} /> {saving ? 'Збереження...' : 'Зберегти зміни'}
                     </button>
                 </div>

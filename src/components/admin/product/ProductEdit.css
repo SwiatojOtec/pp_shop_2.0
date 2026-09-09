@@ -27,6 +27,31 @@
     font-weight: 600;
 }
 
+.product-edit-header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.product-edit-title {
+    margin: 0;
+    font-size: var(--ds-text-xl);
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.product-edit-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.product-edit-delete-btn {
+    color: var(--ds-danger);
+    border-color: var(--ds-danger-soft);
+}
+
 .product-edit-tabbody {
     max-width: 760px;
     display: flex;
@@ -57,6 +82,9 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 20px;
+}
+.section-header .section-title {
+    margin: 0;
 }
 
 .section-hint {
@@ -207,6 +235,27 @@
     align-items: flex-end;
 }
 
+.price-matrix-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.price-matrix-field label {
+    font-size: 0.7rem;
+    color: var(--ds-text-subtle);
+}
+
+.price-matrix-remove-btn {
+    align-self: flex-end;
+    margin-bottom: 1px;
+}
+
+.price-matrix-add-btn {
+    width: 100%;
+    margin-top: 10px;
+    justify-content: center;
+}
+
 /* ─── Image gallery ────────────────────────────────────────────────────────── */
 
 .image-upload-area {
@@ -222,6 +271,46 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+
+.product-gallery-main {
+    margin-bottom: 30px;
+}
+
+.product-gallery-main-preview {
+    position: relative;
+    display: inline-block;
+}
+.product-gallery-main-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: var(--ds-radius-md);
+}
+
+.product-gallery-placeholder-icon {
+    opacity: 0.3;
+    margin-bottom: 10px;
+}
+.product-gallery-placeholder-text {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.product-gallery-main-input {
+    width: 100%;
+    margin-top: 15px;
+    box-sizing: border-box;
+}
+
+.product-gallery-add-row,
+.admin-add-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.product-gallery-add-row input,
+.admin-add-row input {
+    flex: 1;
 }
 
 .image-remove-btn {
@@ -391,4 +480,67 @@
     position: absolute !important;
     top: 6px !important;
     right: 6px !important;
+}
+
+/* ─── ProductRentDetails ─────────────────────────────────────────────────── */
+
+.product-rent-hint {
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+.product-rent-links-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.product-rent-photo-row {
+    margin-bottom: 10px;
+}
+
+.product-rent-lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--ds-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.product-rent-lightbox-card {
+    width: min(92vw, 980px);
+    padding: 12px;
+    background: var(--ds-surface);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-lg);
+}
+
+.product-rent-lightbox-head {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.product-rent-lightbox-img {
+    width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-shell);
+}
+
+.product-rent-lightbox-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.product-rent-lightbox-counter {
+    font-size: 0.85rem;
+    color: var(--ds-text-muted);
 }
