@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import './Admin.css';
+import '../../features/admin/auth/auth.css';
 
 export default function AdminLogin() {
     const { login } = useAuth();
@@ -26,33 +26,36 @@ export default function AdminLogin() {
     };
 
     return (
-        <div className="admin-auth-page">
-            <div className="admin-auth-card">
-                <h1 className="admin-title" style={{ textAlign: 'center', marginBottom: '20px' }}>Вхід в адмінку</h1>
-                {error && <div className="admin-alert error">{error}</div>}
-                <form onSubmit={handleSubmit} className="admin-form">
-                    <div className="form-group">
-                        <label>Email</label>
+        <div className="auth-page">
+            <div className="auth-wordmark">
+                <img src="/admin-sidebar-logo.png" alt="PPbud Tech · PAN PARKET" />
+            </div>
+            <div className="auth-card">
+                <h1 className="auth-title">Вхід в адмінку</h1>
+                {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <label className="auth-field">
+                        Email
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
-                    </div>
-                    <div className="form-group">
-                        <label>Пароль</label>
+                    </label>
+                    <label className="auth-field">
+                        Пароль
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
-                    </div>
-                    <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
+                    </label>
+                    <button type="submit" className="ds-btn ds-btn--primary auth-submit" disabled={loading}>
                         {loading ? 'Вхід...' : 'Увійти'}
                     </button>
-                    <p style={{ marginTop: '15px', fontSize: '0.85rem', textAlign: 'center', color: '#6b7280' }}>
+                    <p className="auth-switch">
                         Ще немає доступу? <Link to="/admin/register">Зареєструватися</Link>
                     </p>
                 </form>
@@ -60,4 +63,3 @@ export default function AdminLogin() {
         </div>
     );
 }
-

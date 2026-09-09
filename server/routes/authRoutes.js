@@ -2,10 +2,27 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const SubdivisionMember = require('../models/SubdivisionMember');
+const Subdivision = require('../models/Subdivision');
 const { authMiddleware, JWT_SECRET } = require('../middleware/auth');
 const { isSubdivisionHead } = require('../utils/timesheetAccess');
 
 const router = express.Router();
+
+/** Мій кабінет (docs/admin-redesign/03-screens.md, 9.2): показати роль і
+ *  підрозділ користувача — єдиний екран «про мене» без жодного контексту прав. */
+async function getSubdivisionInfo(userId) {
+    const row = await SubdivisionMember.findOne({
+        where: { userId },
+        include: [{ model: Subdivision, attributes: ['id', 'name'] }],
+    });
+    if (!row) return null;
+    return {
+        id: row.subdivisionId,
+        name: row.Subdivision?.name || null,
+        isHead: row.isHead,
+    };
+}
 
 // Helper: create JWT
 const createToken = (user) => {
@@ -121,13 +138,14 @@ router.post('/login', async (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', authMiddleware, async (req, res) => {
-    return res.json({ user: req.user });
+    const subdivision = await getSubdivisionInfo(req.user.id);
+    return res.json({ user: { ...req.user, subdivision } });
 });
 
 // PATCH /api/auth/me - оновлення власного профілю
 router.patch('/me', authMiddleware, async (req, res) => {
     try {
-        const { name, lastName, password } = req.body;
+        const { name, lastName, password, currentPassword } = req.body;
         const user = await User.findByPk(req.user.id);
         if (!user) {
             return res.status(404).json({ message: 'Користувача не знайдено' });
@@ -137,6 +155,13 @@ router.patch('/me', authMiddleware, async (req, res) => {
         if (lastName !== undefined) user.lastName = lastName || null;
 
         if (password) {
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Вкажіть поточний пароль' });
+            }
+            const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+            if (!matches) {
+                return res.status(400).json({ message: 'Поточний пароль невірний' });
+            }
             if (String(password).length < 6) {
                 return res.status(400).json({ message: 'Пароль має містити мінімум 6 символів' });
             }
@@ -146,6 +171,7 @@ router.patch('/me', authMiddleware, async (req, res) => {
         await user.save();
 
         const head = await isSubdivisionHead(user.id);
+        const subdivision = await getSubdivisionInfo(user.id);
         return res.json({
             user: {
                 id: user.id,
@@ -154,7 +180,8 @@ router.patch('/me', authMiddleware, async (req, res) => {
                 email: user.email,
                 role: user.role,
                 status: user.status,
-                isSubdivisionHead: head
+                isSubdivisionHead: head,
+                subdivision,
             }
         });
     } catch (err) {

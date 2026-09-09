@@ -14,24 +14,24 @@ export default function RentalFormHeader({
 
     return (
         <div className="rental-form-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="rental-form-header-left">
                 <Link to="/admin/deals?type=rent" className="btn-back">
                     <ArrowLeft size={18} />
                 </Link>
                 <div>
-                    <h1 className="admin-title" style={{ marginBottom: 2 }}>
+                    <h1 className="rental-form-title">
                         {isNew ? 'Нова заявка' : `Заявка ${applicationNumber}`}
                     </h1>
-                    <span style={{ fontSize: '0.85rem', color: '#888' }}>{today}</span>
+                    <span className="rental-form-date">{today}</span>
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="rental-form-header-actions">
                 <select value={status} onChange={e => onStatusChange(e.target.value)} className="status-select">
                     {getStatusOptions('rental').map(({ value, label }) => (
                         <option key={value} value={value}>{label}</option>
                     ))}
                 </select>
-                <button onClick={onSave} disabled={saving} className="btn btn-primary">
+                <button onClick={onSave} disabled={saving} className="ds-btn ds-btn--primary">
                     <Save size={16} /> {saving ? 'Збереження...' : 'Зберегти'}
                 </button>
             </div>

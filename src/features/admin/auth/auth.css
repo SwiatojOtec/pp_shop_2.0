@@ -1,0 +1,182 @@
+/* Login / Register — docs/admin-redesign/03-screens.md, 9.2. */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--ds-bg);
+    padding: 40px 20px;
+    gap: var(--ds-space-5);
+}
+
+.auth-wordmark {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.auth-wordmark img {
+    height: 40px;
+    width: auto;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--ds-surface);
+    border-radius: var(--ds-radius-lg);
+    border: 1px solid var(--ds-border);
+    box-shadow: var(--ds-shadow-lg);
+    padding: var(--ds-space-6) var(--ds-space-5);
+}
+
+.auth-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 var(--ds-space-5);
+    color: var(--ds-text);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+
+.auth-field input {
+    padding: 10px 12px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.auth-field input:focus {
+    outline: none;
+    border-color: var(--ds-accent);
+}
+
+.auth-alert {
+    padding: 10px 12px;
+    border-radius: var(--ds-radius-md);
+    font-size: 0.85rem;
+}
+.auth-alert--error {
+    background: var(--ds-danger-soft);
+    color: var(--ds-danger);
+}
+.auth-alert--success {
+    background: var(--ds-success-soft);
+    color: var(--ds-success);
+}
+
+.auth-submit {
+    width: 100%;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.auth-switch {
+    margin-top: var(--ds-space-4);
+    font-size: 0.85rem;
+    text-align: center;
+    color: var(--ds-text-muted);
+}
+.auth-switch a {
+    color: var(--ds-accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+.auth-switch a:hover { text-decoration: underline; }
+
+/* ── Мій кабінет ── */
+
+.profile-page {
+    max-width: 640px;
+}
+
+.profile-section {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    padding: var(--ds-space-5);
+    margin-bottom: var(--ds-space-4);
+}
+
+.profile-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: var(--ds-text);
+}
+
+.profile-section-hint {
+    font-size: 0.82rem;
+    color: var(--ds-text-subtle);
+    margin: 0 0 var(--ds-space-4);
+}
+
+.profile-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-4);
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.profile-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-3);
+}
+@media (max-width: 560px) {
+    .profile-row { grid-template-columns: 1fr; }
+}
+
+.profile-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.profile-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+.profile-field input {
+    padding: 9px 12px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.profile-field input:disabled {
+    background: var(--ds-surface-sunken);
+    color: var(--ds-text-subtle);
+}

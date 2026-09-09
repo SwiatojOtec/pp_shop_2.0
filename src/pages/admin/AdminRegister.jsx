@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import './Admin.css';
+import '../../features/admin/auth/auth.css';
 
 export default function AdminRegister() {
     const { register } = useAuth();
@@ -35,52 +35,55 @@ export default function AdminRegister() {
     };
 
     return (
-        <div className="admin-auth-page">
-            <div className="admin-auth-card">
-                <h1 className="admin-title" style={{ textAlign: 'center', marginBottom: '20px' }}>Реєстрація в адмінці</h1>
-                {error && <div className="admin-alert error">{error}</div>}
-                {info && <div className="admin-alert success">{info}</div>}
-                <form onSubmit={handleSubmit} className="admin-form">
-                    <div className="form-group">
-                        <label>Імʼя</label>
+        <div className="auth-page">
+            <div className="auth-wordmark">
+                <img src="/admin-sidebar-logo.png" alt="PPbud Tech · PAN PARKET" />
+            </div>
+            <div className="auth-card">
+                <h1 className="auth-title">Реєстрація в адмінці</h1>
+                {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                {info && <div className="auth-alert auth-alert--success">{info}</div>}
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <label className="auth-field">
+                        Ім'я
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
                         />
-                    </div>
-                    <div className="form-group">
-                        <label>Прізвище</label>
+                    </label>
+                    <label className="auth-field">
+                        Прізвище
                         <input
                             type="text"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                             required
                         />
-                    </div>
-                    <div className="form-group">
-                        <label>Email</label>
+                    </label>
+                    <label className="auth-field">
+                        Email
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
-                    </div>
-                    <div className="form-group">
-                        <label>Пароль</label>
+                    </label>
+                    <label className="auth-field">
+                        Пароль
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
-                    </div>
-                    <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
+                    </label>
+                    <button type="submit" className="ds-btn ds-btn--primary auth-submit" disabled={loading}>
                         {loading ? 'Реєстрація...' : 'Зареєструватися'}
                     </button>
-                    <p style={{ marginTop: '15px', fontSize: '0.85rem', textAlign: 'center', color: '#6b7280' }}>
+                    <p className="auth-switch">
                         Вже маєте акаунт? <Link to="/admin/login">Увійти</Link>
                     </p>
                 </form>
@@ -88,4 +91,3 @@ export default function AdminRegister() {
         </div>
     );
 }
-
