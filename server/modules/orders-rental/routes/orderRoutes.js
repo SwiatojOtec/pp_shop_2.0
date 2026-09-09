@@ -13,6 +13,8 @@ router.get('/by-client/:clientId', authMiddleware, requireRole(ORDER_ROLES), ord
 
 router.get('/', authMiddleware, requireRole(ORDER_ROLES), orderController.getAllOrders);
 
+router.get('/deals', authMiddleware, requireRole(ORDER_ROLES), orderController.getDealsList);
+
 router.get('/:id/documents', authMiddleware, requireRole(ORDER_ROLES), orderController.listDocuments);
 
 router.post('/:id/documents/rental-act-number', authMiddleware, requireRole(ORDER_ROLES), orderController.getNextRentalActNumber);

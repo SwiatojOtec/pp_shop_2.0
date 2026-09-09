@@ -79,7 +79,6 @@ export default function AdminRoutes() {
 
                 <Route path="deals" element={<OrdersRentalList />} />
                 <Route path="deals/calendar" element={<RentalCalendar />} />
-                <Route path="deals/new" element={<AdminRentalApplicationForm />} />
                 <Route path="deals/:id" element={<DealWorkspace />} />
 
                 <Route path="clients" element={<AdminClients />} />
@@ -125,7 +124,7 @@ export default function AdminRoutes() {
                 <Route path="orders" element={<DealsLegacyRedirect />} />
                 <Route path="orders/:id" element={<IdLegacyRedirect toBase="/admin/deals" />} />
                 <Route path="rental-applications" element={<LegacyRedirect to="/admin/deals" extra={{ type: 'rent' }} />} />
-                <Route path="rental-applications/new" element={<LegacyRedirect to="/admin/deals/new" />} />
+                <Route path="rental-applications/new" element={<LegacyRedirect to="/admin/deals" />} />
 
                 <Route path="warehouses" element={<LegacyRedirect to="/admin/stock" />} />
                 <Route path="warehouses/positions" element={<LegacyRedirect to="/admin/stock" />} />

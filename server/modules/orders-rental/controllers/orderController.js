@@ -34,6 +34,7 @@ const {
     loadOrderWithClient,
     upsertClientForContract,
     getOrdersByClient,
+    listDeals,
 } = require('../services/orderService');
 const { decodeBase64Pdf } = require('../utils/decodeBase64Pdf');
 
@@ -133,6 +134,18 @@ async function getAllOrders(req, res) {
     try {
         const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
         res.json(orders);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+}
+
+async function getDealsList(req, res) {
+    try {
+        const { q, status, type } = req.query;
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+        const result = await listDeals({ q, status, type, page, limit });
+        res.json(result);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -653,6 +666,7 @@ module.exports = {
     createAdminOrder,
     getOrdersByClientHandler,
     getAllOrders,
+    getDealsList,
     listDocuments,
     createInvoiceDocument,
     createDepositInvoiceDocument,

@@ -78,6 +78,8 @@ export const productsApi = {
 
 export const ordersApi = {
     list: (params) => apiGet('/api/orders', params),
+    /** Уніфікований список «Угоди» — тип/статус/оренда-до і лічильники рахуються на сервері. */
+    deals: (params) => apiGet('/api/orders/deals', params),
     get: (id) => apiGet(`/api/orders/${id}`),
     create: (data) => apiPost('/api/orders', data),
     /** Створення з адмінки (без Telegram-сповіщення). */

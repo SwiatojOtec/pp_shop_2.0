@@ -1,0 +1,54 @@
+/* Угоди list (docs/admin-redesign/03-screens.md, розділ 3) — one table instead
+   of separate Замовлення / Заявки оренди lists. */
+
+.deals-list__date {
+    margin-top: 2px;
+    font-size: 0.78rem;
+    color: var(--ds-text-subtle);
+}
+
+.deals-list__client-name {
+    font-weight: 600;
+    color: var(--ds-text);
+}
+
+.deals-list__client-phone {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    color: var(--ds-text-muted);
+}
+
+.deals-list__items {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--ds-text-muted);
+}
+
+.deals-list__items-desc {
+    color: var(--ds-text-subtle);
+}
+
+.deals-list__overdue {
+    color: var(--ds-danger);
+    font-weight: 600;
+}
+
+.deals-list__dash {
+    color: var(--ds-text-subtle);
+}
+
+.deals-list__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-3);
+    margin-top: var(--ds-space-4);
+}
+
+.deals-list__pager-info {
+    font-size: 0.85rem;
+    color: var(--ds-text-muted);
+}

@@ -1,11 +1,14 @@
 const Order = require('../../../models/Order');
 const Client = require('../../../models/Client');
+const Product = require('../../../models/Product');
+const RentalApplication = require('../../../models/RentalApplication');
 const { Op } = require('sequelize');
 const { sendTelegramMessage } = require('../../../utils/telegram');
 const { normalizeUaPhone, parsePhones, phoneTailsMatch, normalizePhonesField } = require('../../../utils/phoneUtils');
 const { resolveSellerId } = require('../../../constants/sellers');
 const { buildClientPatchFromForm } = require('./rentalContractService');
 const { generateOrderNumber } = require('../utils/orderNumbering');
+const { toIsoDate } = require('./rentalApplicationService');
 
 async function loadOrderWithClient(orderId) {
     const order = await Order.findByPk(orderId);
@@ -165,10 +168,115 @@ async function getOrdersByClient(clientId) {
     return [...map.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
+const ORDER_TERMINAL_STATUSES = ['returned', 'done', 'cancelled'];
+const APPLICATION_TERMINAL_STATUSES = ['returned', 'cancelled'];
+
+function maxRentTo(items, rentIds) {
+    const dates = (items || [])
+        .filter((line) => line.isRent || rentIds.has(line.id))
+        .map((line) => line.rentTo)
+        .filter(Boolean)
+        .sort();
+    return dates[dates.length - 1] || null;
+}
+
+/**
+ * The unified "Угоди" list (docs/admin-redesign/03-screens.md, розділ 3):
+ * one table instead of separate Замовлення / Заявки оренди lists, with type
+ * resolved server-side instead of the client loading the whole catalog to
+ * classify rows itself.
+ *
+ * At today's scale (tens of rows) this classifies/filters/paginates in JS
+ * after one bulk fetch rather than a SQL-level UNION across two JSONB-backed
+ * tables — simpler and just as correct; revisit with real SQL pagination if
+ * the deal count grows into the thousands.
+ *
+ * A handful of RentalApplications have no linked Order (created from a
+ * RentalCalendar booking conversion, which doesn't go through an order) —
+ * those still need to be reachable from this list, so they're included as
+ * their own rows (opening `/admin/rental-applications/:id`, not a deal).
+ */
+async function listDeals({ q = '', status = '', type = 'all', page = 1, limit = 20 } = {}) {
+    const todayIso = toIsoDate();
+    const rentProducts = await Product.findAll({ where: { isRent: true }, attributes: ['id'] });
+    const rentIds = new Set(rentProducts.map((p) => p.id));
+
+    const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
+    const orderRows = orders.map((o) => {
+        const items = (o.items || []).map((line) => ({ ...line, isRent: line.isRent || rentIds.has(line.id) }));
+        const hasRent = items.some((line) => line.isRent);
+        const hasShop = items.some((line) => !line.isRent);
+        const rowType = hasRent && hasShop ? 'both' : hasRent ? 'rent' : 'shop';
+        const rentTo = maxRentTo(items, rentIds);
+        return {
+            kind: 'order',
+            id: o.id,
+            number: o.orderNumber || `#${o.id}`,
+            customerName: o.customerName,
+            customerPhone: o.customerPhone,
+            items,
+            totalAmount: o.totalAmount,
+            status: o.status,
+            statusDomain: 'order',
+            type: rowType,
+            rentTo,
+            isOverdue: !!(rentTo && rentTo < todayIso && !ORDER_TERMINAL_STATUSES.includes(o.status)),
+            createdAt: o.createdAt,
+        };
+    });
+
+    const linkedAppIds = new Set(orders.map((o) => o.rentalApplicationId).filter(Boolean));
+    const apps = await RentalApplication.findAll({ order: [['createdAt', 'DESC']] });
+    const appRows = apps
+        .filter((a) => !linkedAppIds.has(a.id))
+        .map((a) => ({
+            kind: 'application',
+            id: a.id,
+            number: a.applicationNumber || `#${a.id}`,
+            customerName: a.clientName,
+            customerPhone: a.clientPhone,
+            items: a.items || [],
+            totalAmount: a.totalAmount,
+            status: a.status,
+            statusDomain: 'rental',
+            type: 'rent',
+            rentTo: a.rentTo,
+            isOverdue: !!(a.rentTo && a.rentTo < todayIso && !APPLICATION_TERMINAL_STATUSES.includes(a.status)),
+            createdAt: a.createdAt,
+        }));
+
+    const all = [...orderRows, ...appRows].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const counts = {
+        all: all.length,
+        shop: all.filter((r) => r.type === 'shop' || r.type === 'both').length,
+        rent: all.filter((r) => r.type === 'rent' || r.type === 'both').length,
+    };
+
+    let rows = all;
+    if (type === 'shop') rows = rows.filter((r) => r.type === 'shop' || r.type === 'both');
+    if (type === 'rent') rows = rows.filter((r) => r.type === 'rent' || r.type === 'both');
+    if (status) rows = rows.filter((r) => r.status === status);
+    if (q.trim()) {
+        const needle = q.trim().toLowerCase();
+        rows = rows.filter((r) =>
+            (r.customerName || '').toLowerCase().includes(needle)
+            || (r.customerPhone || '').includes(needle)
+            || (r.number || '').toLowerCase().includes(needle));
+    }
+
+    const total = rows.length;
+    const start = (Math.max(1, page) - 1) * limit;
+    const paged = rows.slice(start, start + limit);
+
+    return { rows: paged, total, counts };
+}
+
 module.exports = {
     generateOrderNumber,
     loadOrderWithClient,
     upsertClientForContract,
     persistOrder,
     getOrdersByClient,
+    listDeals,
 };
