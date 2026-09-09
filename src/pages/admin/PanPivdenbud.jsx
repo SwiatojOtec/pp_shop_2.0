@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { isTimesheetViewer } from '../../utils/adminRoles';
 import { downloadTimesheetXlsx } from '../../utils/timesheetExport';
 import PageHeader from '../../features/admin/ui/PageHeader';
+import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
 import './PanPivdenbud.css';
 
 const WD_UK = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
@@ -43,24 +44,70 @@ function entriesToGetCell(entries) {
     return (day, slot) => g[cellKey(day, slot)] || emptyCell();
 }
 
+/** «08:30» — одне поле замість окремих годин/хвилин. */
+function formatHM(h, m) {
+    const hs = String(h ?? '').trim();
+    const ms = String(m ?? '').trim();
+    if (!hs && !ms) return '';
+    return `${padNum(hs) || '00'}:${padNum(ms) || '00'}`;
+}
+
+/** Ліниво розбирає цифри користувача на години/хвилини під час набору: "083" → 08:3. */
+function maskTimeDigits(raw) {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function digitsToHM(raw) {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 4);
+    return { h: digits.slice(0, 2), m: digits.slice(2, 4) };
+}
+
+/** Хвилини відпрацьовано за день з клітинки {ah,am,dh,dm}, або null якщо немає обох міток. */
+function workedMinutes(c) {
+    if (!c) return null;
+    const ah = c.ah !== '' ? parseInt(c.ah, 10) : null;
+    const am = c.am !== '' ? parseInt(c.am, 10) : 0;
+    const dh = c.dh !== '' ? parseInt(c.dh, 10) : null;
+    const dm = c.dm !== '' ? parseInt(c.dm, 10) : 0;
+    if (ah == null || dh == null) return null;
+    const diff = (dh * 60 + dm) - (ah * 60 + am);
+    return diff > 0 ? diff : null;
+}
+
+function formatTotalHours(totalMinutes) {
+    if (!totalMinutes) return '—';
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}:${String(m).padStart(2, '0')}`;
+}
+
 function TimesheetCalendarTable({
     labels,
     slots,
     getCell,
     dayMeta,
     readOnly,
-    handleField,
+    handleTimeField,
     calendarWrapRef
 }) {
+    const [drafts, setDrafts] = useState({});
     const slotList = slots?.length
         ? slots
         : Array.from({ length: Math.max(labels?.length || 0, 1) }, (_, i) => i + 1);
+
+    function totalMinutesForSlot(slot) {
+        return dayMeta.reduce((sum, { day }) => sum + (workedMinutes(getCell(day, slot)) || 0), 0);
+    }
+
     return (
         <div ref={calendarWrapRef} className="timesheet-calendar-wrap">
             <table className="timesheet-cal-table">
                 <thead>
                     <tr>
                         <th className="timesheet-cal-corner" />
+                        <th className="timesheet-cal-hours-corner">Годин</th>
                         {dayMeta.map(({ day, weekend, wdLabel }) => (
                             <th
                                 key={`h-${day}`}
@@ -78,18 +125,25 @@ function TimesheetCalendarTable({
                             {[0, 1].map(rowIdx => (
                                 <tr key={`${slot}-r${rowIdx}`}>
                                     {rowIdx === 0 && (
-                                        <td className="timesheet-cal-name" rowSpan={2}>
-                                            <span className="timesheet-cal-name-text">
-                                                {labels[slot - 1] || `Співробітник ${slot}`}
-                                            </span>
-                                        </td>
+                                        <>
+                                            <td className="timesheet-cal-name" rowSpan={2}>
+                                                <span className="timesheet-cal-name-text">
+                                                    {labels[slot - 1] || `Співробітник ${slot}`}
+                                                </span>
+                                            </td>
+                                            <td className="timesheet-cal-hours" rowSpan={2}>
+                                                {formatTotalHours(totalMinutesForSlot(slot))}
+                                            </td>
+                                        </>
                                     )}
                                     {dayMeta.map(({ day, weekend }) => {
                                         const c = getCell(day, slot);
                                         const isArrival = rowIdx === 0;
                                         const h = isArrival ? c.ah : c.dh;
                                         const m = isArrival ? c.am : c.dm;
-                                        const showEmpty = !h && !m;
+                                        const eventKind = isArrival ? 'прихід' : 'вихід';
+                                        const draftKey = `${day}-${slot}-${isArrival ? 'a' : 'd'}`;
+                                        const committedValue = formatHM(h, m);
                                         return (
                                             <td
                                                 key={`c-${slot}-${day}-${rowIdx}`}
@@ -97,55 +151,30 @@ function TimesheetCalendarTable({
                                                     readOnly ? 'timesheet-cal-cell--readonly' : ''
                                                 }`}
                                             >
-                                                <div className="timesheet-time-pair">
-                                                    {readOnly ? (
-                                                        <>
-                                                            <span className="timesheet-time-read timesheet-time-read--h">
-                                                                {showEmpty ? '—' : h || '—'}
-                                                            </span>
-                                                            <span className="timesheet-time-colon" aria-hidden>
-                                                                :
-                                                            </span>
-                                                            <span className="timesheet-time-read timesheet-time-read--m">
-                                                                {showEmpty ? '—' : m || '—'}
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <input
-                                                                type="text"
-                                                                inputMode="numeric"
-                                                                maxLength={2}
-                                                                className="timesheet-time-inp timesheet-time-inp--h"
-                                                                placeholder="—"
-                                                                value={isArrival ? c.ah : c.dh}
-                                                                onChange={e =>
-                                                                    handleField(day, slot, isArrival ? 'ah' : 'dh', e.target.value)
-                                                                }
-                                                                aria-label={`${labels[slot - 1] || slot}, день ${day}, ${
-                                                                    isArrival ? 'прихід' : 'вихід'
-                                                                }, години`}
-                                                            />
-                                                            <span className="timesheet-time-colon" aria-hidden>
-                                                                :
-                                                            </span>
-                                                            <input
-                                                                type="text"
-                                                                inputMode="numeric"
-                                                                maxLength={2}
-                                                                className="timesheet-time-inp timesheet-time-inp--m"
-                                                                placeholder="—"
-                                                                value={isArrival ? c.am : c.dm}
-                                                                onChange={e =>
-                                                                    handleField(day, slot, isArrival ? 'am' : 'dm', e.target.value)
-                                                                }
-                                                                aria-label={`${labels[slot - 1] || slot}, день ${day}, ${
-                                                                    isArrival ? 'прихід' : 'вихід'
-                                                                }, хвилини`}
-                                                            />
-                                                        </>
-                                                    )}
-                                                </div>
+                                                {readOnly ? (
+                                                    <span className="timesheet-time-read">{committedValue || '—'}</span>
+                                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        maxLength={5}
+                                                        className="timesheet-time-inp"
+                                                        placeholder="—"
+                                                        value={draftKey in drafts ? drafts[draftKey] : committedValue}
+                                                        onChange={e => {
+                                                            const masked = maskTimeDigits(e.target.value);
+                                                            setDrafts(prev => ({ ...prev, [draftKey]: masked }));
+                                                            const { h: nh, m: nm } = digitsToHM(masked);
+                                                            handleTimeField(day, slot, isArrival, nh, nm);
+                                                        }}
+                                                        onBlur={() => setDrafts(prev => {
+                                                            const next = { ...prev };
+                                                            delete next[draftKey];
+                                                            return next;
+                                                        })}
+                                                        aria-label={`${labels[slot - 1] || slot}, день ${day}, ${eventKind}`}
+                                                    />
+                                                )}
                                             </td>
                                         );
                                     })}
@@ -173,6 +202,8 @@ export default function PanPivdenbud() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [dirty, setDirty] = useState(false);
+    const [pendingChange, setPendingChange] = useState(null);
     const calendarWrapRef = useRef(null);
 
     const isViewer = isTimesheetViewer(user?.role);
@@ -221,6 +252,7 @@ export default function PanPivdenbud() {
                     };
                 });
                 setGrid(g);
+                setDirty(false);
             })
             .finally(() => setLoading(false));
     }, [token, year, month, isViewer, authLoading, user]);
@@ -265,16 +297,33 @@ export default function PanPivdenbud() {
         [grid]
     );
 
-    const handleField = (day, slot, part, value) => {
+    const handleTimeField = (day, slot, isArrival, h, m) => {
         const k = cellKey(day, slot);
         setGrid(prev => {
             const cur = prev[k] || emptyCell();
             return {
                 ...prev,
-                [k]: { ...cur, [part]: value }
+                [k]: isArrival ? { ...cur, ah: h, am: m } : { ...cur, dh: h, dm: m }
             };
         });
+        setDirty(true);
     };
+
+    function requestYearChange(nextYear) {
+        if (dirty) { setPendingChange({ type: 'year', value: nextYear }); return; }
+        setYear(nextYear);
+    }
+
+    function requestMonthChange(nextMonth) {
+        if (dirty) { setPendingChange({ type: 'month', value: nextMonth }); return; }
+        setMonth(nextMonth);
+    }
+
+    function confirmPendingChange() {
+        if (pendingChange?.type === 'year') setYear(pendingChange.value);
+        else if (pendingChange?.type === 'month') setMonth(pendingChange.value);
+        setPendingChange(null);
+    }
 
     const handleSave = async () => {
         if (!token) return;
@@ -304,6 +353,7 @@ export default function PanPivdenbud() {
         try {
             await timesheetApi.saveMonth({ year, month, cells });
             showToast('Табель збережено', 'success');
+            setDirty(false);
         } catch (e) {
             showToast(e.message, 'warning');
         } finally {
@@ -341,11 +391,15 @@ export default function PanPivdenbud() {
         }
     };
 
-    const noopField = () => {};
     const visibleOverviewSheets = useMemo(() => {
         if (selectedGroup === 'all') return overviewSheets;
         return overviewSheets.filter(sheet => String(sheet.headUserId) === selectedGroup);
     }, [overviewSheets, selectedGroup]);
+
+    const exportBlockedForViewer = isViewer && (
+        visibleOverviewSheets.length === 0
+        || (selectedGroup === 'all' && visibleOverviewSheets.length > 1)
+    );
 
     return (
         <div className="pan-pivdenbud">
@@ -360,7 +414,7 @@ export default function PanPivdenbud() {
                             min={2020}
                             max={2100}
                             value={year}
-                            onChange={e => setYear(parseInt(e.target.value, 10) || year)}
+                            onChange={e => requestYearChange(parseInt(e.target.value, 10) || year)}
                             className="timesheet-input-year"
                         />
                     </label>
@@ -368,7 +422,7 @@ export default function PanPivdenbud() {
                         Місяць:&nbsp;
                         <select
                             value={month}
-                            onChange={e => setMonth(parseInt(e.target.value, 10))}
+                            onChange={e => requestMonthChange(parseInt(e.target.value, 10))}
                             className="timesheet-select-month"
                         >
                             {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
@@ -415,10 +469,10 @@ export default function PanPivdenbud() {
                         type="button"
                         className="ds-btn ds-btn--secondary"
                         onClick={handleExportXlsx}
-                        disabled={loading || exporting || (isViewer && visibleOverviewSheets.length === 0)}
+                        disabled={loading || exporting || exportBlockedForViewer}
                         title={
                             isViewer
-                                ? 'Експорт для обраного підрозділу'
+                                ? 'Оберіть конкретний підрозділ для експорту'
                                 : 'На кожен день 3 стовпці злиті в одну клітинку; час як 12:00, окремо рядок приходу та виходу'
                         }
                     >
@@ -429,10 +483,12 @@ export default function PanPivdenbud() {
                     <p className="timesheet-hint">
                         Табелі підрозділів: після натискання «Зберегти табель» головами підрозділів дані з’являються тут
                         (за обраний рік і місяць). Редагування недоступне.
+                        {exportBlockedForViewer && visibleOverviewSheets.length > 1 && ' Оберіть підрозділ вище, щоб експортувати в Excel.'}
                     </p>
                 ) : (
                     <p className="timesheet-hint">
-                        У кожній клітинці два рядки: прихід і вихід; години та хвилини поруч. Вихідні підсвічені.{' '}
+                        Час — одним полем «08:30» на прихід і на вихід. Колонка «Годин» — сума відпрацьованого за
+                        місяць. Вихідні підсвічені.{' '}
                         У Excel на кожен день — <strong>три стовпці злиті в одну клітинку</strong>; час одним текстом{' '}
                         <strong>12:00</strong>. Окремо рядок «прихід» і рядок «вихід» для кожного співробітника — як у
                         ручному шаблоні.
@@ -475,7 +531,6 @@ export default function PanPivdenbud() {
                                             getCell={getCellRo}
                                             dayMeta={dayMeta}
                                             readOnly
-                                            handleField={noopField}
                                             calendarWrapRef={null}
                                         />
                                     </section>
@@ -489,11 +544,20 @@ export default function PanPivdenbud() {
                         getCell={getCell}
                         dayMeta={dayMeta}
                         readOnly={false}
-                        handleField={handleField}
+                        handleTimeField={handleTimeField}
                         calendarWrapRef={calendarWrapRef}
                     />
                 )}
             </div>
+
+            <ConfirmDialog
+                open={!!pendingChange}
+                title="Є незбережені зміни"
+                message="У табелі є незбережені зміни. Перейти на інший місяць без збереження?"
+                confirmText="Перейти без збереження"
+                onConfirm={confirmPendingChange}
+                onCancel={() => setPendingChange(null)}
+            />
         </div>
     );
 }
