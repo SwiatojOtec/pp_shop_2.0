@@ -1,26 +1,32 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Network, Plus, Trash2, Pencil, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { subdivisionsApi, usersApi } from '../../services/api';
-import { Card, CardContent } from '../../components/ui/card';
+import { useToast } from '../../context/ToastContext';
+import { subdivisionsApi, usersApi, timesheetApi } from '../../services/api';
 import PageHeader from '../../features/admin/ui/PageHeader';
+import DataTable from '../../features/admin/ui/DataTable';
 import StatusBadge from '../../features/admin/ui/StatusBadge';
 import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
+import EmptyState from '../../features/admin/ui/EmptyState';
 import { ROLE_LABELS } from '../../utils/adminRoles';
-import './Admin.css';
+import '../../features/admin/company/company.css';
 
 const MAX_MEMBERS = 30;
 const GUEST_OPTION = 'guest';
+const MONTH_NAMES = [
+    'січень', 'лютий', 'березень', 'квітень', 'травень', 'червень',
+    'липень', 'серпень', 'вересень', 'жовтень', 'листопад', 'грудень',
+];
+
+function fmtDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return `${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')}.${dt.getFullYear()}`;
+}
 
 function formatUser(u) {
     if (!u) return '—';
     return `${u.name || ''}${u.lastName ? ' ' + u.lastName : ''}`.trim() || u.email;
-}
-
-function formatMember(m) {
-    if (!m) return '—';
-    if (m.isGuest || m.displayName) return m.displayName;
-    return formatUser(m);
 }
 
 function newMemberRow(partial = {}) {
@@ -77,9 +83,9 @@ function MemberRowEditor({ index, row, memberPool, otherSelectedIds, onChange, o
         (u) => !otherSelectedIds.has(u.id) || String(u.id) === row.select
     );
     return (
-        <div className="subdiv-member-row">
-            <span className="subdiv-member-row__num">{index + 1}</span>
-            <div className="subdiv-member-row__fields">
+        <div className="company-member-row">
+            <span className="company-member-row__num">{index + 1}</span>
+            <div className="company-member-row__fields">
                 <select
                     value={row.select}
                     onChange={(e) => onChange({
@@ -89,7 +95,7 @@ function MemberRowEditor({ index, row, memberPool, otherSelectedIds, onChange, o
                     })}
                 >
                     <option value="">— не додавати —</option>
-                    <option value={GUEST_OPTION}>Без акаунта (ім’я вручну)</option>
+                    <option value={GUEST_OPTION}>Без акаунта (ім'я вручну)</option>
                     {pool.map((u) => (
                         <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
                     ))}
@@ -104,7 +110,7 @@ function MemberRowEditor({ index, row, memberPool, otherSelectedIds, onChange, o
                 )}
             </div>
             {canRemove && (
-                <button type="button" className="subdiv-member-row__remove" onClick={onRemove} title="Прибрати рядок">
+                <button type="button" className="company-member-row__remove" onClick={onRemove} title="Прибрати рядок">
                     <X size={16} />
                 </button>
             )}
@@ -114,10 +120,12 @@ function MemberRowEditor({ index, row, memberPool, otherSelectedIds, onChange, o
 
 export default function AdminSubdivisions() {
     const { token, user: me } = useAuth();
+    const { showToast } = useToast();
     const isOwner = me?.role === 'owner';
 
     const [subdivisions, setSubdivisions] = useState([]);
     const [users, setUsers]               = useState([]);
+    const [timesheetByHead, setTimesheetByHead] = useState(new Map());
     const [loading, setLoading]           = useState(true);
     const [showForm, setShowForm]         = useState(false);
     const [editingSub, setEditingSub]     = useState(null);
@@ -130,17 +138,27 @@ export default function AdminSubdivisions() {
     const [headId,     setHeadId]     = useState('');
     const [memberRows, setMemberRows] = useState([newMemberRow()]);
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
     useEffect(() => {
         if (!token) return;
-        Promise.all([
+        reload().finally(() => setLoading(false));
+    }, [token]);
+
+    async function reload() {
+        const [subs, usrs, overview] = await Promise.all([
             subdivisionsApi.list(),
             usersApi.list(),
-        ]).then(([subs, usrs]) => {
-            setSubdivisions(Array.isArray(subs)  ? subs  : []);
-            setUsers(Array.isArray(usrs)  ? usrs  : []);
-        }).catch((err) => setError(err.message))
-          .finally(() => setLoading(false));
-    }, [token]);
+            timesheetApi.overview({ year, month }).catch(() => ({ sheets: [] })),
+        ]);
+        setSubdivisions(Array.isArray(subs) ? subs : []);
+        setUsers(Array.isArray(usrs) ? usrs : []);
+        const map = new Map();
+        (overview?.sheets || []).forEach((sheet) => map.set(sheet.headUserId, sheet));
+        setTimesheetByHead(map);
+    }
 
     const busyIds = useMemo(() => {
         const s = new Set();
@@ -198,12 +216,6 @@ export default function AdminSubdivisions() {
             return;
         }
         setMemberRows((prev) => [...prev, newMemberRow()]);
-    }
-
-    async function reload() {
-        const [subs, usrs] = await Promise.all([subdivisionsApi.list(), usersApi.list()]);
-        setSubdivisions(Array.isArray(subs) ? subs : []);
-        setUsers(Array.isArray(usrs) ? usrs : []);
     }
 
     function cancelForm() {
@@ -303,17 +315,71 @@ export default function AdminSubdivisions() {
             await subdivisionsApi.remove(deleteTarget.id);
             await reload();
         } catch (err) {
-            setError(err.message);
+            showToast(err.message, 'warning');
         } finally {
             setDeleteLoading(false);
             setDeleteTarget(null);
         }
     }
 
+    const columns = useMemo(() => [
+        {
+            key: 'name',
+            label: 'Підрозділ',
+            render: (name, sub) => (
+                <div className="company-sub-title">
+                    <Network size={15} />
+                    {name || `Підрозділ #${sub.id}`}
+                </div>
+            ),
+        },
+        {
+            key: 'head',
+            label: 'Голова',
+            render: (head) => head ? (
+                <div>
+                    {formatUser(head)}
+                    <div className="company-pending-email">{ROLE_LABELS[head.role] || head.role}</div>
+                </div>
+            ) : '—',
+        },
+        {
+            key: 'members',
+            label: 'Людей',
+            align: 'right',
+            render: (members) => <span className="num">{(members?.length || 0) + 1}</span>,
+        },
+        {
+            key: 'id',
+            label: `Табель за ${MONTH_NAMES[month - 1]}`,
+            render: (_, sub) => {
+                const sheet = sub.head ? timesheetByHead.get(sub.head.id) : null;
+                return sheet?.savedAt
+                    ? <StatusBadge tone="success" label={`Збережено ${fmtDate(sheet.savedAt)}`} />
+                    : <StatusBadge tone="neutral" label="Не збережено" />;
+            },
+        },
+        {
+            key: 'actions',
+            label: 'Дії',
+            align: 'right',
+            render: (_, sub) => (
+                <div className="company-sub-actions">
+                    <button type="button" className="ds-btn ds-btn--secondary" onClick={() => openEdit(sub)}>
+                        <Pencil size={15} /> Редагувати
+                    </button>
+                    <button type="button" className="ds-icon-btn" onClick={() => setDeleteTarget(sub)} title="Видалити підрозділ">
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            ),
+        },
+    ], [timesheetByHead, month]);
+
     if (!isOwner) {
         return (
             <div>
-                <p className="text-gray-500">Доступ лише для власника.</p>
+                <EmptyState title="Доступ лише для власника" />
             </div>
         );
     }
@@ -332,173 +398,100 @@ export default function AdminSubdivisions() {
                 }
             />
 
-            {error && (
-                <div className="admin-alert error mb-4">
-                    {error}
-                    <button type="button" className="ml-2.5 bg-transparent border-0 cursor-pointer" onClick={() => setError('')}>✕</button>
-                </div>
-            )}
+            {error && <div className="company-banner">{error}</div>}
 
-            {/* Create / edit form */}
             {(showForm || editingSub) && (
-                <Card className="mb-6">
-                    <CardContent className="p-6">
-                        <h2 className="text-base font-bold mb-4">
-                            {editingSub ? 'Редагувати підрозділ' : 'Новий підрозділ'}
-                        </h2>
-                        <p className="text-sm text-gray-500 mb-4">
-                            <strong>Голова</strong> — лише з облікового запису (входить у табель). <strong>Співробітники</strong> — можна обрати користувача
-                            або «без акаунта» і вписати ім’я вручну (лише підпис у колонках табеля).
-                        </p>
-                        <form onSubmit={editingSub ? handleEditSubmit : handleSubmit} className="subdiv-form">
-                            <div className="subdiv-form__grid">
-                                <div className="subdiv-form__main">
-                                    <div className="form-group !mb-0">
-                                        <label>Назва підрозділу</label>
-                                        <input
-                                            type="text"
-                                            value={subName}
-                                            onChange={(e) => setSubName(e.target.value)}
-                                            placeholder="Наприклад: МАКС І АНТОН"
-                                        />
-                                    </div>
-                                    <div className="form-group !mb-0">
-                                        <label>Голова підрозділу *</label>
-                                        <select required value={headId} onChange={(e) => setHeadId(e.target.value)}>
-                                            <option value="">— оберіть —</option>
-                                            {headOptions.map((u) => (
-                                                <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
-                                            ))}
-                                        </select>
-                                        <p className="subdiv-form__hint">Перший рядок у табелі; потрібен вхід у систему.</p>
-                                    </div>
+                <div className="company-sub-form">
+                    <h2 className="company-sub-form-title">
+                        {editingSub ? 'Редагувати підрозділ' : 'Новий підрозділ'}
+                    </h2>
+                    <p className="company-sub-form-hint">
+                        <strong>Голова</strong> — лише з облікового запису (входить у табель). <strong>Співробітники</strong> — можна обрати користувача
+                        або «без акаунта» і вписати ім'я вручну (лише підпис у колонках табеля).
+                    </p>
+                    <form onSubmit={editingSub ? handleEditSubmit : handleSubmit}>
+                        <div className="company-sub-form-grid">
+                            <div className="company-sub-form-main">
+                                <div className="company-form-group">
+                                    <label>Назва підрозділу</label>
+                                    <input
+                                        type="text"
+                                        value={subName}
+                                        onChange={(e) => setSubName(e.target.value)}
+                                        placeholder="Наприклад: МАКС І АНТОН"
+                                    />
                                 </div>
-
-                                <div className="subdiv-form__members">
-                                    <div className="subdiv-form__members-head">
-                                        <label>Співробітники в табелі</label>
-                                        <span className="subdiv-form__counter">{filledMemberCount} / {MAX_MEMBERS}</span>
-                                    </div>
-                                    <p className="subdiv-form__hint subdiv-form__hint--block">
-                                        Кожен співробітник — окремий рядок у табелі. Можна без акаунта (лише ім’я).
-                                    </p>
-                                    <div className="subdiv-members-list">
-                                        {memberRows.map((row, idx) => (
-                                            <MemberRowEditor
-                                                key={row.key}
-                                                index={idx}
-                                                row={row}
-                                                memberPool={memberPool}
-                                                otherSelectedIds={getOtherSelectedIds(row.key)}
-                                                canRemove={memberRows.length > 1}
-                                                onChange={(next) => setMemberRows((prev) => prev.map((r) => (r.key === row.key ? next : r)))}
-                                                onRemove={() => setMemberRows((prev) => prev.filter((r) => r.key !== row.key))}
-                                            />
+                                <div className="company-form-group">
+                                    <label>Голова підрозділу *</label>
+                                    <select required value={headId} onChange={(e) => setHeadId(e.target.value)}>
+                                        <option value="">— оберіть —</option>
+                                        {headOptions.map((u) => (
+                                            <option key={u.id} value={u.id}>{formatUser(u)} ({u.email})</option>
                                         ))}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className="ds-btn ds-btn--secondary subdiv-add-member-btn"
-                                        onClick={addMemberRow}
-                                        disabled={filledMemberCount >= MAX_MEMBERS}
-                                    >
-                                        <UserPlus size={15} /> Додати співробітника
-                                    </button>
+                                    </select>
+                                    <p className="company-field-hint">Перший рядок у табелі; потрібен вхід у систему.</p>
                                 </div>
                             </div>
-                            <div className="subdiv-form__actions">
-                                <button type="submit" className="ds-btn ds-btn--primary" disabled={saving}>
-                                    {saving ? 'Збереження...' : (editingSub ? 'Зберегти зміни' : 'Зберегти підрозділ')}
-                                </button>
-                                <button type="button" className="ds-btn ds-btn--secondary" onClick={cancelForm}>
-                                    Скасувати
+
+                            <div>
+                                <div className="company-sub-form-members-head">
+                                    <label>Співробітники в табелі</label>
+                                    <span className="company-sub-form-counter">{filledMemberCount} / {MAX_MEMBERS}</span>
+                                </div>
+                                <p className="company-sub-form-hint">
+                                    Кожен співробітник — окремий рядок у табелі. Можна без акаунта (лише ім'я).
+                                </p>
+                                <div className="company-members-list">
+                                    {memberRows.map((row, idx) => (
+                                        <MemberRowEditor
+                                            key={row.key}
+                                            index={idx}
+                                            row={row}
+                                            memberPool={memberPool}
+                                            otherSelectedIds={getOtherSelectedIds(row.key)}
+                                            canRemove={memberRows.length > 1}
+                                            onChange={(next) => setMemberRows((prev) => prev.map((r) => (r.key === row.key ? next : r)))}
+                                            onRemove={() => setMemberRows((prev) => prev.filter((r) => r.key !== row.key))}
+                                        />
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    className="ds-btn ds-btn--secondary"
+                                    onClick={addMemberRow}
+                                    disabled={filledMemberCount >= MAX_MEMBERS}
+                                >
+                                    <UserPlus size={15} /> Додати співробітника
                                 </button>
                             </div>
-                        </form>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Subdivisions list */}
-            {loading ? (
-                <p className="text-gray-500">Завантаження...</p>
-            ) : subdivisions.length === 0 ? (
-                <Card>
-                    <CardContent className="p-12 text-center text-gray-400">
-                        <Network size={40} className="mx-auto mb-3 opacity-30" />
-                        <p>Підрозділів ще немає</p>
-                        <p className="text-sm mt-1">Натисніть «Створити підрозділ» щоб додати перший</p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="flex flex-col gap-3">
-                    {subdivisions.map((sub) => (
-                        <Card key={sub.id}>
-                            <CardContent className="p-5">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Network size={16} className="text-gray-400" />
-                                            <h3 className="font-bold text-base">
-                                                {sub.name || `Підрозділ #${sub.id}`}
-                                            </h3>
-                                        </div>
-
-                                        <div className="text-sm text-gray-600 space-y-1">
-                                            <div>
-                                                <span className="font-medium">Голова:</span>{' '}
-                                                {sub.head ? (
-                                                    <>
-                                                        {formatUser(sub.head)}
-                                                        <span className="ml-2">
-                                                            <StatusBadge tone="neutral" label={ROLE_LABELS[sub.head.role] || sub.head.role} />
-                                                        </span>
-                                                    </>
-                                                ) : '—'}
-                                            </div>
-                                            {sub.members?.length > 0 && (
-                                                <div className="subdiv-list-members">
-                                                    <span className="font-medium">Співробітники ({sub.members.length}):</span>
-                                                    <div className="subdiv-chips">
-                                                        {sub.members.map((m, i) => (
-                                                            <span key={i} className="subdiv-chip">{formatMember(m)}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button
-                                            type="button"
-                                            className="ds-btn ds-btn--secondary"
-                                            onClick={() => openEdit(sub)}
-                                        >
-                                            <Pencil size={15} /> Редагувати
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="action-btn delete"
-                                            onClick={() => setDeleteTarget(sub)}
-                                            title="Видалити підрозділ"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                        </div>
+                        <div className="company-sub-form-actions">
+                            <button type="submit" className="ds-btn ds-btn--primary" disabled={saving}>
+                                {saving ? 'Збереження...' : (editingSub ? 'Зберегти зміни' : 'Зберегти підрозділ')}
+                            </button>
+                            <button type="button" className="ds-btn ds-btn--secondary" onClick={cancelForm}>
+                                Скасувати
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
+
+            <DataTable
+                columns={columns}
+                rows={subdivisions}
+                loading={loading}
+                emptyIcon={Network}
+                emptyTitle="Підрозділів ще немає"
+                emptyDescription="Натисніть «Створити підрозділ» щоб додати перший"
+            />
 
             <ConfirmDialog
                 open={!!deleteTarget}
                 title="Видалити підрозділ?"
                 message={
                     deleteTarget
-                        ? `Видалити «${deleteTarget.name || `Підрозділ #${deleteTarget.id}`}»? Голова підрозділу втратить роль «pivdenbud» (стане «rent»), якщо вона була надана лише через цей підрозділ.`
+                        ? `Видалити «${deleteTarget.name || `Підрозділ #${deleteTarget.id}`}»? Голова підрозділу втратить роль «${ROLE_LABELS.pivdenbud}» (стане «${ROLE_LABELS.rent}»), якщо вона була надана лише через цей підрозділ.`
                         : ''
                 }
                 confirmText="Видалити"

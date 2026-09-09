@@ -1,0 +1,359 @@
+/* Shared styles for the Компанія section — Користувачі / Підрозділи / Юрособи. */
+
+.company-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    background: var(--ds-warning-soft);
+    color: var(--ds-warning);
+    border-radius: var(--ds-radius-md);
+    padding: var(--ds-space-3) var(--ds-space-4);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: var(--ds-space-4);
+}
+
+.company-pending-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-5);
+}
+
+.company-pending-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    flex-wrap: wrap;
+    background: var(--ds-warning-soft);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    padding: var(--ds-space-3) var(--ds-space-4);
+}
+
+.company-pending-info {
+    flex: 1;
+    min-width: 160px;
+}
+
+.company-pending-name {
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.company-pending-email {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-subtle);
+}
+
+.company-pending-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    flex-wrap: wrap;
+}
+
+.company-user-name {
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.company-role-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.company-actions-cell {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--ds-space-2);
+}
+
+/* ── Subdivisions ── */
+
+.company-sub-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    padding: var(--ds-space-4) var(--ds-space-5);
+    margin-bottom: var(--ds-space-3);
+}
+
+.company-sub-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+}
+
+.company-sub-title {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    font-weight: 700;
+    font-size: var(--ds-text-lg);
+    color: var(--ds-text);
+    margin-bottom: var(--ds-space-2);
+}
+
+.company-sub-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--ds-text-base);
+    color: var(--ds-text-muted);
+}
+
+.company-sub-meta-label {
+    font-weight: 600;
+    color: var(--ds-text-subtle);
+    margin-right: 4px;
+}
+
+.company-sub-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.company-sub-chip {
+    background: var(--ds-surface-sunken);
+    border: 1px solid var(--ds-border-subtle);
+    border-radius: var(--ds-radius-sm);
+    padding: 2px 8px;
+    font-size: var(--ds-text-sm);
+}
+
+.company-sub-timesheet {
+    margin-top: var(--ds-space-2);
+}
+
+.company-sub-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    flex-shrink: 0;
+}
+
+.company-sub-empty {
+    text-align: center;
+    color: var(--ds-text-subtle);
+    padding: var(--ds-space-6);
+}
+
+.company-sub-form {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    padding: var(--ds-space-5);
+    margin-bottom: var(--ds-space-5);
+}
+
+.company-sub-form-title {
+    font-weight: 700;
+    font-size: var(--ds-text-lg);
+    margin: 0 0 var(--ds-space-2);
+}
+
+.company-sub-form-hint {
+    font-size: var(--ds-text-base);
+    color: var(--ds-text-subtle);
+    margin: 0 0 var(--ds-space-4);
+    line-height: 1.5;
+}
+
+.company-sub-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: var(--ds-space-5);
+    align-items: start;
+}
+
+@media (max-width: 860px) {
+    .company-sub-form-grid { grid-template-columns: 1fr; }
+}
+
+.company-sub-form-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-3);
+}
+
+.company-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.company-form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+
+.company-form-group input,
+.company-form-group select {
+    padding: 8px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.company-field-hint {
+    font-size: 0.75rem;
+    color: var(--ds-text-subtle);
+    margin: 2px 0 0;
+}
+
+.company-sub-form-members-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.company-sub-form-counter {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-subtle);
+    font-family: var(--ds-font-mono);
+}
+
+.company-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-3);
+}
+
+.company-member-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.company-member-row__num {
+    width: 20px;
+    text-align: right;
+    color: var(--ds-text-subtle);
+    font-size: var(--ds-text-sm);
+    font-family: var(--ds-font-mono);
+    flex-shrink: 0;
+}
+
+.company-member-row__fields {
+    flex: 1;
+    display: flex;
+    gap: var(--ds-space-2);
+}
+
+.company-member-row__fields select,
+.company-member-row__fields input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: var(--ds-text-base);
+    font-family: inherit;
+}
+
+.company-member-row__remove {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--ds-danger);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+}
+
+.company-sub-form-actions {
+    display: flex;
+    gap: var(--ds-space-2);
+    margin-top: var(--ds-space-4);
+}
+
+/* ── Юрособи ── */
+
+.seller-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.seller-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-3);
+}
+
+@media (max-width: 560px) {
+    .seller-form-row { grid-template-columns: 1fr; }
+}
+
+.seller-form-section-title {
+    font-size: var(--ds-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--ds-tracking-label);
+    color: var(--ds-text-subtle);
+    margin: var(--ds-space-2) 0 0;
+    padding-top: var(--ds-space-2);
+    border-top: 1px solid var(--ds-border-subtle);
+}
+
+.seller-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
+}
+
+.seller-form-field input,
+.seller-form-field select,
+.seller-form-field textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-size: 0.9rem;
+    font-weight: 400;
+    font-family: inherit;
+}
+
+.seller-form-checks {
+    display: flex;
+    gap: var(--ds-space-4);
+}
+
+.seller-form-checkbox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.seller-name-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.seller-name-cell__label {
+    font-weight: 700;
+}
+
+.seller-name-cell__type {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-subtle);
+}

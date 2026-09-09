@@ -18,6 +18,7 @@ import AdminBlogEdit from '../../pages/admin/AdminBlogEdit';
 import PanPivdenbud from '../../pages/admin/PanPivdenbud';
 import AdminUsers from '../../pages/admin/AdminUsers';
 import AdminSubdivisions from '../../pages/admin/AdminSubdivisions';
+import AdminSellers from '../../pages/admin/AdminSellers';
 
 import OrdersRentalList from '../orders-rental/pages/OrdersRentalList';
 import RentalCalendar from '../orders-rental/pages/RentalCalendar';
@@ -27,7 +28,6 @@ import AdminRentalApplicationForm from '../orders-rental/pages/AdminRentalApplic
 import RequireAdmin from './RequireAdmin';
 import SectionTabsLayout from './sections/SectionTabsLayout';
 import StockWarehouses from './sections/StockWarehouses';
-import CompanyLegalEntitiesPlaceholder from './sections/CompanyLegalEntitiesPlaceholder';
 import LegacyRedirect, { IdLegacyRedirect } from './sections/LegacyRedirect';
 import DealsLegacyRedirect from './sections/DealsLegacyRedirect';
 import UiSandbox from './dev/UiSandbox';
@@ -108,7 +108,7 @@ export default function AdminRoutes() {
                     <Route index element={<Navigate to="/admin/company/users" replace />} />
                     <Route path="users" element={<AdminUsers />} />
                     <Route path="subdivisions" element={<AdminSubdivisions />} />
-                    <Route path="legal-entities" element={<CompanyLegalEntitiesPlaceholder />} />
+                    <Route path="legal-entities" element={<AdminSellers />} />
                 </Route>
 
                 {/*

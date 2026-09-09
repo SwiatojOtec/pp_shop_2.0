@@ -22,6 +22,7 @@ const rentalBookingRoutes = require('./modules/orders-rental/routes/rentalBookin
 const timesheetRoutes = require('./routes/timesheetRoutes');
 const subdivisionRoutes = require('./routes/subdivisionRoutes');
 const clientRoutes = require('./routes/clientRoutes');
+const sellerRoutes = require('./routes/sellerRoutes');
 const warehouseRoutes = require('./routes/warehouseRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const warehouseDashboardRoutes = require('./routes/warehouseDashboardRoutes');
@@ -114,6 +115,7 @@ app.use('/api/rental-calendar', rentalBookingRoutes);
 app.use('/api/timesheet', timesheetRoutes);
 app.use('/api/subdivisions', subdivisionRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/sellers', sellerRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/warehouse', warehouseDashboardRoutes);

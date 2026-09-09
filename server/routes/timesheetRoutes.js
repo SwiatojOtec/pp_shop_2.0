@@ -202,13 +202,17 @@ router.get('/overview', authMiddleware, requireRole([ROLES.OWNER]), async (req, 
                 order: [['day', 'ASC'], ['employeeSlot', 'ASC']]
             });
             const labels = await teamLabelsForHeadUserId(hid);
+            const savedAt = entryRows.length
+                ? entryRows.reduce((max, r) => (r.updatedAt > max ? r.updatedAt : max), entryRows[0].updatedAt)
+                : null;
             sheets.push({
                 headUserId: hid,
                 subdivisionName: meta.subdivisionName,
                 headDisplayName: formatPersonLabel(meta.headUser),
                 headEmail: meta.headUser.email,
                 labels,
-                entries: entryRows.map(mapEntryRow)
+                entries: entryRows.map(mapEntryRow),
+                savedAt
             });
         }
 

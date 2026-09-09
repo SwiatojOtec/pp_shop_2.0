@@ -270,3 +270,11 @@ export const subdivisionsApi = {
     remove: (id) => apiDelete(`/api/subdivisions/${id}`),
     members: (id) => apiGet(`/api/subdivisions/${id}/members`),
 };
+
+export const sellersApi = {
+    list: () => apiGet('/api/sellers'),
+    create: (data) => apiPost('/api/sellers', data),
+    update: (id, data) => apiPut(`/api/sellers/${id}`, data),
+    patch: (id, data) => apiPatch(`/api/sellers/${id}`, data),
+    remove: (id) => apiDelete(`/api/sellers/${id}`),
+};
