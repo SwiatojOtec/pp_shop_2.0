@@ -7,7 +7,8 @@ import Drawer from '../../admin/ui/Drawer';
 import PageHeader from '../../admin/ui/PageHeader';
 import Tabs from '../../admin/ui/Tabs';
 import {
-    toIsoDate, startOfMonth, addMonths, daysOfMonth, rangesOverlap, buildTimelineRows,
+    toIsoDate, startOfMonth, addMonths, daysOfMonth, addDays, startOfWeek, daysInRange,
+    rangesOverlap, buildTimelineRows,
 } from '../model/calendarTimeline';
 import '../styles/RentalCalendar.css';
 import '../styles/resource-timeline.css';
@@ -22,6 +23,14 @@ const MODES = [
     { value: 'categories', label: 'За категоріями' },
     { value: 'all', label: 'Всі' },
 ];
+
+const RANGE_MODES = [
+    { value: 'week', label: 'Тиждень' },
+    { value: 'twoWeeks', label: '2 тижні' },
+    { value: 'month', label: 'Місяць' },
+];
+
+const RANGE_DAY_WIDTH = { week: 130, twoWeeks: 80, month: 40 };
 
 const STATUS_LABEL = {
     active: 'Активна',
@@ -51,9 +60,18 @@ function filterProducts(products, query) {
 
 const fmtUa = (iso) => (iso ? iso.split('-').reverse().join('.') : '—');
 
+/** Bar content: «клієнт · № угоди» (docs/admin-redesign/05-fixes.md, п.3) —
+ *  falls back to the event title/tool name for bookings that don't have a
+ *  deal number yet. */
+function barLabel(evt) {
+    const client = evt.clientName || evt.title || evt.productName;
+    return evt.applicationNumber ? `${client} · ${evt.applicationNumber}` : client;
+}
+
 export default function RentalCalendar() {
     const navigate = useNavigate();
-    const [month, setMonth] = useState(() => startOfMonth(new Date()));
+    const [rangeMode, setRangeMode] = useState('week');
+    const [anchor, setAnchor] = useState(() => new Date());
     const [mode, setMode] = useState('busy');
     const [events, setEvents] = useState([]);
     const [productTotals, setProductTotals] = useState({});
@@ -84,11 +102,20 @@ export default function RentalCalendar() {
     const [checkResult, setCheckResult] = useState(null);
 
     const todayIso = toIsoDate(new Date());
+    const rangeStart = useMemo(
+        () => (rangeMode === 'month' ? startOfMonth(anchor) : startOfWeek(anchor)),
+        [rangeMode, anchor]
+    );
+    const days = useMemo(() => {
+        if (rangeMode === 'week') return daysInRange(rangeStart, 7);
+        if (rangeMode === 'twoWeeks') return daysInRange(rangeStart, 14);
+        return daysOfMonth(rangeStart);
+    }, [rangeMode, rangeStart]);
     const range = useMemo(() => ({
-        from: toIsoDate(startOfMonth(month)),
-        to: toIsoDate(new Date(month.getFullYear(), month.getMonth() + 1, 0)),
-    }), [month]);
-    const days = useMemo(() => daysOfMonth(month), [month]);
+        from: toIsoDate(days[0] || rangeStart),
+        to: toIsoDate(days[days.length - 1] || rangeStart),
+    }), [days, rangeStart]);
+    const dayColWidth = RANGE_DAY_WIDTH[rangeMode];
     const dayIndexByIso = useMemo(() => {
         const map = new Map();
         days.forEach((d, i) => map.set(toIsoDate(d), i));
@@ -119,7 +146,7 @@ export default function RentalCalendar() {
         let cancelled = false;
         (async () => {
             try {
-                const list = await productsApi.list({ isRent: true });
+                const list = await productsApi.list({ isRent: true, includeHiddenRent: true });
                 if (!cancelled) setProducts(Array.isArray(list) ? list : []);
             } catch {
                 if (!cancelled) setProducts([]);
@@ -269,6 +296,18 @@ export default function RentalCalendar() {
         }
     }
 
+    function goPrevRange() {
+        if (rangeMode === 'month') setAnchor((a) => addMonths(a, -1));
+        else if (rangeMode === 'twoWeeks') setAnchor((a) => addDays(a, -14));
+        else setAnchor((a) => addDays(a, -7));
+    }
+
+    function goNextRange() {
+        if (rangeMode === 'month') setAnchor((a) => addMonths(a, 1));
+        else if (rangeMode === 'twoWeeks') setAnchor((a) => addDays(a, 14));
+        else setAnchor((a) => addDays(a, 7));
+    }
+
     // ── Build the grid's explicit row/column placement ──────────────────────
     const numDays = days.length;
     let rowCursor = 1; // row 1 is the day header
@@ -332,7 +371,13 @@ export default function RentalCalendar() {
     }
     const totalRows = rowCursor;
     const hasAnyRows = groups.some((g) => g.rows.length > 0);
-    const monthLabel = `${MONTHS_UA[month.getMonth()]} ${month.getFullYear()}`;
+    const rangeLabel = (() => {
+        if (rangeMode === 'month') return `${MONTHS_UA[rangeStart.getMonth()]} ${rangeStart.getFullYear()}`;
+        const last = days[days.length - 1] || rangeStart;
+        const sameMonth = rangeStart.getMonth() === last.getMonth() && rangeStart.getFullYear() === last.getFullYear();
+        const fromStr = sameMonth ? `${rangeStart.getDate()}` : `${rangeStart.getDate()} ${MONTHS_UA[rangeStart.getMonth()]}`;
+        return `${fromStr} — ${last.getDate()} ${MONTHS_UA[last.getMonth()]} ${last.getFullYear()}`;
+    })();
 
     return (
         <div className="rt-page">
@@ -348,18 +393,19 @@ export default function RentalCalendar() {
 
             <div className="rt-toolbar">
                 <div className="rental-calendar__nav">
-                    <button type="button" className="rental-calendar__nav-btn" onClick={() => setMonth((m) => addMonths(m, -1))} aria-label="Попередній місяць">
+                    <button type="button" className="rental-calendar__nav-btn" onClick={goPrevRange} aria-label="Попередній період">
                         <ChevronLeft size={18} />
                     </button>
-                    <h3 className="rental-calendar__month">{monthLabel}</h3>
-                    <button type="button" className="rental-calendar__nav-btn" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Наступний місяць">
+                    <h3 className="rental-calendar__month">{rangeLabel}</h3>
+                    <button type="button" className="rental-calendar__nav-btn" onClick={goNextRange} aria-label="Наступний період">
                         <ChevronRight size={18} />
                     </button>
-                    <button type="button" className="rental-calendar__today-btn" onClick={() => setMonth(startOfMonth(new Date()))}>
+                    <button type="button" className="rental-calendar__today-btn" onClick={() => setAnchor(new Date())}>
                         Сьогодні
                     </button>
                 </div>
 
+                <Tabs tabs={RANGE_MODES} value={rangeMode} onChange={setRangeMode} />
                 <Tabs tabs={MODES} value={mode} onChange={setMode} />
 
                 <div className="rt-legend">
@@ -438,7 +484,7 @@ export default function RentalCalendar() {
                 {loading && <div className="rt-loading">Завантаження…</div>}
                 <div
                     className="rt-grid"
-                    style={{ gridTemplateColumns: `220px repeat(${numDays}, 32px)`, gridTemplateRows: `34px repeat(${Math.max(totalRows - 1, 0)}, 30px)` }}
+                    style={{ gridTemplateColumns: `220px repeat(${numDays}, ${dayColWidth}px)`, gridTemplateRows: `34px repeat(${Math.max(totalRows - 1, 0)}, 40px)` }}
                 >
                     <div className="rt-head-label rt-place" style={{ '--rt-col': 1, '--rt-row': 1 }}>Інструмент</div>
                     {days.map((d, i) => {
@@ -474,7 +520,12 @@ export default function RentalCalendar() {
                     {rowLabels.map(({ key, row, startRow, rowSpan }) => (
                         <div key={key} className="rt-row-label rt-place" style={{ '--rt-col': 1, '--rt-row': startRow, '--rt-row-span': rowSpan }}>
                             <div className="rt-row-label-name" title={row.name}>{row.name}</div>
-                            {row.sku && <div className="rt-row-label-sku">{row.sku}</div>}
+                            {(row.inventoryNumber || row.sku) && (
+                                <div className="rt-row-label-sku">
+                                    {[row.inventoryNumber, row.sku !== row.inventoryNumber ? row.sku : null]
+                                        .filter(Boolean).join(' · ')}
+                                </div>
+                            )}
                         </div>
                     ))}
 
@@ -504,10 +555,10 @@ export default function RentalCalendar() {
                             key={b.key}
                             className={`rt-bar rt-place rt-bar--${b.evt.kind}`}
                             style={{ '--rt-col': b.col, '--rt-row': b.row, '--rt-span': b.span }}
-                            title={`${b.evt.productName} · ${b.evt.title || b.evt.clientName || ''} · ${fmtUa(b.evt.rentFrom)} — ${fmtUa(b.evt.rentTo)}`}
+                            title={`${b.evt.productName} · ${barLabel(b.evt)} · ${fmtUa(b.evt.rentFrom)} — ${fmtUa(b.evt.rentTo)}`}
                             onClick={() => setDetailEvent(b.evt)}
                         >
-                            {b.evt.title || b.evt.clientName || b.evt.productName}
+                            {barLabel(b.evt)}
                         </div>
                     ))}
 

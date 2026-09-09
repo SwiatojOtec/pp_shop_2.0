@@ -136,7 +136,9 @@
 
 .rt-grid {
     display: grid;
-    grid-auto-rows: 30px;
+    /* Row label is two lines (name + інв. №/SKU) — needs more than 30px to
+       avoid the flex column squeezing the name line to near-zero height. */
+    grid-auto-rows: 40px;
     min-width: max-content;
 }
 
@@ -237,6 +239,7 @@
 .rt-row-label-name {
     font-size: 0.82rem;
     font-weight: 600;
+    line-height: 1.2;
     color: var(--ds-text);
     white-space: nowrap;
     overflow: hidden;
@@ -245,7 +248,13 @@
 
 .rt-row-label-sku {
     font-size: 0.7rem;
+    line-height: 1.2;
     color: var(--ds-text-subtle);
+    font-family: var(--ds-font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .rt-cell {
@@ -275,6 +284,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* A single-day booking is still one grid column wide (as narrow as the
+       "Місяць" scale's day width) — let it spill over neighboring cells
+       rather than shrink to an unreadable sliver. */
+    min-width: 46px;
+    position: relative;
+    z-index: 1;
 }
 
 .rt-bar--hold { background: #2563eb; }

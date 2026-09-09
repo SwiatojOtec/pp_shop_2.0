@@ -38,6 +38,23 @@ export function daysOfMonth(monthDate) {
     return days;
 }
 
+export function addDays(date, delta) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + delta);
+}
+
+/** Monday-based week start (Ukrainian convention). */
+export function startOfWeek(date) {
+    const day = date.getDay(); // 0=Sun..6=Sat
+    const diff = day === 0 ? -6 : 1 - day;
+    return addDays(date, diff);
+}
+
+export function daysInRange(start, count) {
+    const days = [];
+    for (let i = 0; i < count; i += 1) days.push(addDays(start, i));
+    return days;
+}
+
 export function rangesOverlap(aFrom, aTo, bFrom, bTo) {
     return aFrom <= bTo && aTo >= bFrom;
 }
@@ -105,6 +122,7 @@ export function buildTimelineRows(events, products, mode, days = [], productTota
             productId,
             name: product?.name || rowEvents[0]?.productName || `#${productId}`,
             sku: product?.sku || '',
+            inventoryNumber: product?.inventoryNumber || '',
             category: product?.category || 'Без категорії',
         };
 
