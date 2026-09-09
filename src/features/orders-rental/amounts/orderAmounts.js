@@ -161,6 +161,7 @@ export function calcLineDisplayAmounts(item, sellerId, billingOptions = {}) {
                 rentTo: item.rentTo || '',
                 isRentLine: true,
                 unit: 'шт',
+                unitPrice: qty > 0 ? roundMoney(lineTotal / qty) : lineTotal,
                 lineTotal,
             };
         }

@@ -228,6 +228,7 @@ function calcLineDisplayAmounts(item, appliesVat, billingOptions = {}) {
                 rentDays: days,
                 isRentLine: true,
                 unit: 'шт',
+                unitPrice: qty > 0 ? roundMoney(lineTotal / qty) : lineTotal,
                 lineTotal,
             };
         }
