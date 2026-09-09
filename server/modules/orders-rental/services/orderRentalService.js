@@ -7,7 +7,7 @@ const { recalculateProductQuantity } = require('../../../services/inventoryServi
 const { parseDiscountPercent, roundMoney } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { generateAppNumber } = require('../utils/orderNumbering');
-const { recalcRentQuantitiesForItemsLists } = require('./rentalApplicationService');
+const { recalcRentQuantitiesForItemsLists, shouldBeOverdue } = require('./rentalApplicationService');
 
 /** Inclusive calendar days: 11.08 → 15.08 = 5. */
 function calcInclusiveDays(from, to) {
@@ -298,7 +298,14 @@ async function saveDealWithRentalApplication(orderId, orderPatch, dealExtras = {
             const totalAmount = roundMoney(Math.max(totalRental - discountAmount, 0));
             const rentFromDates = rentItems.map((l) => l.rentFrom).filter(Boolean).sort();
             const rentToDates = rentItems.map((l) => l.rentTo).filter(Boolean).sort();
-            const status = deriveRentalStatusFromDealStage(order.status);
+            const rentTo = rentToDates[rentToDates.length - 1] || null;
+            let status = deriveRentalStatusFromDealStage(order.status);
+            // A deal save must never silently un-overdue an application — only
+            // the auto-overdue sweep (applyAutoOverdueStatus/-ForAll) or an
+            // explicit "Повернуто"/"Виконано" step may clear it.
+            if (shouldBeOverdue({ rentTo, status })) {
+                status = 'overdue';
+            }
 
             const fields = {
                 clientName: order.customerName || '',
@@ -311,7 +318,7 @@ async function saveDealWithRentalApplication(orderId, orderPatch, dealExtras = {
                 responsible: Array.isArray(dealExtras.responsible) ? dealExtras.responsible : (existing?.responsible || []),
                 items: rentItems,
                 rentFrom: rentFromDates[0] || null,
-                rentTo: rentToDates[rentToDates.length - 1] || null,
+                rentTo,
                 rentStartTime: order.rentStartTime || null,
                 depositAmount: totalDeposit,
                 discountType: 'percent',
