@@ -1,20 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Save, ArrowLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { transliterate } from '../../utils/transliterate';
-import { categoriesApi, rentCategoriesApi, brandsApi, warehousesApi, productsApi, inventoryApi } from '../../services/api';
+import { categoriesApi, rentCategoriesApi, brandsApi, warehousesApi, productsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
-import ProductBasicInfo     from '../../components/admin/product/ProductBasicInfo';
-import ProductSpecs         from '../../components/admin/product/ProductSpecs';
-import ProductKitItems      from '../../components/admin/product/ProductKitItems';
+import Tabs from '../../features/admin/ui/Tabs';
+import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
+import ProductBasicInfo from '../../components/admin/product/ProductBasicInfo';
+import ProductCategoryBrand from '../../components/admin/product/ProductCategoryBrand';
+import ProductIdentifiers from '../../components/admin/product/ProductIdentifiers';
+import ProductAvailability from '../../components/admin/product/ProductAvailability';
+import ProductSpecs from '../../components/admin/product/ProductSpecs';
+import ProductGallery from '../../components/admin/product/ProductGallery';
+import ProductKitItems from '../../components/admin/product/ProductKitItems';
 import ProductRelatedSearch from '../../components/admin/product/ProductRelatedSearch';
-import ProductPriceMatrix   from '../../components/admin/product/ProductPriceMatrix';
-import ProductGallery       from '../../components/admin/product/ProductGallery';
-import ProductRentDetails   from '../../components/admin/product/ProductRentDetails';
-import ProductIdentifiers   from '../../components/admin/product/ProductIdentifiers';
-import ProductPriceSidebar  from '../../components/admin/product/ProductPriceSidebar';
-import { ConfirmDialog } from '../../components/admin';
+import ProductRentDetails from '../../components/admin/product/ProductRentDetails';
+import ProductPriceSidebar from '../../components/admin/product/ProductPriceSidebar';
 import {
     ensureRentTiersFormShape,
     normalizeRentTiersForApi,
@@ -47,36 +50,65 @@ const INITIAL_FORM = {
     weightPerUnit: '', weightTotal: '', replacementCost: '', securityDeposit: '',
     competitorLinks: [], adminImages: [],
     createWarehouseId: '', createWarehouseQuantity: '',
-    editWarehouseId: '', editWarehouseQuantity: '',
     rentPriceTiers: null,
 };
+
+const TABS_BASE = [
+    { value: 'basic', label: 'Основне' },
+    { value: 'pricing', label: 'Ціни' },
+    { value: 'photos', label: 'Фото' },
+    { value: 'specs', label: 'Характеристики' },
+];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProductEdit({ context = 'products' }) {
-    const { id }           = useParams();
-    const navigate         = useNavigate();
-    const { user }         = useAuth();
-    const [searchParams]   = useSearchParams();
-    const location         = useLocation();
-    const isNew         = id === 'new';
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const { showToast } = useToast();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    const isNew = id === 'new';
     const isRentContext = context === 'rent';
     const warehouseIdFromQuery = searchParams.get('warehouseId');
+    const tab = searchParams.get('tab') || 'basic';
 
-    const [formData, setFormData]       = useState({ ...INITIAL_FORM, createWarehouseId: warehouseIdFromQuery || '' });
-    const [categories, setCategories]   = useState([]);
-    const [brands, setBrands]           = useState([]);
-    const [warehouses, setWarehouses]   = useState([]);
-    const [inventoryRows, setInventoryRows] = useState([]);
-    const [loading, setLoading]         = useState(!isNew);
-    const [saving, setSaving]           = useState(false);
-    const [deleteOpen, setDeleteOpen]   = useState(false);
+    const [formData, setFormData] = useState({ ...INITIAL_FORM, createWarehouseId: warehouseIdFromQuery || '' });
+    const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
+    const [warehouses, setWarehouses] = useState([]);
+    const [loading, setLoading] = useState(!isNew);
+    const [saving, setSaving] = useState(false);
+    const [dirty, setDirty] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+    const [leaveTarget, setLeaveTarget] = useState(null);
 
     const canDeleteProduct = user && ['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud'].includes(user.role);
 
-    // Merge a single field into formData
-    const update = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
+    // Merge a single field into formData — the only path user edits take, so
+    // it's also where "unsaved changes" tracking lives.
+    const update = (field, value) => {
+        setDirty(true);
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const tabs = useMemo(
+        () => (isRentContext ? [...TABS_BASE, { value: 'rent', label: 'Оренда' }] : TABS_BASE),
+        [isRentContext]
+    );
+    const activeTab = tabs.some((t) => t.value === tab) ? tab : 'basic';
+    const setTab = (value) => setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === 'basic') next.delete('tab');
+        else next.set('tab', value);
+        return next;
+    }, { replace: true });
+
+    const selectedCategory = categories.find((c) => c.name === formData.category);
+    const usesPriceMatrix = !!selectedCategory?.usesPriceMatrix;
 
     // ── Data loading ─────────────────────────────────────────────────────────
 
@@ -98,42 +130,33 @@ export default function ProductEdit({ context = 'products' }) {
                 rentPriceTiers: ensureRentTiersFormShape(null, prev.price ?? ''),
             };
         });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isRentContext, isNew]);
-
-    useEffect(() => {
-        if (isRentContext && !isNew && id) loadInventoryRows(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
-
-    // Auto-populate editWarehouseId when warehouses load (new rent product)
-    useEffect(() => {
-        if (!isRentContext || isNew || formData.editWarehouseId || warehouses.length === 0) return;
-        setFormData((prev) => ({
-            ...prev,
-            editWarehouseId: String(warehouses[0].id),
-            editWarehouseQuantity: prev.editWarehouseQuantity || '0',
-        }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [warehouses]);
 
     // Auto-generate slug from name (new products only)
     useEffect(() => {
         if (isNew && formData.name) {
-            update('slug', transliterate(formData.name));
+            setFormData((prev) => ({ ...prev, slug: transliterate(formData.name) }));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData.name]);
+
+    // Unsaved-changes warning on tab close / refresh / external navigation.
+    useEffect(() => {
+        if (!dirty) return undefined;
+        const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [dirty]);
 
     async function loadCategories() {
         try {
             const data = isRentContext ? await rentCategoriesApi.list() : await categoriesApi.list();
             setCategories(data);
             if (isNew && data.length > 0 && !formData.category) {
-                update('category', data[0].name);
+                setFormData((prev) => ({ ...prev, category: data[0].name }));
             }
         } catch (err) {
-            console.error('loadCategories:', err);
+            showToast(err.message || 'Не вдалося завантажити категорії', 'warning');
         }
     }
 
@@ -142,7 +165,7 @@ export default function ProductEdit({ context = 'products' }) {
             const data = await brandsApi.list();
             setBrands(data);
         } catch (err) {
-            console.error('loadBrands:', err);
+            showToast(err.message || 'Не вдалося завантажити бренди', 'warning');
         }
     }
 
@@ -152,10 +175,10 @@ export default function ProductEdit({ context = 'products' }) {
             const list = Array.isArray(data) ? data : [];
             setWarehouses(list);
             if (isNew && isRentContext && !formData.createWarehouseId && list.length > 0) {
-                update('createWarehouseId', String(list[0].id));
+                setFormData((prev) => ({ ...prev, createWarehouseId: String(list[0].id) }));
             }
         } catch (err) {
-            console.error('loadWarehouses:', err);
+            showToast(err.message || 'Не вдалося завантажити склади', 'warning');
         }
     }
 
@@ -164,67 +187,40 @@ export default function ProductEdit({ context = 'products' }) {
             const data = await productsApi.getById(id);
             if (!data) return;
 
+            // One bulk request instead of one GET per related product.
             let relatedProductObjects = [];
             if (data.relatedProducts?.length > 0) {
-                const relRes = await Promise.all(
-                    data.relatedProducts.map((pid) =>
-                        productsApi.getById(pid).catch(() => null)
-                    )
-                );
-                relatedProductObjects = relRes.filter(Boolean).map((p) => ({
+                const rows = await productsApi.list({ ids: data.relatedProducts.join(',') }).catch(() => []);
+                relatedProductObjects = (Array.isArray(rows) ? rows : []).map((p) => ({
                     id: p.id, name: p.name, image: p.image, slug: p.slug,
                 }));
             }
 
             setFormData({
                 ...data,
-                price:             data.price ?? '',
-                oldPrice:          data.oldPrice ?? '',
-                images:            data.images || [],
-                adminNotes:        data.adminNotes || '',
-                instruction:       data.instruction || '',
-                specs:             data.specs || {},
-                priceMatrix:       data.priceMatrix || [],
-                availableFrom:     data.availableFrom || '',
-                kitItems:          data.kitItems || [],
+                price: data.price ?? '',
+                oldPrice: data.oldPrice ?? '',
+                images: data.images || [],
+                adminNotes: data.adminNotes || '',
+                instruction: data.instruction || '',
+                specs: data.specs || {},
+                priceMatrix: data.priceMatrix || [],
+                availableFrom: data.availableFrom || '',
+                kitItems: data.kitItems || [],
                 quantityAvailable: data.quantityAvailable ?? '',
                 showInRentCatalog: typeof data.showInRentCatalog === 'boolean' ? data.showInRentCatalog : true,
-                relatedProducts:   relatedProductObjects,
-                competitorLinks:   Array.isArray(data.competitorLinks) ? data.competitorLinks : [],
-                adminImages:       Array.isArray(data.adminImages) ? data.adminImages : [],
+                relatedProducts: relatedProductObjects,
+                competitorLinks: Array.isArray(data.competitorLinks) ? data.competitorLinks : [],
+                adminImages: Array.isArray(data.adminImages) ? data.adminImages : [],
                 createWarehouseId: '', createWarehouseQuantity: '',
-                editWarehouseId:   '', editWarehouseQuantity: '',
                 rentPriceTiers: isRentContext
                     ? ensureRentTiersFormShape(data.rentPriceTiers, data.price ?? '')
                     : null,
             });
-
-            await loadInventoryRows(data.id);
         } catch (err) {
-            console.error('loadProduct:', err);
+            showToast(err.message || 'Не вдалося завантажити товар', 'warning');
         } finally {
             setLoading(false);
-        }
-    }
-
-    async function loadInventoryRows(productId) {
-        if (!isRentContext || !productId) return;
-        try {
-            const data = await inventoryApi.list();
-            const rows = Array.isArray(data)
-                ? data.filter((r) => Number(r.productId) === Number(productId))
-                : [];
-            setInventoryRows(rows);
-            if (rows.length > 0) {
-                const first = rows[0];
-                setFormData((prev) => ({
-                    ...prev,
-                    editWarehouseId:       String(first.warehouseId || ''),
-                    editWarehouseQuantity: String(Number(first.quantity || 0)),
-                }));
-            }
-        } catch (err) {
-            console.error('loadInventoryRows:', err);
         }
     }
 
@@ -242,7 +238,7 @@ export default function ProductEdit({ context = 'products' }) {
                 }));
             }
         } catch (err) {
-            console.error('loadGroupData:', err);
+            showToast(err.message || 'Не вдалося підтягнути дані колекції', 'warning');
         }
     }
 
@@ -258,14 +254,25 @@ export default function ProductEdit({ context = 'products' }) {
         return isRentContext ? '/admin/catalog/tools' : '/admin/catalog/goods';
     }
 
+    function goBack() {
+        if (dirty) {
+            setLeaveTarget(afterSavePath());
+            setLeaveConfirmOpen(true);
+            return;
+        }
+        navigate(afterSavePath());
+    }
+
     async function handleSubmit(e) {
         e?.preventDefault();
         if (!formData.image) {
-            alert('Будь ласка, додайте головне зображення товару.');
+            showToast('Будь ласка, додайте головне зображення товару.', 'warning');
+            setTab('photos');
             return;
         }
         if (isRentContext && isNew && !String(formData.createWarehouseId || '').trim()) {
-            alert('Оберіть склад для створення товару.');
+            showToast('Оберіть склад для створення товару.', 'warning');
+            setTab('rent');
             return;
         }
 
@@ -284,18 +291,18 @@ export default function ProductEdit({ context = 'products' }) {
 
             const payload = {
                 ...formData,
-                isRent:    isRentContext,
-                price:     priceForApi,
+                isRent: isRentContext,
+                price: priceForApi,
                 rentPriceTiers: isRentContext ? rentTiersForDb : null,
-                oldPrice:  (formData.oldPrice === '' || formData.badge !== 'SALE') ? null : Number(formData.oldPrice),
-                packSize:  formData.packSize === '' ? 1.0 : Number(formData.packSize),
+                oldPrice: (formData.oldPrice === '' || formData.badge !== 'SALE') ? null : Number(formData.oldPrice),
+                packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize),
                 availableFrom: formData.availableFrom || null,
-                adminNotes:    String(formData.adminNotes || '').trim() || null,
-                instruction:   String(formData.instruction || '').trim() || null,
-                badge:         isRentContext ? null : formData.badge,
+                adminNotes: String(formData.adminNotes || '').trim() || null,
+                instruction: String(formData.instruction || '').trim() || null,
+                badge: isRentContext ? null : formData.badge,
                 quantityAvailable: !isRentContext
                     ? (formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable))
-                    : null,
+                    : undefined,
                 relatedProducts: Array.isArray(formData.relatedProducts)
                     ? formData.relatedProducts.map((r) => (typeof r === 'object' ? r.id : r))
                     : [],
@@ -303,10 +310,8 @@ export default function ProductEdit({ context = 'products' }) {
                     .map((v) => String(v || '').trim()).filter(Boolean),
                 adminImages: (formData.adminImages || [])
                     .map((v) => String(v || '').trim()).filter(Boolean),
-                createWarehouseId:       isRentContext && isNew  ? Number(formData.createWarehouseId)       : undefined,
-                createWarehouseQuantity: isRentContext && isNew  ? Number(formData.createWarehouseQuantity || 0) : undefined,
-                editWarehouseId:         isRentContext && !isNew ? Number(formData.editWarehouseId || 0)    : undefined,
-                editWarehouseQuantity:   isRentContext && !isNew ? Number(formData.editWarehouseQuantity || 0) : undefined,
+                createWarehouseId: isRentContext && isNew ? Number(formData.createWarehouseId) : undefined,
+                createWarehouseQuantity: isRentContext && isNew ? Number(formData.createWarehouseQuantity || 0) : undefined,
             };
 
             if (isNew) {
@@ -314,10 +319,10 @@ export default function ProductEdit({ context = 'products' }) {
             } else {
                 await productsApi.update(id, payload);
             }
+            setDirty(false);
             navigate(afterSavePath());
         } catch (err) {
-            console.error('handleSubmit:', err);
-            alert(err.message || 'Сталася помилка при збереженні товару.');
+            showToast(err.message || 'Сталася помилка при збереженні товару.', 'warning');
         } finally {
             setSaving(false);
         }
@@ -330,7 +335,7 @@ export default function ProductEdit({ context = 'products' }) {
             await productsApi.remove(id);
             navigate(isRentContext ? '/admin/catalog/tools' : '/admin/catalog/goods');
         } catch (err) {
-            alert(err.message || 'Не вдалося видалити товар. Можливі зв’язані замовлення або заявки — спробуйте приховати картку з каталогу.');
+            showToast(err.message || 'Не вдалося видалити товар. Можливі зв\'язані замовлення або заявки — спробуйте приховати картку з каталогу.', 'warning');
         } finally {
             setDeleteLoading(false);
             setDeleteOpen(false);
@@ -339,16 +344,13 @@ export default function ProductEdit({ context = 'products' }) {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    if (loading) return <div>Завантаження...</div>;
-
-    const isSillCategory = formData.category === 'Підвіконня';
+    if (loading) return <div className="od-loading">Завантаження...</div>;
 
     return (
         <div className="product-edit-page">
-            {/* Breadcrumbs */}
             <div className="admin-breadcrumbs">
                 <Link to={isRentContext ? '/admin/catalog/tools' : '/admin/catalog/goods'}>
-                    {isRentContext ? 'Оренда' : 'Товари'}
+                    {isRentContext ? 'Інструмент' : 'Товари'}
                 </Link>
                 <ChevronRight size={14} />
                 <span className="breadcrumb-current">
@@ -358,15 +360,9 @@ export default function ProductEdit({ context = 'products' }) {
                 </span>
             </div>
 
-            {/* Header */}
-            <div className="product-edit-header">
+            <div className="product-edit-header product-edit-header--sticky">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <button
-                        type="button"
-                        onClick={() => navigate(afterSavePath())}
-                        className="action-btn"
-                        style={{ width: '40px', height: '40px' }}
-                    >
+                    <button type="button" onClick={goBack} className="action-btn" style={{ width: '40px', height: '40px' }}>
                         <ArrowLeft size={20} />
                     </button>
                     <h1 className="admin-title" style={{ margin: 0 }}>
@@ -374,6 +370,7 @@ export default function ProductEdit({ context = 'products' }) {
                             ? (isRentContext ? 'Додати новий інструмент' : 'Додати новий товар')
                             : (isRentContext ? 'Редагувати інструмент' : 'Редагувати товар')}
                     </h1>
+                    {dirty && <span className="product-edit-dirty">Є незбережені зміни</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     {!isNew && canDeleteProduct && (
@@ -387,12 +384,7 @@ export default function ProductEdit({ context = 'products' }) {
                             <Trash2 size={18} /> Видалити картку
                         </button>
                     )}
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        className="btn-primary"
-                        disabled={saving}
-                    >
+                    <button type="button" onClick={handleSubmit} className="btn-primary" disabled={saving}>
                         <Save size={18} /> {saving ? 'Збереження...' : 'Зберегти зміни'}
                     </button>
                 </div>
@@ -411,72 +403,108 @@ export default function ProductEdit({ context = 'products' }) {
                 onCancel={() => setDeleteOpen(false)}
             />
 
-            {/* Two-column grid */}
-            <div className="product-edit-grid">
-                {/* ── Left column ── */}
-                <div className="edit-main">
-                    <ProductBasicInfo
+            <ConfirmDialog
+                open={leaveConfirmOpen}
+                danger={false}
+                title="Є незбережені зміни"
+                message="Якщо вийти зараз, зміни на цій сторінці буде втрачено."
+                confirmText="Вийти без збереження"
+                onConfirm={() => { setLeaveConfirmOpen(false); navigate(leaveTarget); }}
+                onCancel={() => setLeaveConfirmOpen(false)}
+            />
+
+            <Tabs tabs={tabs} value={activeTab} onChange={setTab} />
+
+            <div className="product-edit-tabbody">
+                {activeTab === 'basic' && (
+                    <>
+                        <ProductBasicInfo formData={formData} onChange={update} />
+                        <ProductCategoryBrand formData={formData} onChange={update} categories={categories} brands={brands} />
+                        {!isRentContext && (
+                            <ProductIdentifiers formData={formData} onChange={update} onGroupIdBlur={loadGroupData} />
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'pricing' && (
+                    <ProductPriceSidebar
                         formData={formData}
                         onChange={update}
+                        isRentContext={isRentContext}
+                        usesPriceMatrix={usesPriceMatrix}
                     />
-                    <ProductSpecs
-                        specs={formData.specs}
-                        onChange={(val) => update('specs', val)}
-                    />
-                    {isRentContext && (
-                        <ProductKitItems
-                            items={formData.kitItems}
-                            onChange={(val) => update('kitItems', val)}
-                        />
-                    )}
-                    {isRentContext && (
-                        <ProductRelatedSearch
-                            productId={id}
-                            selected={formData.relatedProducts}
-                            onChange={(val) => update('relatedProducts', val)}
-                        />
-                    )}
-                    {isSillCategory && (
-                        <ProductPriceMatrix
-                            matrix={formData.priceMatrix}
-                            onChange={(val) => update('priceMatrix', val)}
-                        />
-                    )}
+                )}
+
+                {activeTab === 'photos' && (
                     <ProductGallery
                         mainImage={formData.image}
                         images={formData.images}
                         onMainChange={(val) => update('image', val)}
                         onImagesChange={(val) => update('images', val)}
                     />
-                </div>
+                )}
 
-                {/* ── Right column ── */}
-                <div className="edit-sidebar">
-                    <ProductPriceSidebar
-                        formData={formData}
-                        onChange={update}
-                        isRentContext={isRentContext}
-                        isNew={isNew}
-                        categories={categories}
-                        brands={brands}
-                        warehouses={warehouses}
-                        inventoryRows={inventoryRows}
-                        isSillCategory={isSillCategory}
-                    />
-                    {isRentContext && (
-                        <ProductRentDetails
+                {activeTab === 'specs' && (
+                    <>
+                        <ProductAvailability
                             formData={formData}
                             onChange={update}
+                            isRentContext={isRentContext}
+                            usesPriceMatrix={usesPriceMatrix}
                         />
-                    )}
-                    {!isRentContext && (
-                        <ProductIdentifiers
-                            formData={formData}
-                            onChange={update}
-                            onGroupIdBlur={loadGroupData}
-                        />
-                    )}
-                </div>
+                        <ProductSpecs specs={formData.specs} onChange={(val) => update('specs', val)} />
+                    </>
+                )}
+
+                {activeTab === 'rent' && isRentContext && (
+                    <>
+                        <div className="admin-section">
+                            <h2 className="section-title">Оренда</h2>
+                            <div className="admin-form">
+                                <div className="form-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!!formData.showInRentCatalog}
+                                            onChange={(e) => update('showInRentCatalog', e.target.checked)}
+                                            style={{ width: '16px', height: '16px' }}
+                                        />
+                                        Показувати в каталозі оренди
+                                    </label>
+                                </div>
+                                {isNew && (
+                                    <>
+                                        <div className="form-group">
+                                            <label className="field-sublabel">Склад створення (обов&apos;язково)</label>
+                                            <select
+                                                value={formData.createWarehouseId || ''}
+                                                onChange={(e) => update('createWarehouseId', e.target.value)}
+                                            >
+                                                <option value="">— Оберіть склад —</option>
+                                                {warehouses.map((w) => (
+                                                    <option key={w.id} value={w.id}>{w.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="field-sublabel">Початкова кількість на обраному складі</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.createWarehouseQuantity}
+                                                onChange={(e) => update('createWarehouseQuantity', e.target.value)}
+                                                placeholder="Наприклад: 5"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <ProductKitItems items={formData.kitItems} onChange={(val) => update('kitItems', val)} />
+                        <ProductRelatedSearch productId={id} selected={formData.relatedProducts} onChange={(val) => update('relatedProducts', val)} />
+                        <ProductRentDetails formData={formData} onChange={update} />
+                    </>
+                )}
             </div>
         </div>
     );

@@ -88,8 +88,13 @@ const ensureInventoryForNewRentProduct = async (product, payload) => {
 
 router.get('/', async (req, res) => {
     try {
-        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit, includeHiddenRent } = req.query;
+        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit, includeHiddenRent, ids } = req.query;
         let where = {};
+
+        if (ids) {
+            const idList = String(ids).split(',').map((v) => parseInt(v, 10)).filter((v) => Number.isFinite(v));
+            where.id = idList;
+        }
 
         if (search) {
             where[Op.or] = [
@@ -137,7 +142,7 @@ router.get('/', async (req, res) => {
         }
 
         // Handle dynamic spec filters (anything else in query)
-        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit', 'includeHiddenRent'];
+        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit', 'includeHiddenRent', 'ids'];
         Object.keys(req.query).forEach(key => {
             if (!standardParams.includes(key) && req.query[key]) {
                 // For JSONB specs filtering
