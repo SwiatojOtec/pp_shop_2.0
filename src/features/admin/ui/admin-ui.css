@@ -68,6 +68,12 @@
     filter: brightness(0.92);
 }
 
+.ds-btn--sm {
+    padding: 5px 11px;
+    font-size: var(--ds-text-sm);
+    border-radius: var(--ds-radius-sm);
+}
+
 .ds-icon-btn {
     display: inline-flex;
     align-items: center;

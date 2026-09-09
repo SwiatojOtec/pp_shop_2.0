@@ -3,33 +3,30 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ClipboardList, Phone, Mail,
     FileText, Tag, Edit2, User, Plus, Check, X as XIcon,
-    AlertTriangle, ShoppingCart,
+    AlertTriangle, ShoppingCart, Trash2,
 } from 'lucide-react';
-import { clientsApi, rentalApplicationsApi, ordersApi } from '../../services/api';
+import { clientsApi, ordersApi } from '../../services/api';
 import { parsePhones } from '../../utils/phoneUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import StatusBadge from '../../features/admin/ui/StatusBadge';
 import DataTable from '../../features/admin/ui/DataTable';
+import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
 import ClientFormModal from '../../features/admin/clients/ClientFormModal';
 import '../../features/admin/clients/clients.css';
-import './Admin.css';
 import './AdminClientDetails.css';
 
-function formatShopOrderNumber(value) {
-    if (!value || typeof value !== 'string') return value || '—';
-    const p = value.trim().split('/');
-    if (p.length === 4 && p.every((x) => /^\d+$/.test(x))) {
-        const [n, dd, mm, yyyy] = p;
-        return `№${n} · ${dd}.${mm}.${yyyy}`;
-    }
-    return value;
-}
+const ORDER_NON_TURNOVER_STATUSES = ['cancelled'];
+const ACTIVE_RENTAL_STATUSES = ['active', 'booked'];
 
 function fmtDate(d) {
     if (!d) return '—';
     const dt = new Date(d);
     return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
+}
+
+function fmtRentTo(iso) {
+    return iso ? iso.split('-').reverse().join('.') : '—';
 }
 
 export default function AdminClientDetails() {
@@ -38,10 +35,9 @@ export default function AdminClientDetails() {
     const { user } = useAuth();
     const { showToast } = useToast();
     const canCreateShopOrders = user?.role !== 'rent' && user?.role !== 'pivdenbud';
-    const [client,       setClient]      = useState(null);
-    const [applications, setApplications]= useState([]);
-    const [shopOrders, setShopOrders] = useState([]);
-    const [loading,      setLoading]     = useState(true);
+    const [client,  setClient]  = useState(null);
+    const [deals,   setDeals]   = useState([]);
+    const [loading, setLoading] = useState(true);
     const [editingNotes, setEditingNotes]= useState(false);
     const [notesDraft,   setNotesDraft]  = useState('');
     const [notesSaving,  setNotesSaving] = useState(false);
@@ -51,34 +47,24 @@ export default function AdminClientDetails() {
     const [claimsSaving, setClaimsSaving] = useState(false);
     const claimsRef = useRef(null);
     const [formOpen, setFormOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     useEffect(() => {
         if (!id) return;
         (async () => {
             setLoading(true);
             try {
-                const parts = [
+                const [clientData, dealRows] = await Promise.all([
                     clientsApi.get(id),
-                    rentalApplicationsApi.list({ clientId: id }),
-                ];
-                if (canCreateShopOrders) {
-                    parts.push(ordersApi.listByClient(id));
-                }
-                const results = await Promise.all(parts);
-                const clientData = results[0];
-                const appsData = results[1];
+                    ordersApi.listByClient(id),
+                ]);
                 setClient(clientData || null);
-                setApplications(Array.isArray(appsData) ? appsData : []);
-                if (canCreateShopOrders && results.length > 2) {
-                    const ord = results[2];
-                    setShopOrders(Array.isArray(ord) ? ord : []);
-                } else {
-                    setShopOrders([]);
-                }
+                const rows = Array.isArray(dealRows) ? dealRows : [];
+                setDeals(canCreateShopOrders ? rows : rows.filter((r) => r.type === 'rent'));
             } catch {
                 setClient(null);
-                setApplications([]);
-                setShopOrders([]);
+                setDeals([]);
             } finally {
                 setLoading(false);
             }
@@ -88,8 +74,8 @@ export default function AdminClientDetails() {
     async function saveClaims() {
         setClaimsSaving(true);
         try {
-            await clientsApi.update(id, { ...client, claims: claimsDraft });
-            setClient(prev => ({ ...prev, claims: claimsDraft }));
+            const updated = await clientsApi.patch(id, { claims: claimsDraft });
+            setClient(updated);
             setEditingClaims(false);
         } catch (e) { showToast(e.message || 'Помилка збереження', 'warning'); }
         finally { setClaimsSaving(false); }
@@ -104,8 +90,8 @@ export default function AdminClientDetails() {
     async function saveNotes() {
         setNotesSaving(true);
         try {
-            await clientsApi.update(id, { ...client, notes: notesDraft });
-            setClient(prev => ({ ...prev, notes: notesDraft }));
+            const updated = await clientsApi.patch(id, { notes: notesDraft });
+            setClient(updated);
             setEditingNotes(false);
         } catch (e) { showToast(e.message || 'Помилка збереження', 'warning'); }
         finally { setNotesSaving(false); }
@@ -122,25 +108,63 @@ export default function AdminClientDetails() {
         setFormOpen(false);
     }
 
-    const applicationColumns = useMemo(() => [
-        { key: 'applicationNumber', label: '№ заявки', className: 'cd-cell-mono', render: (v, a) => v || `#${a.id}` },
-        { key: 'rentFrom', label: 'Оренда', className: 'cd-cell-muted', render: (_, a) => `${fmtDate(a.rentFrom)} — ${fmtDate(a.rentTo)}` },
-        { key: 'totalAmount', label: 'Сума', className: 'cd-cell-amount', render: (v) => `${Number(v || 0).toLocaleString('uk-UA')} ₴` },
-        { key: 'status', label: 'Статус', render: (v) => <StatusBadge domain="rental" status={v} /> },
-    ], []);
+    async function handleDelete() {
+        setDeleteLoading(true);
+        try {
+            await clientsApi.remove(id);
+            navigate('/admin/clients');
+        } catch (e) {
+            showToast(e.message || 'Помилка видалення', 'warning');
+            setDeleteLoading(false);
+        }
+    }
 
-    const shopOrderColumns = useMemo(() => [
-        { key: 'orderNumber', label: '№ замовлення', className: 'cd-cell-mono', render: (v, o) => formatShopOrderNumber(v || `#${o.id}`) },
-        { key: 'createdAt', label: 'Дата', className: 'cd-cell-muted', render: (v) => fmtDate(v) },
+    function openDealRow(row) {
+        navigate(row.kind === 'application' ? `/admin/rental-applications/${row.id}` : `/admin/deals/${row.id}`);
+    }
+
+    const dealColumns = useMemo(() => [
         {
-            key: 'items', label: 'Товари', className: 'cd-cell-muted cd-order-items-preview',
+            key: 'number',
+            label: '№ / дата',
+            render: (_, row) => (
+                <div>
+                    <div className="mono">{row.number}</div>
+                    <div className="cd-cell-muted">{fmtDate(row.createdAt)}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'type',
+            label: 'Тип',
+            render: (type) => (
+                <>
+                    {(type === 'rent' || type === 'both') && <span className="ds-badge ds-badge--info">оренда</span>}
+                    {(type === 'shop' || type === 'both') && <span className="ds-badge ds-badge--neutral">магазин</span>}
+                </>
+            ),
+        },
+        {
+            key: 'items',
+            label: 'Позиції',
+            className: 'cd-order-items-preview',
             render: (items = []) => {
-                const line = (items || []).slice(0, 2).map((i) => `${i.name} ×${i.quantity}`).join(', ');
+                const line = (items || []).slice(0, 2).map((i) => i.name).join(', ');
                 return <>{line || '—'}{items.length > 2 && <span className="cd-cell-more"> +{items.length - 2}</span>}</>;
             },
         },
-        { key: 'totalAmount', label: 'Сума', className: 'cd-cell-amount', render: (v) => `${Number(v || 0).toLocaleString('uk-UA')} ₴` },
-        { key: 'status', label: 'Статус', render: (v) => <StatusBadge domain="order" status={v} /> },
+        {
+            key: 'totalAmount',
+            label: 'Сума',
+            align: 'right',
+            render: (v) => <span className="num">{Number(v || 0).toLocaleString('uk-UA')} ₴</span>,
+        },
+        { key: 'status', label: 'Статус', render: (v, row) => <StatusBadge domain={row.statusDomain} status={v} /> },
+        {
+            key: 'rentTo',
+            label: 'Оренда до',
+            render: (v, row) => (v ? <span className={`mono${row.isOverdue ? ' cd-claims-text' : ''}`}>{fmtRentTo(v)}</span> : <span className="cd-cell-muted">—</span>),
+        },
     ], []);
 
     if (loading) return <div className="cd-loading">Завантаження...</div>;
@@ -148,9 +172,11 @@ export default function AdminClientDetails() {
 
     const phones   = parsePhones(client.phone);
     const discount = Number(client.discountPercent || 0);
-    const totalRevenue = applications.reduce((s,a) => s + Number(a.totalAmount || 0), 0);
-    const activeCount  = applications.filter(a => ['active','booked'].includes(a.status)).length;
-    const shopTotal    = shopOrders.reduce((s, o) => s + Number(o.totalAmount || 0), 0);
+    const turnoverRows = deals.filter((d) => !ORDER_NON_TURNOVER_STATUSES.includes(d.status));
+    const totalRevenue = turnoverRows.reduce((s, d) => s + Number(d.totalAmount || 0), 0);
+    const activeCount = deals.filter((d) => d.isOverdue
+        || (d.statusDomain === 'rental' && ACTIVE_RENTAL_STATUSES.includes(d.status))
+        || (d.statusDomain === 'order' && d.status === 'issued')).length;
     const hasClaims = !!(client.claims && String(client.claims).trim());
 
     return (
@@ -177,14 +203,17 @@ export default function AdminClientDetails() {
                 </div>
 
                 <div className="cd-header-actions">
-                    <button type="button" className="cd-btn cd-btn--ghost" onClick={() => setFormOpen(true)}>
+                    <button type="button" className="ds-btn ds-btn--secondary" onClick={() => setFormOpen(true)}>
                         <Edit2 size={14} /> Редагувати
                     </button>
                     {canCreateShopOrders && (
-                        <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-btn cd-btn--ghost cd-btn--cart" title="Нове замовлення магазину">
-                            <ShoppingCart size={14} /> Замовлення
+                        <Link to={`/admin/deals?newClientId=${client.id}`} className="ds-btn ds-btn--secondary" title="Нове замовлення магазину">
+                            <ShoppingCart size={14} /> Нова угода
                         </Link>
                     )}
+                    <button type="button" className="ds-btn ds-btn--danger" onClick={() => setDeleteOpen(true)}>
+                        <Trash2 size={14} /> Видалити
+                    </button>
                 </div>
             </div>
 
@@ -259,8 +288,8 @@ export default function AdminClientDetails() {
                         </div>
                         <div className="cd-stats-grid">
                             <div className="cd-stat">
-                                <span className="cd-stat-label">Заявок всього</span>
-                                <span className="cd-stat-value">{applications.length}</span>
+                                <span className="cd-stat-label">Угод всього</span>
+                                <span className="cd-stat-value">{deals.length}</span>
                             </div>
                             <div className="cd-stat">
                                 <span className="cd-stat-label">Активних</span>
@@ -273,90 +302,49 @@ export default function AdminClientDetails() {
                                 </span>
                             </div>
                             <div className="cd-stat">
-                                <span className="cd-stat-label">Сума оренди</span>
+                                <span className="cd-stat-label">Оборот</span>
                                 <span className="cd-stat-value cd-stat-value--sm">
                                     {totalRevenue > 0 ? `${totalRevenue.toLocaleString('uk-UA')} ₴` : '—'}
                                 </span>
                             </div>
-                            {canCreateShopOrders && (
-                                <>
-                                    <div className="cd-stat">
-                                        <span className="cd-stat-label">Замовлень</span>
-                                        <span className="cd-stat-value">{shopOrders.length}</span>
-                                    </div>
-                                    <div className="cd-stat">
-                                        <span className="cd-stat-label">Сума магазину</span>
-                                        <span className="cd-stat-value cd-stat-value--sm">
-                                            {shopTotal > 0 ? `${shopTotal.toLocaleString('uk-UA')} ₴` : '—'}
-                                        </span>
-                                    </div>
-                                </>
-                            )}
                         </div>
                     </div>
 
                 </div>
 
-                {/* Applications + notes column */}
+                {/* History + notes column */}
                 <div className="cd-main">
                     <div className="cd-main-grid">
                         <div className="cd-main-primary">
-                    <div className="cd-card cd-card--full">
-                        <div className="cd-card-title cd-card-title--split">
-                            <span className="cd-card-title-main">
-                                <ClipboardList size={15} /> Історія заявок
-                                {applications.length > 0 && (
-                                    <span className="cd-badge-count">{applications.length}</span>
-                                )}
-                            </span>
-                        </div>
-
-                        {applications.length === 0 ? (
-                            <div className="cd-apps-empty">
-                                <ClipboardList size={36} className="cd-apps-empty-icon" />
-                                <p>Заявок ще немає</p>
-                            </div>
-                        ) : (
-                            <DataTable
-                                columns={applicationColumns}
-                                rows={applications}
-                                onRowClick={(app) => navigate(`/admin/rental-applications/${app.id}`)}
-                            />
-                        )}
-                    </div>
-
-                    {canCreateShopOrders && (
-                        <div className="cd-card cd-card--full">
-                            <div className="cd-card-title cd-card-title--split">
-                                <span className="cd-card-title-main">
-                                    <ShoppingCart size={15} /> Замовлення магазину
-                                    {shopOrders.length > 0 && (
-                                        <span className="cd-badge-count">{shopOrders.length}</span>
+                            <div className="cd-card cd-card--full">
+                                <div className="cd-card-title cd-card-title--split">
+                                    <span className="cd-card-title-main">
+                                        <ClipboardList size={15} /> Історія угод
+                                        {deals.length > 0 && (
+                                            <span className="cd-badge-count">{deals.length}</span>
+                                        )}
+                                    </span>
+                                    {canCreateShopOrders && (
+                                        <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-notes-edit-btn">
+                                            <Plus size={11} /> Нова угода
+                                        </Link>
                                     )}
-                                </span>
-                                <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-new-app-link">
-                                    <Plus size={13} /> Нове замовлення
-                                </Link>
-                            </div>
-
-                            {shopOrders.length === 0 ? (
-                                <div className="cd-apps-empty">
-                                    <ShoppingCart size={36} className="cd-apps-empty-icon" />
-                                    <p>Замовлень ще немає</p>
-                                    <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-btn cd-btn--primary cd-apps-empty-cta">
-                                        <Plus size={14} /> Перше замовлення
-                                    </Link>
                                 </div>
-                            ) : (
-                                <DataTable
-                                    columns={shopOrderColumns}
-                                    rows={shopOrders}
-                                    onRowClick={(o) => navigate(`/admin/deals/${o.id}`)}
-                                />
-                            )}
-                        </div>
-                    )}
 
+                                {deals.length === 0 ? (
+                                    <div className="cd-apps-empty">
+                                        <ClipboardList size={36} className="cd-apps-empty-icon" />
+                                        <p>Угод ще немає</p>
+                                    </div>
+                                ) : (
+                                    <DataTable
+                                        columns={dealColumns}
+                                        rows={deals}
+                                        rowKey={(row) => `${row.kind}-${row.id}`}
+                                        onRowClick={openDealRow}
+                                    />
+                                )}
+                            </div>
                         </div>
 
                         <div className="cd-main-aside">
@@ -383,10 +371,10 @@ export default function AdminClientDetails() {
                                             className="cd-notes-textarea"
                                         />
                                         <div className="cd-notes-actions">
-                                            <button type="button" className="cd-btn cd-btn--primary cd-btn--sm" onClick={saveNotes} disabled={notesSaving}>
+                                            <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveNotes} disabled={notesSaving}>
                                                 <Check size={12} /> {notesSaving ? 'Збереження...' : 'Зберегти'}
                                             </button>
-                                            <button type="button" className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setEditingNotes(false)}>
+                                            <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingNotes(false)}>
                                                 <XIcon size={12} /> Скасувати
                                             </button>
                                         </div>
@@ -421,10 +409,10 @@ export default function AdminClientDetails() {
                                             className="cd-notes-textarea"
                                         />
                                         <div className="cd-notes-actions">
-                                            <button type="button" className="cd-btn cd-btn--primary cd-btn--sm" onClick={saveClaims} disabled={claimsSaving}>
+                                            <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveClaims} disabled={claimsSaving}>
                                                 <Check size={12} /> {claimsSaving ? 'Збереження...' : 'Зберегти'}
                                             </button>
-                                            <button type="button" className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setEditingClaims(false)}>
+                                            <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingClaims(false)}>
                                                 <XIcon size={12} /> Скасувати
                                             </button>
                                         </div>
@@ -445,6 +433,16 @@ export default function AdminClientDetails() {
                 client={client}
                 onClose={() => setFormOpen(false)}
                 onSaved={handleClientSaved}
+            />
+
+            <ConfirmDialog
+                open={deleteOpen}
+                title="Видалити клієнта?"
+                message={`Видалити «${client.fullName}»? Всі пов'язані угоди залишаться, але посилання на клієнта буде знято.`}
+                confirmText="Видалити"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteOpen(false)}
+                loading={deleteLoading}
             />
         </div>
     );

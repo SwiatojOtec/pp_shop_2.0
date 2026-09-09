@@ -202,6 +202,7 @@ export const clientsApi = {
     get: (id) => apiGet(`/api/clients/${id}`),
     create: (data) => apiPost('/api/clients', data),
     update: (id, data) => apiPut(`/api/clients/${id}`, data),
+    patch: (id, data) => apiPatch(`/api/clients/${id}`, data),
     remove: (id) => apiDelete(`/api/clients/${id}`),
 };
 

@@ -137,12 +137,23 @@ ${lines.length ? lines.join('\n') : '(поки без позицій)'}
     return order;
 }
 
-/** Замовлення для картки клієнта: за clientId + старі без clientId за збігом телефону. */
+/**
+ * Одна історія угод для картки клієнта (docs/admin-redesign/03-screens.md,
+ * «Клієнти»): оренда й магазин разом, той самий рядок, що й у списку «Угоди»
+ * (kind/type/statusDomain), а не дві незв'язані таблиці. Замовлення — за
+ * clientId + старі без clientId за збігом телефону; заявки оренди без
+ * власного замовлення (створені конвертацією брокінгу з календаря) — окремими
+ * рядками kind:'application'.
+ */
 async function getOrdersByClient(clientId) {
     const client = await Client.findByPk(clientId);
     if (!client) {
         return [];
     }
+
+    const todayIso = toIsoDate();
+    const rentProducts = await Product.findAll({ where: { isRent: true }, attributes: ['id'] });
+    const rentIds = new Set(rentProducts.map((p) => p.id));
 
     const byLink = await Order.findAll({
         where: { clientId },
@@ -161,11 +172,19 @@ async function getOrdersByClient(clientId) {
         byPhone = candidates.filter((o) => phoneTailsMatch(client.phone, o.customerPhone));
     }
 
-    const map = new Map();
+    const orderMap = new Map();
     for (const o of [...byLink, ...byPhone]) {
-        if (!map.has(o.id)) map.set(o.id, o);
+        if (!orderMap.has(o.id)) orderMap.set(o.id, o);
     }
-    return [...map.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const linkedAppIds = new Set([...orderMap.values()].map((o) => o.rentalApplicationId).filter(Boolean));
+    const orderRows = [...orderMap.values()].map((o) => buildOrderRow(o, rentIds, todayIso));
+
+    const apps = await RentalApplication.findAll({ where: { clientId }, order: [['createdAt', 'DESC']] });
+    const appRows = apps
+        .filter((a) => !linkedAppIds.has(a.id))
+        .map((a) => buildApplicationRow(a, todayIso));
+
+    return [...orderRows, ...appRows].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 const ORDER_TERMINAL_STATUSES = ['returned', 'done', 'cancelled'];
@@ -178,6 +197,74 @@ function maxRentTo(items, rentIds) {
         .filter(Boolean)
         .sort();
     return dates[dates.length - 1] || null;
+}
+
+/** Shared row shape for the unified deal history — used by both the
+ *  «Угоди» list (listDeals) and a client's own history (getOrdersByClient). */
+function buildOrderRow(o, rentIds, todayIso) {
+    const items = (o.items || []).map((line) => ({ ...line, isRent: line.isRent || rentIds.has(line.id) }));
+    const hasRent = items.some((line) => line.isRent);
+    const hasShop = items.some((line) => !line.isRent);
+    const rowType = hasRent && hasShop ? 'both' : hasRent ? 'rent' : 'shop';
+    const rentTo = maxRentTo(items, rentIds);
+    return {
+        kind: 'order',
+        id: o.id,
+        clientId: o.clientId,
+        number: o.orderNumber || `#${o.id}`,
+        customerName: o.customerName,
+        customerPhone: o.customerPhone,
+        items,
+        totalAmount: o.totalAmount,
+        status: o.status,
+        statusDomain: 'order',
+        type: rowType,
+        rentTo,
+        isOverdue: !!(rentTo && rentTo < todayIso && !ORDER_TERMINAL_STATUSES.includes(o.status)),
+        createdAt: o.createdAt,
+    };
+}
+
+function buildApplicationRow(a, todayIso) {
+    return {
+        kind: 'application',
+        id: a.id,
+        clientId: a.clientId,
+        number: a.applicationNumber || `#${a.id}`,
+        customerName: a.clientName,
+        customerPhone: a.clientPhone,
+        items: a.items || [],
+        totalAmount: a.totalAmount,
+        status: a.status,
+        statusDomain: 'rental',
+        type: 'rent',
+        rentTo: a.rentTo,
+        isOverdue: !!(a.rentTo && a.rentTo < todayIso && !APPLICATION_TERMINAL_STATUSES.includes(a.status)),
+        createdAt: a.createdAt,
+    };
+}
+
+/**
+ * Усі рядки угод (замовлення + заявки без замовлення) без пагінації — джерело
+ * істини для агрегатів клієнта (docs/admin-redesign/03-screens.md, «Клієнти»):
+ * той самий isOverdue/type, що й у списку «Угоди» і в картці клієнта, а не
+ * окремий підрахунок лише по RentalApplication.status.
+ */
+async function getAllDealRows() {
+    const todayIso = toIsoDate();
+    const rentProducts = await Product.findAll({ where: { isRent: true }, attributes: ['id'] });
+    const rentIds = new Set(rentProducts.map((p) => p.id));
+
+    const orders = await Order.findAll();
+    const orderRows = orders.map((o) => buildOrderRow(o, rentIds, todayIso));
+
+    const linkedAppIds = new Set(orders.map((o) => o.rentalApplicationId).filter(Boolean));
+    const apps = await RentalApplication.findAll();
+    const appRows = apps
+        .filter((a) => !linkedAppIds.has(a.id))
+        .map((a) => buildApplicationRow(a, todayIso));
+
+    return [...orderRows, ...appRows];
 }
 
 /**
@@ -202,48 +289,13 @@ async function listDeals({ q = '', status = '', type = 'all', page = 1, limit = 
     const rentIds = new Set(rentProducts.map((p) => p.id));
 
     const orders = await Order.findAll({ order: [['createdAt', 'DESC']] });
-    const orderRows = orders.map((o) => {
-        const items = (o.items || []).map((line) => ({ ...line, isRent: line.isRent || rentIds.has(line.id) }));
-        const hasRent = items.some((line) => line.isRent);
-        const hasShop = items.some((line) => !line.isRent);
-        const rowType = hasRent && hasShop ? 'both' : hasRent ? 'rent' : 'shop';
-        const rentTo = maxRentTo(items, rentIds);
-        return {
-            kind: 'order',
-            id: o.id,
-            number: o.orderNumber || `#${o.id}`,
-            customerName: o.customerName,
-            customerPhone: o.customerPhone,
-            items,
-            totalAmount: o.totalAmount,
-            status: o.status,
-            statusDomain: 'order',
-            type: rowType,
-            rentTo,
-            isOverdue: !!(rentTo && rentTo < todayIso && !ORDER_TERMINAL_STATUSES.includes(o.status)),
-            createdAt: o.createdAt,
-        };
-    });
+    const orderRows = orders.map((o) => buildOrderRow(o, rentIds, todayIso));
 
     const linkedAppIds = new Set(orders.map((o) => o.rentalApplicationId).filter(Boolean));
     const apps = await RentalApplication.findAll({ order: [['createdAt', 'DESC']] });
     const appRows = apps
         .filter((a) => !linkedAppIds.has(a.id))
-        .map((a) => ({
-            kind: 'application',
-            id: a.id,
-            number: a.applicationNumber || `#${a.id}`,
-            customerName: a.clientName,
-            customerPhone: a.clientPhone,
-            items: a.items || [],
-            totalAmount: a.totalAmount,
-            status: a.status,
-            statusDomain: 'rental',
-            type: 'rent',
-            rentTo: a.rentTo,
-            isOverdue: !!(a.rentTo && a.rentTo < todayIso && !APPLICATION_TERMINAL_STATUSES.includes(a.status)),
-            createdAt: a.createdAt,
-        }));
+        .map((a) => buildApplicationRow(a, todayIso));
 
     const all = [...orderRows, ...appRows].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -279,4 +331,5 @@ module.exports = {
     persistOrder,
     getOrdersByClient,
     listDeals,
+    getAllDealRows,
 };
