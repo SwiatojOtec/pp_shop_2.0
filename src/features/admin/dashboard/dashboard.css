@@ -1,0 +1,149 @@
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.9fr 1fr;
+    gap: var(--ds-space-5);
+    align-items: start;
+}
+
+@media (max-width: 960px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Потребує уваги ── */
+
+.dashboard-attention-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    overflow: hidden;
+}
+
+.dashboard-attention-title {
+    font-size: var(--ds-text-lg);
+    font-weight: 700;
+    margin: 0;
+    padding: var(--ds-space-4) var(--ds-space-5);
+    border-bottom: 1px solid var(--ds-border-subtle);
+    color: var(--ds-text);
+}
+
+.dashboard-attention-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-attention-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-3) var(--ds-space-5);
+    border-bottom: 1px solid var(--ds-border-subtle);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: background var(--ds-duration-fast);
+}
+
+.dashboard-attention-row:last-child { border-bottom: none; }
+.dashboard-attention-row:hover { background: var(--ds-surface-sunken); }
+
+.dashboard-attention-bar {
+    width: 4px;
+    align-self: stretch;
+    border-radius: var(--ds-radius-full);
+    flex-shrink: 0;
+}
+
+.dashboard-attention-bar--danger  { background: var(--ds-danger); }
+.dashboard-attention-bar--warning { background: var(--ds-warning); }
+.dashboard-attention-bar--info    { background: var(--ds-info); }
+.dashboard-attention-bar--neutral { background: var(--ds-neutral); }
+
+.dashboard-attention-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.dashboard-attention-row-title {
+    font-weight: 700;
+    font-size: var(--ds-text-base);
+    color: var(--ds-text);
+}
+
+.dashboard-attention-row-detail {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-attention-row-arrow {
+    flex-shrink: 0;
+    color: var(--ds-text-subtle);
+}
+
+.dashboard-attention-empty {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-4) var(--ds-space-5);
+    color: var(--ds-success);
+    font-weight: 600;
+}
+
+/* ── Number blocks ── */
+
+.dashboard-numbers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+}
+
+.dashboard-numbers-block {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-lg);
+    padding: var(--ds-space-4) var(--ds-space-5);
+}
+
+.dashboard-numbers-title {
+    font-size: var(--ds-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--ds-tracking-label);
+    color: var(--ds-text-subtle);
+    margin: 0 0 var(--ds-space-3);
+}
+
+.dashboard-numbers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-4);
+}
+
+.dashboard-number {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dashboard-number-value {
+    font-family: var(--ds-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.dashboard-number-label {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+}
+
+.dashboard-loading {
+    padding: var(--ds-space-6);
+    color: var(--ds-text-subtle);
+    text-align: center;
+}

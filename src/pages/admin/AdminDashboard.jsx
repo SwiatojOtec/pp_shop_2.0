@@ -1,191 +1,113 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-    Package, ShoppingBag, TrendingUp, Wrench, CheckCircle, Clock,
-    AlertTriangle, ClipboardList, FileClock, ShieldAlert, WrenchIcon,
-} from 'lucide-react';
+import { ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { hasShopAccess, hasRentAccess } from '../../utils/adminRoles';
-import { productsApi, ordersApi } from '../../services/api';
-import { Card, CardContent } from '../../components/ui/card';
-import { AdminTable } from '../../components/admin';
-import StatusBadge from '../../features/admin/ui/StatusBadge';
-import RentDashboard from './RentDashboard';
-import './Admin.css';
+import { dashboardApi } from '../../services/api';
+import PageHeader from '../../features/admin/ui/PageHeader';
+import '../../features/admin/dashboard/dashboard.css';
 
-// ─── Stat card component ──────────────────────────────────────────────────────
+const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-function StatCard({ icon, label, value, valueColor, accent, as: As = 'div', to }) {
-    const content = (
-        <Card className={`admin-dash-stat flex items-center gap-4 hover:shadow-md transition-shadow ${accent ? 'border-l-4 border-l-[#e63946]' : ''}`}>
-            <div className={`p-2.5 rounded-lg bg-gray-100 ${valueColor ? '' : 'text-[#e63946]'}`} style={valueColor ? { color: valueColor } : {}}>
-                {icon}
-            </div>
-            <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-gray-500 font-medium">{label}</span>
-                <span className="text-xl font-bold" style={valueColor ? { color: valueColor } : {}}>
-                    {value}
-                </span>
-            </div>
-        </Card>
-    );
-
-    if (As === 'link') {
-        return <Link to={to} className="no-underline text-inherit">{content}</Link>;
-    }
-    return content;
+function monthTitle(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('uk-UA', { month: 'long' });
 }
-
-// ─── Table column definitions ─────────────────────────────────────────────────
-
-const ORDER_COLUMNS = [
-    { key: 'id',           label: 'ID',      width: '60px', render: (v) => `#${v}` },
-    { key: 'customerName', label: 'Клієнт'   },
-    { key: 'totalAmount',  label: 'Сума',     render: (v) => `${v} ₴` },
-    {
-        key: 'status', label: 'Статус',
-        render: (v) => <StatusBadge domain="order" status={v} />,
-    },
-];
-
-// ─── Main dashboard for owner / manager ──────────────────────────────────────
-
-function AdminOwnerDashboard({ user, showShop = true, showRent = true }) {
-    const [shopStats,    setShopStats]   = useState({ products: 0, orders: 0, revenue: 0 });
-    const [recentOrders, setRecentOrders] = useState([]);
-    const [rentStats,    setRentStats]   = useState({ total: 0, available: 0, availableLater: 0, inProcurement: 0, needsRepair: 0, inRepair: 0, lowStock: 0 });
-    const [loading,      setLoading]    = useState(true);
-
-    useEffect(() => {
-        async function loadAll() {
-            try {
-                const tasks = [];
-                if (showShop) {
-                    tasks.push(productsApi.list(), ordersApi.list());
-                }
-                if (showRent) {
-                    tasks.push(productsApi.list({ isRent: true, includeHiddenRent: true }));
-                }
-                const results = await Promise.all(tasks);
-
-                let products = [];
-                let orders = [];
-                let rent = [];
-                if (showShop && showRent) {
-                    [products, orders, rent] = results;
-                } else if (showShop) {
-                    [products, orders] = results;
-                } else if (showRent) {
-                    [rent] = results;
-                }
-
-                const shopProducts = Array.isArray(products) ? products.filter((p) => !p.isRent) : [];
-                const safeOrders   = Array.isArray(orders)   ? orders   : [];
-                const safeRent     = Array.isArray(rent)      ? rent     : [];
-
-                const revenue = safeOrders.reduce((s, o) => s + parseFloat(o.totalAmount || 0), 0);
-                const isAvail = (p) => p.stockStatus === 'available' || p.stockStatus === 'in_stock';
-
-                if (showShop) {
-                    setShopStats({ products: shopProducts.length, orders: safeOrders.length, revenue: revenue.toFixed(2) });
-                    setRecentOrders(safeOrders.slice(0, 5));
-                }
-                if (showRent) {
-                    setRentStats({
-                        total:          safeRent.length,
-                        available:      safeRent.filter(isAvail).length,
-                        availableLater: safeRent.filter((p) => p.stockStatus === 'available_later').length,
-                        inProcurement:  safeRent.filter((p) => p.stockStatus === 'in_procurement').length,
-                        needsRepair:    safeRent.filter((p) => p.stockStatus === 'needs_repair').length,
-                        inRepair:       safeRent.filter((p) => p.stockStatus === 'in_repair').length,
-                        lowStock:       safeRent.filter((p) => isAvail(p) && p.quantityAvailable != null && p.quantityAvailable <= 2).length,
-                    });
-                }
-            } catch (err) {
-                console.error('Dashboard load error:', err);
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showShop, showRent]);
-
-    return (
-        <div className="admin-dashboard">
-            {/* Header */}
-            <div className="dashboard-header">
-                <h1 className="admin-title">Дашборд</h1>
-                <p className="admin-subtitle">
-                    Вітаємо{user ? `, ${user.name}${user.lastName ? ' ' + user.lastName : ''}` : ''}! Ось загальна картина.
-                </p>
-            </div>
-
-            {showShop && (
-                <>
-                    <p className="admin-dash-section-title">Магазин</p>
-                    <div className="stats-grid admin-dash-stats-grid">
-                        <StatCard icon={<Package size={22} />}     label="Товарів у магазині" value={shopStats.products} />
-                        <StatCard icon={<ShoppingBag size={22} />} label="Замовлень"           value={shopStats.orders}   />
-                        <StatCard icon={<TrendingUp size={22} />}  label="Загальна виручка"    value={`${shopStats.revenue} ₴`} />
-                    </div>
-                </>
-            )}
-
-            {showRent && (
-                <>
-            <p className={`admin-dash-section-title ${showShop ? 'admin-dash-section-title--spaced' : ''}`}>Оренда інструменту</p>
-            <div className="stats-grid admin-dash-stats-grid">
-                <StatCard icon={<Wrench size={22} />}      label="Всього інструментів" value={rentStats.total} />
-                <StatCard icon={<CheckCircle size={22} />} label="Доступні зараз"      value={rentStats.available}      valueColor="#16a34a" />
-                <StatCard icon={<Clock size={22} />}       label="Буде доступно"        value={rentStats.availableLater} valueColor="#d97706" />
-                <StatCard icon={<FileClock size={22} />}   label="У закупівлі"          value={rentStats.inProcurement}  valueColor="#7c3aed" />
-                <StatCard icon={<ShieldAlert size={22} />} label="Потребує ремонту"     value={rentStats.needsRepair}    valueColor="#b45309" />
-                <StatCard icon={<WrenchIcon size={22} />}  label="На ремонті"           value={rentStats.inRepair}       valueColor="#dc2626" />
-                <StatCard as="link" to="/admin/deals?type=rent"
-                    icon={<ClipboardList size={22} />}
-                    label="Заявки оренди"
-                    value="Переглянути →"
-                    valueColor="#e63946"
-                />
-                {rentStats.lowStock > 0 && (
-                    <StatCard icon={<AlertTriangle size={22} />}
-                        label="Мало на складі (≤2 шт)"
-                        value={rentStats.lowStock}
-                        valueColor="#dc2626"
-                        accent
-                    />
-                )}
-            </div>
-                </>
-            )}
-
-            {showShop && (
-            <Card className="admin-dash-orders-card">
-                <CardContent className="admin-dash-orders-body">
-                    <div className="admin-dash-orders-head">
-                        <h2 className="text-base font-bold uppercase tracking-wide">Останні замовлення</h2>
-                        <Link to="/admin/deals" className="text-sm font-bold text-[#e63946] no-underline hover:underline">
-                            Всі замовлення →
-                        </Link>
-                    </div>
-                    <AdminTable columns={ORDER_COLUMNS} rows={recentOrders} loading={loading} empty="Замовлень поки немає" />
-                </CardContent>
-            </Card>
-            )}
-        </div>
-    );
-}
-
-// ─── Export ───────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
     const { user } = useAuth();
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const role = user?.role;
-    if (role && hasRentAccess(role) && !hasShopAccess(role)) {
-        return <RentDashboard />;
-    }
+    useEffect(() => {
+        dashboardApi.get()
+            .then((res) => setData(res))
+            .catch(() => setData({ attention: [], today: null, shop: null }))
+            .finally(() => setLoading(false));
+    }, []);
 
-    return <AdminOwnerDashboard user={user} showRent={hasRentAccess(role)} showShop={hasShopAccess(role)} />;
+    return (
+        <div>
+            <PageHeader
+                title="Робочий стіл"
+                subtitle={`Вітаємо${user ? `, ${user.name}${user.lastName ? ' ' + user.lastName : ''}` : ''}!`}
+            />
+
+            {loading ? (
+                <p className="dashboard-loading">Завантаження...</p>
+            ) : (
+                <div className="dashboard-grid">
+                    <div className="dashboard-attention-card">
+                        <h2 className="dashboard-attention-title">Потребує уваги</h2>
+                        {data.attention.length === 0 ? (
+                            <div className="dashboard-attention-empty">
+                                <CheckCircle2 size={18} />
+                                Усе під контролем
+                            </div>
+                        ) : (
+                            <div className="dashboard-attention-list">
+                                {data.attention.map((row, i) => (
+                                    <Link key={i} to={row.to} className="dashboard-attention-row">
+                                        <span className={`dashboard-attention-bar dashboard-attention-bar--${row.tone}`} />
+                                        <span className="dashboard-attention-body">
+                                            <span className="dashboard-attention-row-title">{row.title}</span>
+                                            <span className="dashboard-attention-row-detail">{row.detail}</span>
+                                        </span>
+                                        <ChevronRight size={16} className="dashboard-attention-row-arrow" />
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="dashboard-numbers">
+                        {data.today && (
+                            <div className="dashboard-numbers-block">
+                                <h3 className="dashboard-numbers-title">
+                                    Сьогодні · {new Date(data.today.date).toLocaleDateString('uk-UA')}
+                                </h3>
+                                <div className="dashboard-numbers-grid">
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{data.today.toIssue}</span>
+                                        <span className="dashboard-number-label">Видати інструмент</span>
+                                    </div>
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{data.today.toReturn}</span>
+                                        <span className="dashboard-number-label">Прийняти назад</span>
+                                    </div>
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{data.today.activeRentals}</span>
+                                        <span className="dashboard-number-label">Активних оренд</span>
+                                    </div>
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{money(data.today.activeRentalsAmount)} ₴</span>
+                                        <span className="dashboard-number-label">В оренді на суму</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {data.shop && (
+                            <div className="dashboard-numbers-block">
+                                <h3 className="dashboard-numbers-title">Магазин · {monthTitle(data.shop.month)}</h3>
+                                <div className="dashboard-numbers-grid">
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{data.shop.orders}</span>
+                                        <span className="dashboard-number-label">Замовлень</span>
+                                    </div>
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{data.shop.paid}</span>
+                                        <span className="dashboard-number-label">Оплачено</span>
+                                    </div>
+                                    <div className="dashboard-number">
+                                        <span className="dashboard-number-value">{money(data.shop.revenue)} ₴</span>
+                                        <span className="dashboard-number-label">Виручка</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }

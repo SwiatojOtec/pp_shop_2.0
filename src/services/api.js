@@ -250,6 +250,10 @@ export const subdivisionsApi = {
     remove: (id) => apiDelete(`/api/subdivisions/${id}`),
 };
 
+export const dashboardApi = {
+    get: () => apiGet('/api/admin/dashboard'),
+};
+
 export const sellersApi = {
     list: () => apiGet('/api/sellers'),
     create: (data) => apiPost('/api/sellers', data),

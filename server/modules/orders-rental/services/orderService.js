@@ -199,14 +199,25 @@ function maxRentTo(items, rentIds) {
     return dates[dates.length - 1] || null;
 }
 
-/** Shared row shape for the unified deal history — used by both the
- *  «Угоди» list (listDeals) and a client's own history (getOrdersByClient). */
+function minRentFrom(items, rentIds) {
+    const dates = (items || [])
+        .filter((line) => line.isRent || rentIds.has(line.id))
+        .map((line) => line.rentFrom)
+        .filter(Boolean)
+        .sort();
+    return dates[0] || null;
+}
+
+/** Shared row shape for the unified deal history — used by the «Угоди» list
+ *  (listDeals), a client's own history (getOrdersByClient), client aggregates
+ *  (clientRoutes) and the Робочий стіл (dashboardService). */
 function buildOrderRow(o, rentIds, todayIso) {
     const items = (o.items || []).map((line) => ({ ...line, isRent: line.isRent || rentIds.has(line.id) }));
     const hasRent = items.some((line) => line.isRent);
     const hasShop = items.some((line) => !line.isRent);
     const rowType = hasRent && hasShop ? 'both' : hasRent ? 'rent' : 'shop';
     const rentTo = maxRentTo(items, rentIds);
+    const rentFrom = minRentFrom(items, rentIds);
     return {
         kind: 'order',
         id: o.id,
@@ -219,6 +230,7 @@ function buildOrderRow(o, rentIds, todayIso) {
         status: o.status,
         statusDomain: 'order',
         type: rowType,
+        rentFrom,
         rentTo,
         isOverdue: !!(rentTo && rentTo < todayIso && !ORDER_TERMINAL_STATUSES.includes(o.status)),
         createdAt: o.createdAt,
