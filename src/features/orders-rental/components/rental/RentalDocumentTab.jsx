@@ -15,7 +15,7 @@ export default function RentalDocumentTab({
 }) {
     return (
         <div className="rental-section">
-            <h2>Документ</h2>
+            <h2 className="rental-section-title">Документ</h2>
             <div className="rental-doc-tab-body">
                 <div className="rental-doc-actions">
                     <button

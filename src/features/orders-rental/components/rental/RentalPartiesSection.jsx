@@ -38,11 +38,11 @@ export default function RentalPartiesSection({
 
             <div className="rental-party-block">
                 <h3 className="party-title">Орендар</h3>
-                <div style={{ marginBottom: '10px' }}>
+                <div className="rental-party-select-wrap">
                     <select
                         value={selectedClientId}
                         onChange={e => onClientSelect(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                        className="rental-party-select"
                     >
                         <option value="">Обрати клієнта з бази (опціонально)</option>
                         {clients.map(c => (
@@ -68,26 +68,26 @@ export default function RentalPartiesSection({
                 ))}
 
                 {responsible.length > 0 && (
-                    <div style={{ marginTop: '10px', borderTop: '1px dashed #eee', paddingTop: '10px' }}>
-                        <div className="party-title" style={{ marginBottom: '8px' }}>Відповідальні особи</div>
+                    <div className="rental-responsible-block">
+                        <div className="party-title rental-responsible-title">Відповідальні особи</div>
                         {responsible.map((r, i) => (
-                            <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                            <div key={i} className="rental-responsible-row">
                                 <input
                                     value={r.name}
                                     onChange={e => onResponsibleChange(i, 'name', e.target.value)}
                                     placeholder="П.І.Б. відповідальної особи"
-                                    style={{ flex: 2, border: 'none', borderBottom: '1px dashed #ddd', padding: '2px 4px', fontSize: '0.88rem', outline: 'none', background: 'transparent' }}
+                                    className="rental-responsible-input rental-responsible-input--name"
                                 />
                                 <input
                                     value={r.phone}
                                     onChange={e => onResponsibleChange(i, 'phone', e.target.value)}
                                     onBlur={e => onResponsibleChange(i, 'phone', normalizeUaPhone(e.target.value))}
                                     placeholder="380670064044"
-                                    style={{ flex: 1, border: 'none', borderBottom: '1px dashed #ddd', padding: '2px 4px', fontSize: '0.88rem', outline: 'none', background: 'transparent' }}
+                                    className="rental-responsible-input rental-responsible-input--phone"
                                 />
                                 <button
                                     onClick={() => onRemoveResponsible(i)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53e3e', padding: '2px', opacity: 0.6 }}
+                                    className="rental-responsible-remove-btn"
                                 >
                                     <X size={14} />
                                 </button>
@@ -96,10 +96,7 @@ export default function RentalPartiesSection({
                     </div>
                 )}
 
-                <button
-                    onClick={onAddResponsible}
-                    style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1px dashed #ddd', borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.8rem', color: '#888', width: '100%', justifyContent: 'center' }}
-                >
+                <button onClick={onAddResponsible} className="rental-add-responsible-btn">
                     <Plus size={13} /> Додати відповідальну особу
                 </button>
             </div>

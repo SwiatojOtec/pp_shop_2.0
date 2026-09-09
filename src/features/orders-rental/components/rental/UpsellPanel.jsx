@@ -13,7 +13,7 @@ export default function UpsellPanel({
         <div className={`upsell-panel ${visible ? 'upsell-panel--open' : ''}`}>
             <div className="upsell-panel-header">
                 <div className="upsell-panel-title">
-                    <Sparkles size={16} style={{ color: '#f59e0b' }} />
+                    <Sparkles size={16} />
                     <span>Не забудьте порадити замовнику:</span>
                 </div>
                 <button className="upsell-close" onClick={onClose}>

@@ -17,18 +17,18 @@ export default function RentalTotalsBlock({
                     <span>Загальна сума оренди:</span>
                     <strong>{totalRental.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>
                 </div>
-                <div className="total-row" style={{ gap: '10px', flexWrap: 'wrap' }}>
+                <div className="total-row total-row--discount">
                     <span>Знижка:</span>
                     {discountLocked ? (
                         <span className="rental-discount-locked">
                             {Number(discountValue || 0).toFixed(0)}% · із замовлення
                         </span>
                     ) : (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div className="rental-discount-controls">
                             <select
                                 value={discountType}
                                 onChange={e => onDiscountTypeChange(e.target.value)}
-                                style={{ padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                className="rental-discount-type"
                             >
                                 <option value="fixed">₴</option>
                                 <option value="percent">%</option>
@@ -41,11 +41,11 @@ export default function RentalTotalsBlock({
                                 value={discountValue}
                                 onChange={e => onDiscountValueChange(e.target.value)}
                                 placeholder={discountType === 'percent' ? '0-100' : '0.00'}
-                                style={{ width: '100px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                className="rental-discount-value"
                             />
                         </div>
                     )}
-                    <strong style={{ marginLeft: 'auto', color: '#b91c1c' }}>
+                    <strong className="rental-discount-amount">
                         -{discountAmount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
                     </strong>
                 </div>

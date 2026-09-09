@@ -8,6 +8,10 @@
     font-size: 0.95rem;
 }
 
+.rental-print-hidden {
+    display: none;
+}
+
 /* ── Tab navigation ── */
 .rental-tabs-nav {
     display: flex;
@@ -156,6 +160,10 @@
     align-items: baseline;
     margin-bottom: 8px;
     font-size: 0.88rem;
+    /* Explicit — src/index.css sets body { color: #212529 } for the public
+       site and isn't theme-aware, so anything here that doesn't set its own
+       color inherits that fixed dark value and goes unreadable in dark mode. */
+    color: var(--ds-text);
 }
 .party-field > span:first-child {
     min-width: 110px;
@@ -175,6 +183,87 @@
 }
 .party-field.editable input:focus {
     border-bottom-color: var(--ds-accent);
+}
+
+.rental-party-select-wrap {
+    margin-bottom: 10px;
+}
+
+.rental-party-select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--ds-border);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.rental-responsible-block {
+    margin-top: 10px;
+    border-top: 1px dashed var(--ds-border-subtle);
+    padding-top: 10px;
+}
+
+.rental-responsible-title {
+    margin-bottom: 8px;
+}
+
+.rental-responsible-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.rental-responsible-input {
+    border: none;
+    border-bottom: 1px dashed var(--ds-border-strong);
+    padding: 2px 4px;
+    font-size: 0.88rem;
+    outline: none;
+    background: transparent;
+    color: var(--ds-text);
+}
+.rental-responsible-input:focus {
+    border-bottom-color: var(--ds-accent);
+}
+.rental-responsible-input--name { flex: 2; }
+.rental-responsible-input--phone { flex: 1; }
+
+.rental-responsible-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ds-danger);
+    padding: 2px;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.15s;
+}
+.rental-responsible-remove-btn:hover { opacity: 1; }
+
+.rental-add-responsible-btn {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    background: none;
+    border: 1px dashed var(--ds-border-strong);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--ds-text-subtle);
+    transition: border-color 0.15s, color 0.15s;
+}
+.rental-add-responsible-btn:hover {
+    border-color: var(--ds-accent);
+    color: var(--ds-accent);
 }
 
 /* Section */
@@ -198,6 +287,14 @@
     font-weight: 800;
     text-transform: uppercase;
     color: var(--ds-text);
+}
+
+.rental-section-title {
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--ds-text);
+    margin: 0 0 16px;
 }
 
 /* Product search */
@@ -445,6 +542,35 @@
     font-size: 1rem;
     padding-top: 4px;
     color: var(--ds-text);
+}
+
+.total-row--discount {
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.rental-discount-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.rental-discount-type,
+.rental-discount-value {
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--ds-border);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font-family: inherit;
+}
+.rental-discount-value {
+    width: 100px;
+}
+
+.rental-discount-amount {
+    margin-left: auto;
+    color: var(--ds-danger);
 }
 .total-row--grand strong { color: var(--ds-accent); font-size: 1.15rem; }
 .rental-discount-locked {

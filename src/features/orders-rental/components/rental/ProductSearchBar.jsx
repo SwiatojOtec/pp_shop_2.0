@@ -3,7 +3,7 @@ import { formatRentCatalogPriceCaption } from '../../../../utils/rentPricing';
 
 export default function ProductSearchBar({ searchQuery, onSearchChange, searchResults, onSelectProduct }) {
     return (
-        <div className="product-search-wrap" style={{ position: 'relative' }}>
+        <div className="product-search-wrap">
             <Search size={16} className="search-icon" />
             <input
                 type="text"

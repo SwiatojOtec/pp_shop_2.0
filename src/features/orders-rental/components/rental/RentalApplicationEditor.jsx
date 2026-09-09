@@ -165,7 +165,7 @@ export default function RentalApplicationEditor({ id }) {
                 onAddProduct={search.addUpsellProduct}
             />
 
-            <div style={{ display: 'none' }}>
+            <div className="rental-print-hidden">
                 <RentalApplicationPrint
                     ref={printRef}
                     applicationNumber={app.applicationNumber}
