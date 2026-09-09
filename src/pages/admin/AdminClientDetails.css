@@ -83,7 +83,7 @@
 /* ── Layout ── */
 .cd-body {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 260px 1fr;
     gap: 20px;
     align-items: start;
 }
@@ -101,26 +101,19 @@
     min-width: 0;
 }
 
-.cd-main-grid {
+/* Історія угод is the main content of this page (docs/admin-redesign/
+   03-screens.md, «Клієнти») — full page width, not squeezed beside
+   Нотатки/Претензії, which sat 260-360px wide and forced the deals
+   table into permanent horizontal scroll even at normal desktop widths. */
+.cd-notes-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     align-items: start;
 }
 
-.cd-main-primary {
-    min-width: 0;
-}
-
-.cd-main-aside {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ds-space-4);
-    min-width: 0;
-}
-
-@media (max-width: 960px) {
-    .cd-main-grid {
+@media (max-width: 720px) {
+    .cd-notes-row {
         grid-template-columns: 1fr;
     }
 }
@@ -159,10 +152,6 @@
 .cd-badge-icon {
     margin-right: 3px;
     vertical-align: middle;
-}
-
-.cd-main-primary .cd-card + .cd-card {
-    margin-top: var(--ds-space-4);
 }
 
 /* ── Fields ── */
@@ -378,7 +367,7 @@
 }
 
 .cd-order-items-preview {
-    max-width: 280px;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

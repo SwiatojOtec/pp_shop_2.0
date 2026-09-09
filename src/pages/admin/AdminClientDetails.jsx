@@ -314,115 +314,111 @@ export default function AdminClientDetails() {
 
                 {/* History + notes column */}
                 <div className="cd-main">
-                    <div className="cd-main-grid">
-                        <div className="cd-main-primary">
-                            <div className="cd-card cd-card--full">
-                                <div className="cd-card-title cd-card-title--split">
-                                    <span className="cd-card-title-main">
-                                        <ClipboardList size={15} /> Історія угод
-                                        {deals.length > 0 && (
-                                            <span className="cd-badge-count">{deals.length}</span>
-                                        )}
-                                    </span>
-                                    {canCreateShopOrders && (
-                                        <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-notes-edit-btn">
-                                            <Plus size={11} /> Нова угода
-                                        </Link>
-                                    )}
-                                </div>
-
-                                {deals.length === 0 ? (
-                                    <div className="cd-apps-empty">
-                                        <ClipboardList size={36} className="cd-apps-empty-icon" />
-                                        <p>Угод ще немає</p>
-                                    </div>
-                                ) : (
-                                    <DataTable
-                                        columns={dealColumns}
-                                        rows={deals}
-                                        rowKey={(row) => `${row.kind}-${row.id}`}
-                                        onRowClick={openDealRow}
-                                    />
+                    <div className="cd-card cd-card--full">
+                        <div className="cd-card-title cd-card-title--split">
+                            <span className="cd-card-title-main">
+                                <ClipboardList size={15} /> Історія угод
+                                {deals.length > 0 && (
+                                    <span className="cd-badge-count">{deals.length}</span>
                                 )}
-                            </div>
+                            </span>
+                            {canCreateShopOrders && (
+                                <Link to={`/admin/deals?newClientId=${client.id}`} className="cd-notes-edit-btn">
+                                    <Plus size={11} /> Нова угода
+                                </Link>
+                            )}
                         </div>
 
-                        <div className="cd-main-aside">
-                            <div className="cd-card">
-                                <div className="cd-card-title cd-card-title--split">
-                                    <span className="cd-card-title-main">
-                                        <FileText size={15} /> Нотатки
-                                    </span>
-                                    {!editingNotes && (
-                                        <button type="button" className="cd-notes-edit-btn" onClick={startEditNotes}>
-                                            {client.notes ? <><Edit2 size={11} /> Редагувати</> : <><Plus size={11} /> Додати</>}
-                                        </button>
-                                    )}
-                                </div>
+                        {deals.length === 0 ? (
+                            <div className="cd-apps-empty">
+                                <ClipboardList size={36} className="cd-apps-empty-icon" />
+                                <p>Угод ще немає</p>
+                            </div>
+                        ) : (
+                            <DataTable
+                                columns={dealColumns}
+                                rows={deals}
+                                rowKey={(row) => `${row.kind}-${row.id}`}
+                                onRowClick={openDealRow}
+                            />
+                        )}
+                    </div>
 
-                                {editingNotes ? (
-                                    <div className="cd-notes-editor">
-                                        <textarea
-                                            ref={notesRef}
-                                            value={notesDraft}
-                                            onChange={e => setNotesDraft(e.target.value)}
-                                            placeholder="Особливості клієнта, умови роботи..."
-                                            rows={5}
-                                            className="cd-notes-textarea"
-                                        />
-                                        <div className="cd-notes-actions">
-                                            <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveNotes} disabled={notesSaving}>
-                                                <Check size={12} /> {notesSaving ? 'Збереження...' : 'Зберегти'}
-                                            </button>
-                                            <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingNotes(false)}>
-                                                <XIcon size={12} /> Скасувати
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : client.notes ? (
-                                    <p className="cd-notes-text">{client.notes}</p>
-                                ) : (
-                                    <p className="cd-notes-empty">Нотаток немає</p>
+                    <div className="cd-notes-row">
+                        <div className="cd-card">
+                            <div className="cd-card-title cd-card-title--split">
+                                <span className="cd-card-title-main">
+                                    <FileText size={15} /> Нотатки
+                                </span>
+                                {!editingNotes && (
+                                    <button type="button" className="cd-notes-edit-btn" onClick={startEditNotes}>
+                                        {client.notes ? <><Edit2 size={11} /> Редагувати</> : <><Plus size={11} /> Додати</>}
+                                    </button>
                                 )}
                             </div>
 
-                            <div className={`cd-card ${hasClaims ? 'cd-card--claims' : ''}`}>
-                                <div className="cd-card-title cd-card-title--split">
-                                    <span className="cd-card-title-main">
-                                        <AlertTriangle size={15} /> Претензії
-                                    </span>
-                                    {!editingClaims && (
-                                        <button type="button" className="cd-notes-edit-btn" onClick={startEditClaims}>
-                                            {hasClaims ? <><Edit2 size={11} /> Редагувати</> : <><Plus size={11} /> Додати</>}
+                            {editingNotes ? (
+                                <div className="cd-notes-editor">
+                                    <textarea
+                                        ref={notesRef}
+                                        value={notesDraft}
+                                        onChange={e => setNotesDraft(e.target.value)}
+                                        placeholder="Особливості клієнта, умови роботи..."
+                                        rows={5}
+                                        className="cd-notes-textarea"
+                                    />
+                                    <div className="cd-notes-actions">
+                                        <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveNotes} disabled={notesSaving}>
+                                            <Check size={12} /> {notesSaving ? 'Збереження...' : 'Зберегти'}
                                         </button>
-                                    )}
-                                </div>
-
-                                {editingClaims ? (
-                                    <div className="cd-notes-editor">
-                                        <textarea
-                                            ref={claimsRef}
-                                            value={claimsDraft}
-                                            onChange={e => setClaimsDraft(e.target.value)}
-                                            placeholder="Претензії, інциденти, ризики — видно в списку клієнтів"
-                                            rows={5}
-                                            className="cd-notes-textarea"
-                                        />
-                                        <div className="cd-notes-actions">
-                                            <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveClaims} disabled={claimsSaving}>
-                                                <Check size={12} /> {claimsSaving ? 'Збереження...' : 'Зберегти'}
-                                            </button>
-                                            <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingClaims(false)}>
-                                                <XIcon size={12} /> Скасувати
-                                            </button>
-                                        </div>
+                                        <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingNotes(false)}>
+                                            <XIcon size={12} /> Скасувати
+                                        </button>
                                     </div>
-                                ) : hasClaims ? (
-                                    <p className="cd-notes-text cd-claims-text">{client.claims}</p>
-                                ) : (
-                                    <p className="cd-notes-empty">Претензій немає</p>
+                                </div>
+                            ) : client.notes ? (
+                                <p className="cd-notes-text">{client.notes}</p>
+                            ) : (
+                                <p className="cd-notes-empty">Нотаток немає</p>
+                            )}
+                        </div>
+
+                        <div className={`cd-card ${hasClaims ? 'cd-card--claims' : ''}`}>
+                            <div className="cd-card-title cd-card-title--split">
+                                <span className="cd-card-title-main">
+                                    <AlertTriangle size={15} /> Претензії
+                                </span>
+                                {!editingClaims && (
+                                    <button type="button" className="cd-notes-edit-btn" onClick={startEditClaims}>
+                                        {hasClaims ? <><Edit2 size={11} /> Редагувати</> : <><Plus size={11} /> Додати</>}
+                                    </button>
                                 )}
                             </div>
+
+                            {editingClaims ? (
+                                <div className="cd-notes-editor">
+                                    <textarea
+                                        ref={claimsRef}
+                                        value={claimsDraft}
+                                        onChange={e => setClaimsDraft(e.target.value)}
+                                        placeholder="Претензії, інциденти, ризики — видно в списку клієнтів"
+                                        rows={5}
+                                        className="cd-notes-textarea"
+                                    />
+                                    <div className="cd-notes-actions">
+                                        <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveClaims} disabled={claimsSaving}>
+                                            <Check size={12} /> {claimsSaving ? 'Збереження...' : 'Зберегти'}
+                                        </button>
+                                        <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingClaims(false)}>
+                                            <XIcon size={12} /> Скасувати
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : hasClaims ? (
+                                <p className="cd-notes-text cd-claims-text">{client.claims}</p>
+                            ) : (
+                                <p className="cd-notes-empty">Претензій немає</p>
+                            )}
                         </div>
                     </div>
                 </div>
