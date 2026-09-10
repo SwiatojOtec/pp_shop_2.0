@@ -633,6 +633,13 @@
     color: var(--ds-text-muted);
 }
 
+.deal-modal-hint {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--ds-text-subtle);
+    line-height: 1.45;
+}
+
 .deal-modal-field input,
 .deal-modal-field select {
     padding: 8px 10px;

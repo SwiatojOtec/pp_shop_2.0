@@ -314,7 +314,7 @@ export default function AdminClientDetails() {
 
                 {/* History + notes column */}
                 <div className="cd-main">
-                    <div className="cd-card cd-card--full">
+                    <div className="cd-card">
                         <div className="cd-card-title cd-card-title--split">
                             <span className="cd-card-title-main">
                                 <ClipboardList size={15} /> Історія угод

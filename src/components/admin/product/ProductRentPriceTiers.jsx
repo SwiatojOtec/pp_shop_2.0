@@ -18,24 +18,16 @@ export default function ProductRentPriceTiers({ value, onChange }) {
     };
 
     return (
-        <div className="form-group" style={{ marginTop: 14 }}>
+        <div className="form-group rent-price-tiers">
             <label>Тарифи оренди (₴ за добу)</label>
-            <p className="field-hint" style={{ marginBottom: 10 }}>
+            <p className="field-hint rent-price-tiers-hint">
                 Якщо всі чотири значення однакові — зберігається одна базова ціна. Якщо відрізняються —
                 на сайті показується список діапазонів як у конкурентів.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="rent-price-tiers-list">
                 {rows.map((row, index) => (
-                    <div
-                        key={`${row.minDays}-${row.maxDays ?? 'x'}`}
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 100px',
-                            alignItems: 'center',
-                            gap: 10,
-                        }}
-                    >
-                        <span style={{ fontSize: '0.9rem', color: '#374151' }}>{row.labelUa}</span>
+                    <div key={`${row.minDays}-${row.maxDays ?? 'x'}`} className="rent-price-tier-row">
+                        <span className="rent-price-tier-label">{row.labelUa}</span>
                         <input
                             type="number"
                             min="0"

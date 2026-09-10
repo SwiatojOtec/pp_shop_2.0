@@ -153,6 +153,32 @@
     color: var(--ds-text-subtle) !important;
 }
 
+.rent-price-tiers {
+    margin-top: 14px;
+}
+
+.rent-price-tiers-hint {
+    margin-bottom: 10px;
+}
+
+.rent-price-tiers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rent-price-tier-row {
+    display: grid;
+    grid-template-columns: 1fr 100px;
+    align-items: center;
+    gap: 10px;
+}
+
+.rent-price-tier-label {
+    font-size: 0.9rem;
+    color: var(--ds-text-muted);
+}
+
 .form-label {
     display: block;
     margin-bottom: 8px;
@@ -205,6 +231,7 @@
 .spec-item-text {
     flex: 1;
     font-size: 0.9rem;
+    color: var(--ds-text);
 }
 
 .add-spec-form {

@@ -12,6 +12,22 @@
     background: var(--ds-bg);
 }
 
+/* RequireAdmin's auth-check gate, shown before the shell itself mounts —
+   had no rule anywhere (docs/admin-redesign/05-fixes.md pattern: a class
+   with zero CSS, not just low contrast), so it flashed unstyled, top-left,
+   inheriting the public site's body color. */
+.admin-loading-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ds-bg);
+    color: var(--ds-text-subtle);
+    font-size: var(--ds-text-md);
+    font-family: var(--ds-font);
+}
+
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 
 .ds-shell-side {

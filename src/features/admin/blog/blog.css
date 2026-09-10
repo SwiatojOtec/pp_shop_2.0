@@ -103,3 +103,60 @@
     height: 400px;
     margin-bottom: 50px;
 }
+
+/* Quill's "snow" theme is built for a light page — no theme awareness of
+   its own, so its editor text (no color set, inherits the public site's
+   body color) and toolbar icons (hardcoded #444/#06c strokes) both need
+   an explicit override here or they're unreadable on a dark --ds-surface. */
+.blog-edit-quill-wrap .ql-toolbar.ql-snow {
+    border-color: var(--ds-border);
+    border-radius: var(--ds-radius-md) var(--ds-radius-md) 0 0;
+}
+
+.blog-edit-quill-wrap .ql-container.ql-snow {
+    border-color: var(--ds-border);
+    border-radius: 0 0 var(--ds-radius-md) var(--ds-radius-md);
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.blog-edit-quill-wrap .ql-editor {
+    color: var(--ds-text);
+}
+
+.blog-edit-quill-wrap .ql-editor.ql-blank::before {
+    color: var(--ds-text-subtle);
+    font-style: normal;
+}
+
+.blog-edit-quill-wrap .ql-snow .ql-stroke {
+    stroke: var(--ds-text-muted);
+}
+
+.blog-edit-quill-wrap .ql-snow .ql-fill,
+.blog-edit-quill-wrap .ql-snow .ql-stroke.ql-fill {
+    fill: var(--ds-text-muted);
+}
+
+.blog-edit-quill-wrap .ql-snow .ql-picker {
+    color: var(--ds-text-muted);
+}
+
+.blog-edit-quill-wrap .ql-snow .ql-picker-options {
+    background: var(--ds-surface);
+    border-color: var(--ds-border);
+}
+
+.blog-edit-quill-wrap .ql-snow.ql-toolbar button:hover,
+.blog-edit-quill-wrap .ql-snow .ql-toolbar button:hover,
+.blog-edit-quill-wrap .ql-snow.ql-toolbar button.ql-active,
+.blog-edit-quill-wrap .ql-snow .ql-toolbar button.ql-active {
+    color: var(--ds-accent);
+}
+
+.blog-edit-quill-wrap .ql-snow.ql-toolbar button:hover .ql-stroke,
+.blog-edit-quill-wrap .ql-snow .ql-toolbar button:hover .ql-stroke,
+.blog-edit-quill-wrap .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.blog-edit-quill-wrap .ql-snow .ql-toolbar button.ql-active .ql-stroke {
+    stroke: var(--ds-accent);
+}
