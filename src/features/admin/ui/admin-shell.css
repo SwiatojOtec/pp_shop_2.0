@@ -40,9 +40,13 @@
 }
 
 .ds-shell-side-top {
-    padding: 18px 18px 16px;
+    height: var(--ds-topbar-h);
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
     border-bottom: 1px solid var(--ds-shell-divider);
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .ds-shell-brand {
