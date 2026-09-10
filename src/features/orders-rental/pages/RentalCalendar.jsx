@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, X, FilePlus2, Trash2, Search, Calendar
 import { productsApi, rentalCalendarApi } from '../../../services/api';
 import ConfirmDialog from '../../admin/ui/ConfirmDialog';
 import Drawer from '../../admin/ui/Drawer';
+import CalendarProductDrawer from '../components/calendar/CalendarProductDrawer';
 import PageHeader from '../../admin/ui/PageHeader';
 import Tabs from '../../admin/ui/Tabs';
 import {
@@ -87,6 +88,7 @@ export default function RentalCalendar() {
     const [saving, setSaving] = useState(false);
 
     const [detailEvent, setDetailEvent] = useState(null);
+    const [productDrawerId, setProductDrawerId] = useState(null);
     const [convertingId, setConvertingId] = useState(null);
     const [cancelTarget, setCancelTarget] = useState(null);
     const [cancelBusy, setCancelBusy] = useState(false);
@@ -159,6 +161,8 @@ export default function RentalCalendar() {
         () => buildTimelineRows(events, products, mode, days, productTotals),
         [events, products, mode, days, productTotals]
     );
+
+    const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
     // "За категоріями" opens with every group collapsed (docs/admin-redesign/
     // 03-screens.md, «Календар») — reset the collapse set each time that mode
@@ -681,7 +685,21 @@ export default function RentalCalendar() {
                 </form>
             </Drawer>
 
-            <Drawer open={!!detailEvent} onClose={() => setDetailEvent(null)} title={detailEvent?.productName || 'Подія'} width="md">
+            <Drawer
+                open={!!detailEvent}
+                onClose={() => setDetailEvent(null)}
+                title={detailEvent ? (
+                    <button
+                        type="button"
+                        className="rental-calendar__event-title-link"
+                        onClick={() => setProductDrawerId(detailEvent.productId)}
+                        title="Показати картку інструмента"
+                    >
+                        {detailEvent.productName || 'Подія'}
+                    </button>
+                ) : 'Подія'}
+                width="md"
+            >
                 {detailEvent && (
                     <ul className="rental-calendar__event-list">
                         <li className={`rental-calendar__event-card rental-calendar__event-card--${detailEvent.kind}`}>
@@ -725,11 +743,21 @@ export default function RentalCalendar() {
                                         </button>
                                     </>
                                 )}
-                                {detailEvent.source === 'application' && detailEvent.applicationId && (
+                                {detailEvent.source === 'application' && detailEvent.orderId && (
+                                    <button
+                                        type="button"
+                                        className="ds-btn ds-btn--secondary"
+                                        onClick={() => navigate(`/admin/deals/${detailEvent.orderId}`)}
+                                    >
+                                        Відкрити угоду
+                                    </button>
+                                )}
+                                {detailEvent.source === 'application' && !detailEvent.orderId && detailEvent.applicationId && (
                                     <button
                                         type="button"
                                         className="ds-btn ds-btn--secondary"
                                         onClick={() => navigate(`/admin/rental-applications/${detailEvent.applicationId}`)}
+                                        title="Заявка без угоди — старий маршрут"
                                     >
                                         Відкрити заявку
                                     </button>
@@ -739,6 +767,12 @@ export default function RentalCalendar() {
                     </ul>
                 )}
             </Drawer>
+
+            <CalendarProductDrawer
+                open={!!productDrawerId}
+                onClose={() => setProductDrawerId(null)}
+                product={productsById.get(productDrawerId) || null}
+            />
 
             <ConfirmDialog
                 open={!!cancelTarget}

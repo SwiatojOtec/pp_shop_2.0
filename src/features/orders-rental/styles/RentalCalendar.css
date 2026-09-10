@@ -1,3 +1,22 @@
+.rental-calendar__event-title-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-family: var(--ds-font);
+    color: var(--ds-text);
+    cursor: pointer;
+    text-align: left;
+}
+
+.rental-calendar__event-title-link:hover {
+    color: var(--ds-accent);
+    text-decoration: underline;
+}
+
 .rental-calendar__nav {
     display: flex;
     align-items: center;

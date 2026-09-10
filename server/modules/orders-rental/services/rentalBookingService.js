@@ -180,7 +180,7 @@ async function deleteBooking(id) {
     return true;
 }
 
-function buildAppLineEvent(app, item, productNameById) {
+function buildAppLineEvent(app, item, productNameById, orderIdByApplication) {
     const rentFrom = item.rentFrom || app.rentFrom;
     const rentTo = item.rentTo || app.rentTo;
     if (!rentFrom || !rentTo) return null;
@@ -201,6 +201,10 @@ function buildAppLineEvent(app, item, productNameById) {
         clientPhone: app.clientPhone || '',
         applicationId: app.id,
         applicationNumber: app.applicationNumber || null,
+        // Ведемо на угоду, а не на застарілий маршрут заявки, якщо вона вже
+        // прив'язана до Order — той самий патерн, що й у /api/warehouse/
+        // product-rentals/:productId (docs/admin-redesign/03-screens.md, 1.2).
+        orderId: orderIdByApplication.get(app.id) || null,
         bookingId: null,
         note: '',
     };
@@ -258,6 +262,15 @@ async function listCalendarEvents({ from, to } = {}) {
         productTotals[pid] = physicalQuantityById.get(pid) || 0;
     }
 
+    const appIds = apps.map((app) => app.id);
+    const linkedOrders = appIds.length
+        ? await Order.findAll({
+            where: { rentalApplicationId: { [Op.in]: appIds } },
+            attributes: ['id', 'rentalApplicationId'],
+        })
+        : [];
+    const orderIdByApplication = new Map(linkedOrders.map((o) => [o.rentalApplicationId, o.id]));
+
     const events = [];
 
     for (const hold of holds) {
@@ -286,7 +299,7 @@ async function listCalendarEvents({ from, to } = {}) {
         const items = Array.isArray(app.items) ? app.items : [];
         if (!items.length) {
             if (app.rentFrom && app.rentTo && rangesOverlap(app.rentFrom, app.rentTo, rangeFrom, rangeTo)) {
-                const evt = buildAppLineEvent(app, {}, productNameById);
+                const evt = buildAppLineEvent(app, {}, productNameById, orderIdByApplication);
                 if (evt) events.push(evt);
             }
             continue;
@@ -296,7 +309,7 @@ async function listCalendarEvents({ from, to } = {}) {
             const rentTo = item.rentTo || app.rentTo;
             if (!rentFrom || !rentTo) continue;
             if (!rangesOverlap(rentFrom, rentTo, rangeFrom, rangeTo)) continue;
-            const evt = buildAppLineEvent(app, item, productNameById);
+            const evt = buildAppLineEvent(app, item, productNameById, orderIdByApplication);
             if (evt) events.push(evt);
         }
     }
