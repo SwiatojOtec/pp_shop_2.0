@@ -190,6 +190,22 @@
 
 .stock-warehouse-tabs {
     overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-color: var(--ds-border-strong) var(--ds-surface-sunken);
+}
+
+.stock-warehouse-tabs::-webkit-scrollbar {
+    height: 8px;
+}
+
+.stock-warehouse-tabs::-webkit-scrollbar-track {
+    background: var(--ds-surface-sunken);
+    border-radius: var(--ds-radius-full);
+}
+
+.stock-warehouse-tabs::-webkit-scrollbar-thumb {
+    background: var(--ds-border-strong);
+    border-radius: var(--ds-radius-full);
 }
 
 .stock-warehouse-tabs .ds-tabs {
