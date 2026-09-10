@@ -549,6 +549,13 @@ export default function ProductDetail() {
                                     >
                                         Інструкція
                                     </button>
+                                    <button
+                                        type="button"
+                                        className={`tab-link ${activeTab === 'kit' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('kit')}
+                                    >
+                                        Комплектація
+                                    </button>
                                 </div>
                                 <div className="tab-content">
                                     {activeTab === 'specs' && (
@@ -589,11 +596,22 @@ export default function ProductDetail() {
                                             <p className="tab-empty">Інструкція з&apos;явиться незабаром.</p>
                                         )
                                     )}
+                                    {activeTab === 'kit' && (
+                                        Array.isArray(product.kitItems) && product.kitItems.length > 0 ? (
+                                            <ul className="kit-list">
+                                                {product.kitItems.map((item, index) => (
+                                                    <li key={index}>{item}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="tab-empty">Комплектація не вказана.</p>
+                                        )
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* RIGHT: related + kit + buy + phone */}
+                        {/* RIGHT: related + buy + phone */}
                         <aside className="rent-sidebar">
                             {relatedItems.length > 0 && (
                                 <div className="rent-related-block">
@@ -619,17 +637,6 @@ export default function ProductDetail() {
                                             </button>
                                         </div>
                                     ))}
-                                </div>
-                            )}
-
-                            {Array.isArray(product.kitItems) && product.kitItems.length > 0 && (
-                                <div className="kit-block">
-                                    <h3 className="kit-title">До комплекту входять:</h3>
-                                    <ul className="kit-list">
-                                        {product.kitItems.map((item, index) => (
-                                            <li key={index}>{item}</li>
-                                        ))}
-                                    </ul>
                                 </div>
                             )}
 
