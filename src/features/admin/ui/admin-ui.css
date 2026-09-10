@@ -116,6 +116,8 @@
 .ds-badge--warning { background: var(--ds-warning-soft); color: var(--ds-warning); }
 .ds-badge--danger  { background: var(--ds-danger-soft);  color: var(--ds-danger); }
 .ds-badge--info    { background: var(--ds-info-soft);    color: var(--ds-info); }
+.ds-badge--violet  { background: var(--ds-violet-soft);  color: var(--ds-violet); }
+.ds-badge--teal    { background: var(--ds-teal-soft);    color: var(--ds-teal); }
 .ds-badge--neutral { background: var(--ds-neutral-soft); color: var(--ds-neutral); }
 .ds-badge--accent  { background: var(--ds-accent-soft);  color: var(--ds-accent); }
 
