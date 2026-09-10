@@ -3,7 +3,7 @@ import { MapPin, Clock, Navigation } from 'lucide-react';
 import './ShowroomSection.css';
 
 export default function ShowroomSection() {
-    const address = "вулиця Козацька, 79, Петропавлівська Борщагівка, Київська обл. 08130";
+    const address = "вулиця Холодноярська, 2а, Київ";
     const freeMapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=15&ie=UTF8&iwloc=&output=embed&hl=uk`;
 
     return (
@@ -33,7 +33,7 @@ export default function ShowroomSection() {
                             <MapPin className="info-icon" />
                             <div>
                                 <h4>Адреса</h4>
-                                <p>вул. Козацька, 79, Петропавлівська Борщагівка</p>
+                                <p>вулиця Холодноярська, 2а, Київ</p>
                             </div>
                         </div>
                         <div className="info-item">

@@ -55,8 +55,6 @@ export default function Checkout() {
         e.preventDefault();
         setLoading(true);
 
-        const hasRentItems = cartItems.some(item => item.isRent);
-
         const orderData = {
             customerName: formData.name,
             customerPhone: normalizeUaPhone(formData.phone),
@@ -64,9 +62,7 @@ export default function Checkout() {
             deliveryMethod: formData.deliveryMethod,
             address: formData.deliveryMethod === 'delivery'
                 ? `${formData.city}, ${formData.address}`
-                : hasRentItems
-                    ? 'Самовивіз (вул. Холодноярська 2а, Київ)'
-                    : 'Самовивіз (вул. Козацька, 79, Петропавлівська Борщагівка)',
+                : 'Самовивіз (вул. Холодноярська, 2а, Київ)',
             paymentMethod: formData.paymentMethod,
             items: cartItems,
             totalAmount: cartTotal
@@ -136,9 +132,7 @@ export default function Checkout() {
                                     <MapPin size={24} />
                                     <span style={{ fontWeight: 700 }}>Самовивіз</span>
                                     <span style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
-                                        {cartItems.some(item => item.isRent)
-                                            ? 'вул. Холодноярська 2а, Київ'
-                                            : 'вул. Козацька, 79, Петропавлівська Борщагівка'}
+                                        вул. Холодноярська, 2а, Київ
                                     </span>
                                 </label>
                                 <label className={`payment-card ${formData.deliveryMethod === 'delivery' ? 'active' : ''}`} style={{ cursor: 'pointer', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>

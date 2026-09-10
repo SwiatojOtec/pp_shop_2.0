@@ -28,7 +28,7 @@ export default function Footer() {
                 </div>
                 <div className="footer-col">
                     <h4 className="footer-title">Контакти</h4>
-                    <p>вул. Жовтнева, 79, Петропавлівська Борщагівка</p>
+                    <p>вулиця Холодноярська, 2а, Київ</p>
                     <p><a href="tel:0670064044" style={{ color: 'inherit', textDecoration: 'none' }}>067 006 40 44</a></p>
                     <Link to="/contacts" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>Всі контакти</Link>
                 </div>

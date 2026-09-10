@@ -82,7 +82,7 @@ export default function Header({ onCartClick }) {
           <div className="top-bar-left">
             <span className="top-bar-item">
               <MapPin size={14} className="top-bar-icon" />
-              Петропавлівська Борщагівка, вул. Козацька, 79
+              вулиця Холодноярська, 2а, Київ
             </span>
             <span className="top-bar-item">
               <Phone size={14} className="top-bar-icon" />

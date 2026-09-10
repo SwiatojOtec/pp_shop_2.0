@@ -48,9 +48,8 @@ export default function Contacts() {
                             <div className="info-icon"><MapPin size={32} /></div>
                             <div className="info-content">
                                 <h3>Адреса Шоуруму</h3>
-                                <p>вулиця Козацька, 79</p>
-                                <p>Петропавлівська Борщагівка, Київська обл.</p>
-                                <p>08130, Україна</p>
+                                <p>вулиця Холодноярська, 2а</p>
+                                <p>Київ, Україна</p>
                             </div>
                         </div>
 
@@ -139,7 +138,7 @@ export default function Contacts() {
 
                 <div className="map-container">
                     <iframe
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2541.042247476449!2d30.3340833!3d50.4309167!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40d4cb6800000001%3A0x7c7f7f7f7f7f7f7f!2z0LLRg9C70LjRhtGPINCW0L7QstGC0L3QtdCy0LAsIDc5LCDQn9C10YLRgNC-0L_QsNCy0LvRltCy0YHRjNC60LAg0JHQvtGA0YnQsNCz0ZbQstC60LAsINCa0LjRl9Cy0YHRjNC60LAg0L7QsdC7LiwgMDgxMzA!5e0!3m2!1suk!2sua!4v1700000000000!5m2!1suk!2sua&hl=uk"
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent('вулиця Холодноярська, 2а, Київ')}&t=&z=15&ie=UTF8&iwloc=&output=embed&hl=uk`}
                         width="100%"
                         height="100%"
                         style={{ border: 0 }}
