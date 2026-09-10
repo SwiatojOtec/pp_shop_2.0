@@ -155,6 +155,7 @@
     font-weight: 700;
     font-size: var(--ds-text-lg);
     margin: 0 0 var(--ds-space-2);
+    color: var(--ds-text);
 }
 
 .company-sub-form-hint {
@@ -215,6 +216,12 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 4px;
+}
+
+.company-sub-form-members-head label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ds-text-muted);
 }
 
 .company-sub-form-counter {
