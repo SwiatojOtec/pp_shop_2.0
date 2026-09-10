@@ -100,8 +100,8 @@ export default function AdminLayout() {
             {/* ── Sidebar ── */}
             <aside className="ds-shell-side">
                 <div className="ds-shell-side-top">
-                    <Link to="/admin">
-                        <img src="/admin-sidebar-logo.png" alt="PPbud Tech · PAN PARKET" className="ds-shell-logo" />
+                    <Link to="/admin" className="ds-shell-brand">
+                        <span className="ds-shell-brand-mark">PP</span>bud_Tech
                     </Link>
                 </div>
 
