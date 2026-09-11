@@ -102,7 +102,14 @@ export function useOrderDraftEditor({
         setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
-            const items = [...prev.items, buildOrderItemFromProduct(product)];
+            const newItem = buildOrderItemFromProduct(product);
+            // Seed serial/inventory/condition/weight/replacement-cost from the
+            // catalog right away — otherwise these stay blank until the next
+            // save round-trip re-enriches items from the server.
+            const [enriched] = newItem.isRent
+                ? enrichRentOrderItemsFromApplication([newItem], rentProductIds, null, products)
+                : [newItem];
+            const items = [...prev.items, enriched];
             return withOrderTotal({ ...prev, items }, billingOptions);
         });
         setProductSearch('');
