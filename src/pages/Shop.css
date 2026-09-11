@@ -527,15 +527,6 @@
     margin-bottom: 8px;
 }
 
-.product-rating {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #666;
-}
-
 /* Modal Styles */
 .modal-overlay {
     position: fixed;

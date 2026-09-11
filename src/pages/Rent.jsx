@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { Filter, ChevronDown, Plus, X, Heart, Star } from 'lucide-react';
+import { Filter, ChevronDown, Plus, X, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
@@ -378,12 +378,6 @@ export default function Rent() {
                                         </button>
                                     </div>
                                     <div className="product-info">
-                                        <div className="product-meta">
-                                            <div className="product-rating">
-                                                <Star size={12} fill="var(--color-primary)" color="var(--color-primary)" />
-                                                <span>{product.rating}.0 ({product.reviews})</span>
-                                            </div>
-                                        </div>
                                         <Link to={`/orenda/${product.slug}`}>
                                             <h3 className="product-name">{product.name}</h3>
                                         </Link>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { Filter, ChevronDown, Plus, X, Heart, Star } from 'lucide-react';
+import { Filter, ChevronDown, Plus, X, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategoryName, getCategorySlug } from '../utils/categoryMapping';
@@ -357,10 +357,6 @@ export default function Shop() {
                                                     {product.colors?.map((c, i) => (
                                                         <span key={i} className="swatch" style={{ backgroundColor: c }}></span>
                                                     ))}
-                                                </div>
-                                                <div className="product-rating">
-                                                    <Star size={12} fill="var(--color-primary)" color="var(--color-primary)" />
-                                                    <span>{product.rating}.0 ({product.reviews})</span>
                                                 </div>
                                             </div>
                                             <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>

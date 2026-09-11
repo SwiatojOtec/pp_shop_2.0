@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, ShoppingCart, ShieldCheck, Truck, RotateCcw, Plus, Minus, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
@@ -825,10 +825,6 @@ export default function ProductDetail() {
                                         : product.stockStatus === 'available_later'
                                             ? `Буде доступно з ${product.availableFrom || 'дата уточнюється'}`
                                             : 'В наявності'}
-                            </div>
-                            <div className="product-rating">
-                                <Star size={16} fill="var(--color-primary)" color="var(--color-primary)" />
-                                <span>{product.rating}.0 ({product.reviews} відгуків)</span>
                             </div>
                         </div>
 
