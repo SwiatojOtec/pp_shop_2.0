@@ -5,19 +5,10 @@ const Client = require('../../../models/Client');
 const RentalApplication = require('../../../models/RentalApplication');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { recalculateProductQuantity } = require('../../../services/inventoryService');
-const { parseDiscountPercent, roundMoney } = require('../../../utils/orderAmounts');
+const { parseDiscountPercent, roundMoney, calcRentDays } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { generateAppNumber, generateOrderNumber } = require('../utils/orderNumbering');
 const { recalcRentQuantitiesForItemsLists, shouldBeOverdue } = require('./rentalApplicationService');
-
-/** Rental days = nights between dates, return day is free: 11.08 → 15.08 = 4.
- *  Minimum 1 for a same-day pickup/return. */
-function calcRentDays(from, to) {
-    if (!from || !to) return 0;
-    const ms = new Date(to) - new Date(from);
-    if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.max(1, Math.floor(ms / 86400000));
-}
 
 /** First value among `a`/`b` that isn't null/undefined/''. */
 function pickFilled(...values) {

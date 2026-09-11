@@ -6,6 +6,7 @@ const Product = require('../../../models/Product');
 const { normalizeUaPhone } = require('../../../utils/phoneUtils');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
+const { calcRentDays } = require('../../../utils/orderAmounts');
 const { toIsoDate } = require('./rentalApplicationService');
 const { saveDealWithRentalApplication } = require('./orderRentalService');
 const { generateOrderNumber } = require('../utils/orderNumbering');
@@ -16,14 +17,6 @@ const HOLD_STATUS = 'hold';
 
 function rangesOverlap(aFrom, aTo, bFrom, bTo) {
     return aFrom <= bTo && aTo >= bFrom;
-}
-
-/** Rental days = nights between dates, return day is free. Minimum 1 for a same-day pickup/return. */
-function calcRentDays(from, to) {
-    if (!from || !to) return 0;
-    const ms = new Date(to) - new Date(from);
-    if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.max(1, Math.floor(ms / 86400000));
 }
 
 function serializeBooking(row, product = null) {

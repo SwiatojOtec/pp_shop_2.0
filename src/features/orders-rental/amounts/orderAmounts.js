@@ -1,5 +1,6 @@
 import { resolveSellerId } from '../../../constants/sellers';
 import { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } from '../../../utils/rentPricing';
+import { calcRentDays } from '../model/rentDays';
 
 /** Стандартна ставка ПДВ в Україні, % */
 export const UA_VAT_PERCENT = 20;
@@ -9,14 +10,6 @@ const TOV_SELLER_ID = 'tov_pan_pivdenbud';
 
 function roundMoney(value) {
     return Math.round((Number(value) || 0) * 100) / 100;
-}
-
-/** Rental days = nights between dates, return day is free. Minimum 1 for a same-day pickup/return. */
-function calcRentDays(from, to) {
-    if (!from || !to) return 0;
-    const ms = new Date(to) - new Date(from);
-    if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.max(1, Math.floor(ms / 86400000));
 }
 
 function resolveOrderItemRentDays(item) {

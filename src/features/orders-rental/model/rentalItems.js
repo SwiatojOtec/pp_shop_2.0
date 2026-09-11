@@ -3,6 +3,9 @@ import { normalizeTechnicalCondition } from '../../../constants/technicalConditi
 import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers } from '../../../utils/rentPricing';
 import { productsApi } from '../../../services/api';
 import { parseDiscountPercent } from '../amounts/orderAmounts';
+import { calcRentDays } from './rentDays';
+
+export { calcRentDays as calcDays } from './rentDays';
 
 export const emptyItem = () => ({
     _key: Date.now() + Math.random(),
@@ -29,18 +32,9 @@ export const emptyItem = () => ({
     rentPriceTiers: null,
 });
 
-/** Rental days = nights between dates, return day is free: 11.08 → 15.08 = 4 діб.
- *  Minimum 1 for a same-day pickup/return. */
-export const calcDays = (from, to) => {
-    if (!from || !to) return 0;
-    const ms = new Date(to) - new Date(from);
-    if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.max(1, Math.floor(ms / 86400000));
-};
-
 export function recalcLineTotals(item) {
     const qty = parseFloat(item.quantity || 1);
-    const rawDays = calcDays(item.rentFrom, item.rentTo);
+    const rawDays = calcRentDays(item.rentFrom, item.rentTo);
     const daysForTier = rawDays > 0 ? rawDays : 1;
     const catRaw =
         item.catalogPrice === '' || item.catalogPrice === null || item.catalogPrice === undefined

@@ -263,6 +263,7 @@ module.exports = {
     UA_VAT_RATE,
     roundMoney,
     parseDiscountPercent,
+    calcRentDays,
     buildRentalAppIndex,
     resolveLineNetTotal,
     calcItemsNetSubtotal,
