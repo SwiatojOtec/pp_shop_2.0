@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 
 function productHref(p, isRent) {
     if (isRent) return `/orenda/${p.slug}`;
@@ -41,7 +42,7 @@ export default function ProductDetailRecoRails({ isRent, sameCategory, recent })
                             >
                                 <div className="product-reco-card-img-wrap">
                                     {p.image ? (
-                                        <img src={p.image} alt="" loading="lazy" />
+                                        <img src={optimizeImageUrl(p.image, { width: 250 })} alt="" loading="lazy" />
                                     ) : (
                                         <div className="product-reco-card-img-placeholder" />
                                     )}
@@ -68,7 +69,7 @@ export default function ProductDetailRecoRails({ isRent, sameCategory, recent })
                             >
                                 <div className="product-reco-card-img-wrap">
                                     {p.image ? (
-                                        <img src={p.image} alt="" loading="lazy" />
+                                        <img src={optimizeImageUrl(p.image, { width: 250 })} alt="" loading="lazy" />
                                     ) : (
                                         <div className="product-reco-card-img-placeholder" />
                                     )}

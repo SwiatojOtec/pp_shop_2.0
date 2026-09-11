@@ -13,6 +13,7 @@ import {
     formatRentCatalogPriceCaption,
 } from '../utils/rentPricing';
 import { recordProductView, getRecentProductViews } from '../utils/recentlyViewedProducts';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import ProductDetailRecoRails from '../components/ProductDetailRecoRails';
 import './ProductDetail.css';
 
@@ -334,7 +335,7 @@ export default function ProductDetail() {
         return (
             <div className="image-lightbox" onClick={() => setImageZoomOpen(false)}>
                 <div className="image-lightbox-inner" onClick={(e) => e.stopPropagation()}>
-                    <img src={activeImg} alt={product.name} className="image-lightbox-img" />
+                    <img src={optimizeImageUrl(activeImg, { width: 1200 })} alt={product.name} className="image-lightbox-img" />
                     {galleryUrls.length > 1 && (
                         <>
                             <button
@@ -398,7 +399,7 @@ export default function ProductDetail() {
                         <div className="rent-gallery">
                             <div className="rent-main-image-wrap">
                                 <img
-                                    src={activeImg}
+                                    src={optimizeImageUrl(activeImg, { width: 900 })}
                                     alt={product.name}
                                     className="rent-main-image"
                                     onClick={() => setImageZoomOpen(true)}
@@ -449,7 +450,7 @@ export default function ProductDetail() {
                                         className={`thumb-item ${activeImg === product.image ? 'active' : ''}`}
                                         onClick={() => setActiveImg(product.image)}
                                     >
-                                        <img src={product.image} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={optimizeImageUrl(product.image, { width: 100 })} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     </div>
                                     {product.images.map((img, i) => (
                                         <div
@@ -457,7 +458,7 @@ export default function ProductDetail() {
                                             className={`thumb-item ${activeImg === img ? 'active' : ''}`}
                                             onClick={() => setActiveImg(img)}
                                         >
-                                            <img src={img} alt={`Thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <img src={optimizeImageUrl(img, { width: 100 })} alt={`Thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         </div>
                                     ))}
                                 </div>
@@ -650,7 +651,7 @@ export default function ProductDetail() {
                                     {relatedItems.map(item => (
                                         <div key={item.id} className="rent-related-item">
                                             <Link to={`/orenda/${item.slug}`} className="rent-related-link">
-                                                <img src={item.image} alt={item.name} className="rent-related-img" />
+                                                <img src={optimizeImageUrl(item.image, { width: 200 })} alt={item.name} className="rent-related-img" />
                                                 <div className="rent-related-info">
                                                     <span className="rent-related-name">{item.name}</span>
                                                     <span className="rent-related-price">{formatRentCatalogPriceCaption(item)}</span>
@@ -729,7 +730,7 @@ export default function ProductDetail() {
                         <div className="product-gallery">
                         <div className="main-image-container">
                             <img
-                                src={activeImg}
+                                src={optimizeImageUrl(activeImg, { width: 900 })}
                                 alt={product.name}
                                 className="main-image"
                                 onClick={() => setImageZoomOpen(true)}
@@ -788,7 +789,7 @@ export default function ProductDetail() {
                                     onClick={() => setActiveImg(product.image)}
                                     style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: activeImg === product.image ? '2px solid var(--color-primary)' : '2px solid transparent', flexShrink: 0 }}
                                 >
-                                    <img src={product.image} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={optimizeImageUrl(product.image, { width: 100 })} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                                 {product.images.map((img, i) => (
                                     <div
@@ -797,7 +798,7 @@ export default function ProductDetail() {
                                         onClick={() => setActiveImg(img)}
                                         style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: activeImg === img ? '2px solid var(--color-primary)' : '2px solid transparent', flexShrink: 0 }}
                                     >
-                                        <img src={img} alt={`Thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={optimizeImageUrl(img, { width: 100 })} alt={`Thumb ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     </div>
                                 ))}
                             </div>
@@ -877,7 +878,7 @@ export default function ProductDetail() {
                                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                     {/* Current product indicator */}
                                     <div style={{ width: '45px', height: '45px', borderRadius: '50%', border: '2px solid var(--color-primary)', padding: '2px', cursor: 'default' }}>
-                                        <img src={product.image} alt="current" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} title="Поточний колір" />
+                                        <img src={optimizeImageUrl(product.image, { width: 80 })} alt="current" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} title="Поточний колір" />
                                     </div>
                                     {/* Other variants */}
                                     {variants.map(v => (
@@ -888,7 +889,7 @@ export default function ProductDetail() {
                                             onMouseOver={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
                                             onMouseOut={e => e.currentTarget.style.borderColor = '#ddd'}
                                         >
-                                            <img src={v.image} alt={v.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} title={v.name} />
+                                            <img src={optimizeImageUrl(v.image, { width: 80 })} alt={v.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} title={v.name} />
                                         </Link>
                                     ))}
                                 </div>

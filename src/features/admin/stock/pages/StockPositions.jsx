@@ -13,6 +13,7 @@ import { useInventorySuggestions } from '../hooks/useInventorySuggestions';
 import { getStockStatusBadgeProps } from '../model/stockStatus';
 import { exportWarehousePdf } from '../model/exportWarehousePdf';
 import { formatRentCatalogPriceCaption } from '../../../../utils/rentPricing';
+import { optimizeImageUrl } from '../../../../utils/imageOptimize';
 import BulkMoveModal from '../components/BulkMoveModal';
 import ProductWorkDrawer from '../components/ProductWorkDrawer';
 import '../stock.css';
@@ -120,7 +121,7 @@ export default function StockPositions() {
                 const p = row.Product;
                 return (
                     <div className="stock-product-cell">
-                        {p?.image && <img src={p.image} alt="" className="stock-product-thumb" />}
+                        {p?.image && <img src={optimizeImageUrl(p.image, { width: 120 })} alt="" className="stock-product-thumb" />}
                         <div>
                             <div className="stock-product-name">{p?.name || '—'}</div>
                             <div className="stock-product-meta">{p?.inventoryNumber || '—'} · {p?.sku || '—'}</div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Package } from 'lucide-react';
 import { productsApi, categoriesApi } from '../../services/api';
+import { optimizeImageUrl } from '../../utils/imageOptimize';
 import { useToast } from '../../context/ToastContext';
 import PageHeader from '../../features/admin/ui/PageHeader';
 import Toolbar from '../../features/admin/ui/Toolbar';
@@ -73,7 +74,7 @@ export default function AdminProducts() {
             render: (name, row) => (
                 <div className="catalog-row">
                     {row.image
-                        ? <img src={row.image} alt={name} className="catalog-row__thumb" />
+                        ? <img src={optimizeImageUrl(row.image, { width: 120 })} alt={name} className="catalog-row__thumb" />
                         : <div className="catalog-row__thumb catalog-row__thumb--empty"><Package size={16} /></div>}
                     <div>
                         <div className="catalog-row__name">{name}</div>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Trash2, Plus, X } from 'lucide-react';
 import { TECHNICAL_CONDITION_OPTIONS } from '../../../constants/technicalConditions';
+import { optimizeImageUrl } from '../../../utils/imageOptimize';
 
 /**
  * Rent-specific product details: serial number, condition, costs,
@@ -193,7 +194,7 @@ export default function ProductRentDetails({ formData, onChange }) {
                                             onClick={() => setPreviewImage(link)}
                                             title="Відкрити фото"
                                         >
-                                            <img src={link} alt="" />
+                                            <img src={optimizeImageUrl(link, { width: 150 })} alt="" />
                                         </button>
                                         <button
                                             type="button"
@@ -222,7 +223,7 @@ export default function ProductRentDetails({ formData, onChange }) {
                                 <X size={18} />
                             </button>
                         </div>
-                        <img src={previewImage} alt="Адмінське фото" className="product-rent-lightbox-img" />
+                        <img src={optimizeImageUrl(previewImage, { width: 1000 })} alt="Адмінське фото" className="product-rent-lightbox-img" />
                         {adminImages.length > 1 && (
                             <div className="product-rent-lightbox-nav">
                                 <button

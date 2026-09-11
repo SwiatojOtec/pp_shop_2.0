@@ -4,6 +4,7 @@ import {
     ArrowRightLeft, Wrench, CheckCircle2, Hash, EyeOff, Eye, Trash2, ClipboardList,
 } from 'lucide-react';
 import { warehouseApi, inventoryApi, productsApi } from '../../../../services/api';
+import { optimizeImageUrl } from '../../../../utils/imageOptimize';
 import { useToast } from '../../../../context/ToastContext';
 import Drawer from '../../ui/Drawer';
 import ConfirmDialog from '../../ui/ConfirmDialog';
@@ -496,7 +497,7 @@ export default function ProductWorkDrawer({
                                     className="stock-drawer-photo-thumb"
                                     onClick={() => setGallery({ urls: p.adminImages, index: i })}
                                 >
-                                    <img src={url} alt="" loading="lazy" />
+                                    <img src={optimizeImageUrl(url, { width: 150 })} alt="" loading="lazy" />
                                 </button>
                             ))}
                         </div>
@@ -548,7 +549,7 @@ export default function ProductWorkDrawer({
             {gallery && gallery.urls[gallery.index] && (
                 <div className="stock-gallery-overlay" role="dialog" aria-modal="true" aria-label="Адмінські фото" onMouseDown={() => setGallery(null)}>
                     <div className="stock-gallery-card" onMouseDown={(e) => e.stopPropagation()}>
-                        <img src={gallery.urls[gallery.index]} alt="Адмінське фото" className="stock-gallery-image" />
+                        <img src={optimizeImageUrl(gallery.urls[gallery.index], { width: 1000 })} alt="Адмінське фото" className="stock-gallery-image" />
                         {gallery.urls.length > 1 && (
                             <div className="stock-gallery-nav">
                                 <button

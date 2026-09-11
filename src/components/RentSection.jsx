@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { getCategorySlug } from '../utils/categoryMapping';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import { productsApi } from '../services/api';
 import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import './RentSection.css';
@@ -122,7 +123,7 @@ export default function RentSection() {
                                             <>
                                     <div className="product-image-container">
                                         <Link to={`/orenda/${product.slug}`}>
-                                            <img src={product.image} alt={product.name} className="product-image" />
+                                            <img src={optimizeImageUrl(product.image, { width: 300 })} alt={product.name} className="product-image" />
                                         </Link>
                                         <button
                                             className="add-to-cart-btn"

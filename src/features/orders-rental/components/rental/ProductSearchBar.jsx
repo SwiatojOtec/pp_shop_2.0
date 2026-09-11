@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
 import { formatRentCatalogPriceCaption } from '../../../../utils/rentPricing';
+import { optimizeImageUrl } from '../../../../utils/imageOptimize';
 
 export default function ProductSearchBar({ searchQuery, onSearchChange, searchResults, onSelectProduct }) {
     return (
@@ -16,7 +17,7 @@ export default function ProductSearchBar({ searchQuery, onSearchChange, searchRe
                 <div className="search-dropdown">
                     {searchResults.map(p => (
                         <div key={p.id} className="search-dropdown-item" onClick={() => onSelectProduct(p)}>
-                            <img src={p.image} alt="" />
+                            <img src={optimizeImageUrl(p.image, { width: 100 })} alt="" />
                             <div>
                                 <div className="sdi-name">{p.name}</div>
                                 <div className="sdi-sub">{p.category} · {formatRentCatalogPriceCaption(p)}</div>

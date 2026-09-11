@@ -4,6 +4,7 @@ import { Heart, ShoppingCart, Eye, Trash2 } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
 import { getCategorySlug } from '../utils/categoryMapping';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import './Favorites.css';
 
 export default function Favorites() {
@@ -63,7 +64,7 @@ export default function Favorites() {
                             <div className="favorite-image-container">
                                 <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
                                     <img
-                                        src={product.image}
+                                        src={optimizeImageUrl(product.image, { width: 300 })}
                                         alt={product.name}
                                         className="favorite-image"
                                     />

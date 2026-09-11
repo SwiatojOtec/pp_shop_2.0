@@ -1,5 +1,6 @@
 import { Plus, X, Sparkles } from 'lucide-react';
 import { formatRentCatalogPriceCaption } from '../../../../utils/rentPricing';
+import { optimizeImageUrl } from '../../../../utils/imageOptimize';
 
 export default function UpsellPanel({
     visible,
@@ -32,7 +33,7 @@ export default function UpsellPanel({
                             className={`upsell-item ${alreadyAdded ? 'upsell-item--added' : ''}`}
                             onClick={() => !alreadyAdded && onAddProduct(p)}
                         >
-                            <img src={p.image} alt={p.name} className="upsell-item-img" />
+                            <img src={optimizeImageUrl(p.image, { width: 150 })} alt={p.name} className="upsell-item-img" />
                             <div className="upsell-item-info">
                                 <span className="upsell-item-name">{p.name}</span>
                                 <span className="upsell-item-price">{formatRentCatalogPriceCaption(p)}</span>

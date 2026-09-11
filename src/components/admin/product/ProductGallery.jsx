@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Image as ImageIcon, Trash2, Plus, X } from 'lucide-react';
+import { optimizeImageUrl } from '../../../utils/imageOptimize';
 
 /**
  * Product gallery: main image + additional images.
@@ -27,7 +28,7 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
                 <div className="image-upload-area">
                     {mainImage ? (
                         <div className="product-gallery-main-preview">
-                            <img src={mainImage} alt="Preview" />
+                            <img src={optimizeImageUrl(mainImage, { width: 300 })} alt="Preview" />
                             <button
                                 type="button"
                                 onClick={() => onMainChange('')}
@@ -60,7 +61,7 @@ export default function ProductGallery({ mainImage, images = [], onMainChange, o
                     {images.map((img, i) => (
                         <div key={i} className="admin-image-card">
                             <div className="admin-image-preview-btn">
-                                <img src={img} alt={`Gallery ${i}`} />
+                                <img src={optimizeImageUrl(img, { width: 150 })} alt={`Gallery ${i}`} />
                             </div>
                             <button
                                 type="button"

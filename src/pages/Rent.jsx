@@ -7,6 +7,7 @@ import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { productsApi, brandsApi, rentCategoriesApi } from '../services/api';
 import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import './Shop.css';
 
 const RENT_CATEGORY_NAME = 'Оренда інструменту';
@@ -357,7 +358,7 @@ export default function Rent() {
                                             </span>
                                         )}
                                         <Link to={`/orenda/${product.slug}`}>
-                                            <img src={product.image} alt={product.name} className="product-image" />
+                                            <img src={optimizeImageUrl(product.image, { width: 300 })} alt={product.name} className="product-image" />
                                         </Link>
                                         <button
                                             className={`wishlist-btn ${isFavorite(product._id || product.id) ? 'active' : ''}`}
@@ -424,7 +425,7 @@ export default function Rent() {
                         </button>
                         <div className="modal-grid">
                             <div className="modal-image">
-                                <img src={quickViewProduct.image} alt={quickViewProduct.name} />
+                                <img src={optimizeImageUrl(quickViewProduct.image, { width: 500 })} alt={quickViewProduct.name} />
                             </div>
                             <div className="modal-info">
                                 <h2 className="modal-title">{quickViewProduct.name}</h2>

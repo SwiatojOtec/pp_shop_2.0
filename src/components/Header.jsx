@@ -6,6 +6,7 @@ import { useFavorites } from '../context/FavoritesContext';
 import { productsApi } from '../services/api';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import './Header.css';
 
 export default function Header({ onCartClick }) {
@@ -137,7 +138,7 @@ export default function Header({ onCartClick }) {
                   >
                     <div className="search-dropdown__img">
                       {p.image
-                        ? <img src={p.image} alt={p.name} />
+                        ? <img src={optimizeImageUrl(p.image, { width: 100 })} alt={p.name} />
                         : <div className="search-dropdown__img-placeholder" />
                       }
                     </div>

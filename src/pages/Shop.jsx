@@ -4,6 +4,7 @@ import { Filter, ChevronDown, Plus, X, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategoryName, getCategorySlug } from '../utils/categoryMapping';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import { productsApi, categoriesApi, brandsApi } from '../services/api';
 import './Shop.css';
 
@@ -338,7 +339,7 @@ export default function Shop() {
                                                 </span>
                                             )}
                                             <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
-                                                <img src={product.image} alt={product.name} className="product-image" />
+                                                <img src={optimizeImageUrl(product.image, { width: 300 })} alt={product.name} className="product-image" />
                                             </Link>
                                             <button
                                                 className={`wishlist-btn ${isFavorite(product._id || product.id) ? 'active' : ''}`}
@@ -405,7 +406,7 @@ export default function Shop() {
                         </button>
                         <div className="modal-grid">
                             <div className="modal-image">
-                                <img src={quickViewProduct.image} alt={quickViewProduct.name} />
+                                <img src={optimizeImageUrl(quickViewProduct.image, { width: 500 })} alt={quickViewProduct.name} />
                             </div>
                             <div className="modal-info">
                                 <h2 className="modal-title">{quickViewProduct.name}</h2>

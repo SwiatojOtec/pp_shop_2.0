@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { X } from 'lucide-react';
 import { productsApi } from '../../../services/api';
 import { formatRentCatalogPriceCaption } from '../../../utils/rentPricing';
+import { optimizeImageUrl } from '../../../utils/imageOptimize';
 
 /**
  * Rent product "also rented with" picker.
@@ -57,7 +58,7 @@ export default function ProductRelatedSearch({ productId, selected = [], onChang
                     selected.map((item) => (
                         <div key={item.id} className="related-tag">
                             {item.image && (
-                                <img src={item.image} alt="" className="related-tag-img" />
+                                <img src={optimizeImageUrl(item.image, { width: 60 })} alt="" className="related-tag-img" />
                             )}
                             <span>{item.name}</span>
                             <button
@@ -89,7 +90,7 @@ export default function ProductRelatedSearch({ productId, selected = [], onChang
                                 className="related-dropdown-item"
                                 onClick={() => addItem(p)}
                             >
-                                <img src={p.image} alt="" className="related-dropdown-img" />
+                                <img src={optimizeImageUrl(p.image, { width: 100 })} alt="" className="related-dropdown-img" />
                                 <div>
                                     <div className="related-dropdown-name">{p.name}</div>
                                     <div className="related-dropdown-meta">{p.category} · {formatRentCatalogPriceCaption(p)}</div>

@@ -3,6 +3,7 @@ import { X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import './Cart.css';
 
 export default function Cart({ isOpen, onClose }) {
@@ -34,7 +35,7 @@ export default function Cart({ isOpen, onClose }) {
                             {cartItems.map(item => (
                                 <div key={item.id} className="cart-item">
                                     <div className="item-img">
-                                        <img src={item.image} alt={item.name} />
+                                        <img src={optimizeImageUrl(item.image, { width: 150 })} alt={item.name} />
                                     </div>
                                     <div className="item-info">
                                         <h3>{item.name}</h3>

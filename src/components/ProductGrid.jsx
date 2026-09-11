@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { addToCartWithToast } from '../utils/addToCartWithToast';
 import { useFavorites } from '../context/FavoritesContext';
 import { getCategorySlug } from '../utils/categoryMapping';
+import { optimizeImageUrl } from '../utils/imageOptimize';
 import { productsApi } from '../services/api';
 import './ProductGrid.css';
 
@@ -69,7 +70,7 @@ export default function ProductGrid() {
                                     </span>
                                 )}
                                 <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`}>
-                                    <img src={product.image} alt={product.name} className="product-image" />
+                                    <img src={optimizeImageUrl(product.image, { width: 300 })} alt={product.name} className="product-image" />
                                 </Link>
                                 <button
                                     className={`wishlist-btn ${isFavorite(product._id || product.id) ? 'active' : ''}`}
