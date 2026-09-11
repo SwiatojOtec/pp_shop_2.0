@@ -10,12 +10,13 @@ const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../.
 const { generateAppNumber, generateOrderNumber } = require('../utils/orderNumbering');
 const { recalcRentQuantitiesForItemsLists, shouldBeOverdue } = require('./rentalApplicationService');
 
-/** Inclusive calendar days: 11.08 → 15.08 = 5. */
-function calcInclusiveDays(from, to) {
+/** Rental days = nights between dates, return day is free: 11.08 → 15.08 = 4.
+ *  Minimum 1 for a same-day pickup/return. */
+function calcRentDays(from, to) {
     if (!from || !to) return 0;
     const ms = new Date(to) - new Date(from);
     if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.floor(ms / 86400000) + 1;
+    return Math.max(1, Math.floor(ms / 86400000));
 }
 
 /** First value among `a`/`b` that isn't null/undefined/''. */
@@ -60,7 +61,7 @@ function buildRentItemsFromOrder(order, productsById, previousItems = []) {
             const rentPriceTiers = coerceDbRentPriceTiers(prev.rentPriceTiers || product.rentPriceTiers);
             const rentFrom = line.rentFrom || prev.rentFrom || '';
             const rentTo = line.rentTo || prev.rentTo || '';
-            const dateDays = calcInclusiveDays(rentFrom, rentTo);
+            const dateDays = calcRentDays(rentFrom, rentTo);
             const rentDays = dateDays > 0
                 ? dateDays
                 : Math.max(1, Number(line.rentDays) || Number(prev.days) || 1);

@@ -18,11 +18,12 @@ function rangesOverlap(aFrom, aTo, bFrom, bTo) {
     return aFrom <= bTo && aTo >= bFrom;
 }
 
-function calcInclusiveDays(from, to) {
+/** Rental days = nights between dates, return day is free. Minimum 1 for a same-day pickup/return. */
+function calcRentDays(from, to) {
     if (!from || !to) return 0;
     const ms = new Date(to) - new Date(from);
     if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.floor(ms / 86400000) + 1;
+    return Math.max(1, Math.floor(ms / 86400000));
 }
 
 function serializeBooking(row, product = null) {
@@ -342,7 +343,7 @@ async function convertBookingToOrder(id, createdBy = null) {
         throw err;
     }
 
-    const days = calcInclusiveDays(row.rentFrom, row.rentTo) || 1;
+    const days = calcRentDays(row.rentFrom, row.rentTo) || 1;
     const qty = 1;
     const catalogPrice = parseFloat(product.price || 0) || 0;
     const rentPriceTiers = coerceDbRentPriceTiers(product.rentPriceTiers);

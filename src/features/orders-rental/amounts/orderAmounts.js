@@ -11,15 +11,16 @@ function roundMoney(value) {
     return Math.round((Number(value) || 0) * 100) / 100;
 }
 
-function calcInclusiveDays(from, to) {
+/** Rental days = nights between dates, return day is free. Minimum 1 for a same-day pickup/return. */
+function calcRentDays(from, to) {
     if (!from || !to) return 0;
     const ms = new Date(to) - new Date(from);
     if (Number.isNaN(ms) || ms < 0) return 0;
-    return Math.floor(ms / 86400000) + 1;
+    return Math.max(1, Math.floor(ms / 86400000));
 }
 
 function resolveOrderItemRentDays(item) {
-    const fromDates = calcInclusiveDays(item?.rentFrom, item?.rentTo);
+    const fromDates = calcRentDays(item?.rentFrom, item?.rentTo);
     if (fromDates > 0) return fromDates;
     return Math.max(1, Number(item?.rentDays) || 1);
 }
