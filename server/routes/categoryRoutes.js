@@ -44,7 +44,7 @@ router.put('/:id', authMiddleware, requireRole(CATEGORY_ROLES), async (req, res)
         const category = await Category.findByPk(req.params.id);
         if (!category) return res.status(404).json({ message: 'Category not found' });
 
-        const { name, usesPriceMatrix } = req.body;
+        const { name, priceMatrixType } = req.body;
         if (name && name !== category.name) {
             const previousName = category.name;
             category.name = name;
@@ -52,8 +52,11 @@ router.put('/:id', authMiddleware, requireRole(CATEGORY_ROLES), async (req, res)
             await category.save();
             await Product.update({ category: name }, { where: { category: previousName, isRent: false } });
         }
-        if (usesPriceMatrix !== undefined) {
-            category.usesPriceMatrix = !!usesPriceMatrix;
+        if (priceMatrixType !== undefined) {
+            if (![null, 'linear', 'grid'].includes(priceMatrixType)) {
+                return res.status(400).json({ message: 'priceMatrixType має бути null, "linear" або "grid"' });
+            }
+            category.priceMatrixType = priceMatrixType;
             await category.save();
         }
 

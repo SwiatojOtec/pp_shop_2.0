@@ -43,7 +43,7 @@ const INITIAL_FORM = {
     name: '', price: '', oldPrice: '', category: '', image: '', images: [],
     desc: '', instruction: '', adminNotes: '', sku: '', slug: '', groupId: '',
     stockStatus: 'in_stock', brand: '', packSize: 1.0, unit: 'м²', badge: '',
-    specs: {}, priceMatrix: [], availableFrom: '', kitItems: [],
+    specs: {}, priceMatrix: [], priceGrid: null, availableFrom: '', kitItems: [],
     quantityAvailable: '', showInRentCatalog: true, relatedProducts: [],
     serialNumber: '', inventoryNumber: '', technicalCondition: '',
     weightPerUnit: '', weightTotal: '', replacementCost: '', securityDeposit: '',
@@ -107,7 +107,7 @@ export default function ProductEdit({ context = 'products' }) {
     }, { replace: true });
 
     const selectedCategory = categories.find((c) => c.name === formData.category);
-    const usesPriceMatrix = !!selectedCategory?.usesPriceMatrix;
+    const priceMatrixType = selectedCategory?.priceMatrixType || null;
 
     // ── Data loading ─────────────────────────────────────────────────────────
 
@@ -204,6 +204,7 @@ export default function ProductEdit({ context = 'products' }) {
                 instruction: data.instruction || '',
                 specs: data.specs || {},
                 priceMatrix: data.priceMatrix || [],
+                priceGrid: data.priceGrid || null,
                 availableFrom: data.availableFrom || '',
                 kitItems: data.kitItems || [],
                 quantityAvailable: data.quantityAvailable ?? '',
@@ -233,7 +234,7 @@ export default function ProductEdit({ context = 'products' }) {
                 setFormData((prev) => ({
                     ...prev,
                     price: t.price, category: t.category, desc: t.desc,
-                    specs: t.specs || {}, priceMatrix: t.priceMatrix || [],
+                    specs: t.specs || {}, priceMatrix: t.priceMatrix || [], priceGrid: t.priceGrid || null,
                 }));
             }
         } catch (err) {
@@ -429,7 +430,7 @@ export default function ProductEdit({ context = 'products' }) {
                         formData={formData}
                         onChange={update}
                         isRentContext={isRentContext}
-                        usesPriceMatrix={usesPriceMatrix}
+                        priceMatrixType={priceMatrixType}
                     />
                 )}
 
@@ -448,7 +449,7 @@ export default function ProductEdit({ context = 'products' }) {
                             formData={formData}
                             onChange={update}
                             isRentContext={isRentContext}
-                            usesPriceMatrix={usesPriceMatrix}
+                            matrixKind={priceMatrixType}
                         />
                         <ProductSpecs specs={formData.specs} onChange={(val) => update('specs', val)} />
                     </>

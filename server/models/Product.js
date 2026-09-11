@@ -90,6 +90,14 @@ const Product = sequelize.define('Product', {
         type: DataTypes.JSONB, // For windowsills width/thickness/price
         defaultValue: []
     },
+    /** 2-осьова матриця цін (хімія: фасовка × ступінь глянцю тощо) —
+     *  { axisXLabel, axisYLabel, xValues, yValues, cells: [{x,y,price}] }.
+     *  Окрема колонка від priceMatrix, бо форма несумісна (масив vs об'єкт). */
+    priceGrid: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null
+    },
     groupId: {
         type: DataTypes.STRING // For grouping variants/colors
     },

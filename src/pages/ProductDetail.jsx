@@ -81,6 +81,10 @@ export default function ProductDetail() {
     const [sillLength, setSillLength] = useState('');
     const [calculatedSillPrice, setCalculatedSillPrice] = useState(0);
     const [sillError, setSillError] = useState('');
+
+    // Price Grid Selector State (хімія: фасовка × ступінь глянцю тощо)
+    const [gridX, setGridX] = useState('');
+    const [gridY, setGridY] = useState('');
     const [imageZoomOpen, setImageZoomOpen] = useState(false);
     const [sameCategoryProducts, setSameCategoryProducts] = useState([]);
     const [recentViews, setRecentViews] = useState([]);
@@ -210,6 +214,11 @@ export default function ProductDetail() {
         }
     }, [sillWidth, sillLength, product]);
 
+    const gridCell = useMemo(() => {
+        if (!product?.priceGrid || !gridX || !gridY) return null;
+        return product.priceGrid.cells?.find((c) => c.x === gridX && c.y === gridY) || null;
+    }, [product, gridX, gridY]);
+
     const galleryUrls = useMemo(() => {
         if (!product?.image) return [];
         const seen = new Set();
@@ -279,6 +288,28 @@ export default function ProductDetail() {
                 calcWidth: calcWidth,
                 length: length
             }
+        };
+
+        addToCart(customItem, 1);
+        showToast(`${product.name} додано в кошик`, 'success');
+    };
+
+    const handleAddGridToCart = () => {
+        if (!product || !product.priceGrid || !gridCell) return;
+
+        const { axisXLabel, axisYLabel } = product.priceGrid;
+        const customItem = {
+            ...product,
+            id: `${product.id}_${gridX}_${gridY}`,
+            originalId: product.id,
+            name: `${product.name} (${axisXLabel}: ${gridX}, ${axisYLabel}: ${gridY})`,
+            price: gridCell.price,
+            unit: product.unit || 'шт',
+            packSize: 1,
+            customAttributes: {
+                [axisXLabel]: gridX,
+                [axisYLabel]: gridY,
+            },
         };
 
         addToCart(customItem, 1);
@@ -868,8 +899,60 @@ export default function ProductDetail() {
                             </div>
                         )}
 
-                        {/* Window Sill Calculator */}
-                        {product.priceMatrix && product.priceMatrix.length > 0 ? (
+                        {/* Price Grid Selector (хімія: фасовка × ступінь глянцю тощо) */}
+                        {product.priceGrid ? (
+                            <div className="price-grid-selector" style={{ background: '#f9f9f9', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' }}>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>Оберіть параметри:</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                                    <div className="calc-group">
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>{product.priceGrid.axisXLabel}</label>
+                                        <select
+                                            value={gridX}
+                                            onChange={(e) => setGridX(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                        >
+                                            <option value="">Оберіть...</option>
+                                            {product.priceGrid.xValues.map((x) => (
+                                                <option key={x} value={x}>{x}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="calc-group">
+                                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '5px' }}>{product.priceGrid.axisYLabel}</label>
+                                        <select
+                                            value={gridY}
+                                            onChange={(e) => setGridY(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                        >
+                                            <option value="">Оберіть...</option>
+                                            {product.priceGrid.yValues.map((y) => (
+                                                <option key={y} value={y}>{y}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #ddd', textAlign: 'right' }}>
+                                    {gridCell ? (
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                                            Ціна: {Number(gridCell.price).toLocaleString()} ₴
+                                        </span>
+                                    ) : (
+                                        <span style={{ fontSize: '0.85rem', color: '#666' }}>Оберіть обидва параметри, щоб побачити ціну</span>
+                                    )}
+                                </div>
+
+                                <button
+                                    className="btn btn-primary buy-btn"
+                                    onClick={handleAddGridToCart}
+                                    disabled={!gridCell}
+                                    style={{ width: '100%', marginTop: '15px' }}
+                                >
+                                    <ShoppingCart size={20} />
+                                    Додати в кошик
+                                </button>
+                            </div>
+                        ) : product.priceMatrix && product.priceMatrix.length > 0 ? (
                             <div className="sill-calculator" style={{ background: '#f9f9f9', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' }}>
                                 <h4 style={{ fontSize: '0.9rem', marginBottom: '15px', fontWeight: 700 }}>Калькулятор підвіконня:</h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>

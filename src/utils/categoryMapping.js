@@ -3,6 +3,7 @@ export const CATEGORY_MAP = {
     'laminat': 'Ламінат',
     'vinilova_pidloha': 'Вінілова підлога',
     'pidvikonnya': 'Підвіконня',
+    'himiya': 'Хімія',
     'stinovi_paneli': 'Стінові панелі',
     'plintusa': 'Плінтуса'
 };

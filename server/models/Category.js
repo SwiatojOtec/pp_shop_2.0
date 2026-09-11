@@ -25,6 +25,14 @@ const Category = sequelize.define('Category', {
     usesPriceMatrix: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
+    },
+    /** Який редактор ціни показувати у картці товару цієї категорії:
+     *  'linear' — калькулятор ширини (підвіконня, Product.priceMatrix),
+     *  'grid' — 2-осьова матриця (хімія, Product.priceGrid), null — звичайна ціна. */
+    priceMatrixType: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
     }
 });
 

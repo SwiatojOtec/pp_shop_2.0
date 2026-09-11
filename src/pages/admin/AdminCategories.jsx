@@ -127,6 +127,16 @@ export default function AdminCategories() {
         }
     }
 
+    async function handleSetPriceMatrixType(id, value) {
+        const priceMatrixType = value || null;
+        try {
+            await categoriesApi.update(id, { priceMatrixType });
+            setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, priceMatrixType } : c)));
+        } catch (err) {
+            showToast(err.message || 'Не вдалося змінити тип матриці цін', 'warning');
+        }
+    }
+
     async function handleAddRentCategory(e) {
         e.preventDefault();
         if (!newRentCategory.trim()) return;
@@ -238,6 +248,7 @@ export default function AdminCategories() {
                                 <thead>
                                     <tr>
                                         <th className="ds-table-th">Назва</th>
+                                        <th className="ds-table-th">Матриця цін</th>
                                         <th className="ds-table-th ds-table-th--center">На сайті</th>
                                         <th className="ds-table-th ds-table-th--right">Дії</th>
                                     </tr>
@@ -252,6 +263,17 @@ export default function AdminCategories() {
                                                     className="catalog-input catalog-input--inline"
                                                     onBlur={(e) => handleRenameCategory(cat.id, e.target.value)}
                                                 />
+                                            </td>
+                                            <td className="ds-table-td">
+                                                <select
+                                                    className="catalog-select"
+                                                    value={cat.priceMatrixType || ''}
+                                                    onChange={(e) => handleSetPriceMatrixType(cat.id, e.target.value)}
+                                                >
+                                                    <option value="">Немає</option>
+                                                    <option value="linear">Ширина (підвіконня)</option>
+                                                    <option value="grid">Матриця (2 параметри)</option>
+                                                </select>
                                             </td>
                                             <td className="ds-table-td ds-table-td--center">
                                                 <Switch

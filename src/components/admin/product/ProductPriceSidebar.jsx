@@ -1,12 +1,13 @@
 import ProductRentPriceTiers from './ProductRentPriceTiers';
 import ProductPriceMatrix from './ProductPriceMatrix';
+import ProductPriceGrid from './ProductPriceGrid';
 
-/** Ціни tab: price, badge/sale, rent tiers, price-matrix (usesPriceMatrix categories). */
+/** Ціни tab: price, badge/sale, rent tiers, price-matrix ('linear'/'grid' categories). */
 export default function ProductPriceSidebar({
     formData,
     onChange,
     isRentContext,
-    usesPriceMatrix,
+    priceMatrixType,
 }) {
     return (
         <div className="admin-section">
@@ -66,10 +67,17 @@ export default function ProductPriceSidebar({
                 )}
             </div>
 
-            {usesPriceMatrix && (
+            {priceMatrixType === 'linear' && (
                 <ProductPriceMatrix
                     matrix={formData.priceMatrix}
                     onChange={(val) => onChange('priceMatrix', val)}
+                />
+            )}
+
+            {priceMatrixType === 'grid' && (
+                <ProductPriceGrid
+                    grid={formData.priceGrid}
+                    onChange={(val) => onChange('priceGrid', val)}
                 />
             )}
         </div>

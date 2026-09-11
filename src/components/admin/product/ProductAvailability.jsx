@@ -4,7 +4,8 @@
  * no editable warehouse quantity here anymore, `quantityAvailable` for rent is shown
  * read-only, computed from stock.
  */
-export default function ProductAvailability({ formData, onChange, isRentContext, usesPriceMatrix }) {
+export default function ProductAvailability({ formData, onChange, isRentContext, matrixKind }) {
+    const hasMatrix = matrixKind === 'linear' || matrixKind === 'grid';
     return (
         <div className="admin-section">
             <h2 className="section-title">Наявність</h2>
@@ -14,8 +15,8 @@ export default function ProductAvailability({ formData, onChange, isRentContext,
                     <select
                         value={formData.unit}
                         onChange={(e) => onChange('unit', e.target.value)}
-                        disabled={usesPriceMatrix}
-                        className={usesPriceMatrix ? 'input-disabled' : ''}
+                        disabled={matrixKind === 'linear'}
+                        className={matrixKind === 'linear' ? 'input-disabled' : ''}
                     >
                         {isRentContext ? (
                             <>
@@ -33,7 +34,7 @@ export default function ProductAvailability({ formData, onChange, isRentContext,
                     </select>
                 </div>
 
-                {!usesPriceMatrix && !isRentContext && (
+                {!hasMatrix && !isRentContext && (
                     <div className="form-group">
                         <label>Площа в упаковці ({formData.unit})</label>
                         <input
