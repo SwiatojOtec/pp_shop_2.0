@@ -262,3 +262,7 @@ export const sellersApi = {
     patch: (id, data) => apiPatch(`/api/sellers/${id}`, data),
     remove: (id) => apiDelete(`/api/sellers/${id}`),
 };
+
+export const geocodeApi = {
+    lookup: (address) => apiGet('/api/geocode', { q: address }),
+};

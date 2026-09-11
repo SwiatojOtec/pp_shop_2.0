@@ -5,6 +5,12 @@ const OFFICE_CONTACTS = {
     phone: '+38 098 188 00 44; +38 095 672 44 00',
     email: 'office@ppbud.info',
     warehouseAddress: 'м. Київ, вул. Холодноярська 2а',
+    // Nominatim doesn't reliably resolve this address by name (tried several
+    // Cyrillic phrasings, all empty) — fixed once by reverse-geocoding the
+    // known "Пан Прокат" listing at this address, so DealRouteMap can skip
+    // geocoding the warehouse and go straight to routing.
+    warehouseLat: 50.3976618,
+    warehouseLon: 30.4818019,
 };
 
 /**

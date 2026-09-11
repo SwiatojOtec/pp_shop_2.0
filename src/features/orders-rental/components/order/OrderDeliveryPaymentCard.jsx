@@ -54,8 +54,20 @@ export default function OrderDeliveryPaymentCard({
                     </div>
                     <div className="ds-field">
                         <dt>Доставка</dt>
-                        <dd>{DELIVERY_LABELS[draft.deliveryMethod] || draft.deliveryMethod || '—'}</dd>
+                        <dd>
+                            <select value={draft.deliveryMethod || 'pickup'} onChange={(e) => setField('deliveryMethod', e.target.value)}>
+                                {Object.entries(DELIVERY_LABELS).map(([value, label]) => (
+                                    <option key={value} value={value}>{label}</option>
+                                ))}
+                            </select>
+                        </dd>
                     </div>
+                    {draft.deliveryMethod === 'delivery' && (
+                        <div className="ds-field">
+                            <dt>Адреса доставки</dt>
+                            <dd><input type="text" placeholder="Місто, вулиця, будинок" value={draft.address || ''} onChange={(e) => setField('address', e.target.value)} /></dd>
+                        </div>
+                    )}
                     <div className="ds-field">
                         <dt>Оплата</dt>
                         <dd>{PAYMENT_LABELS[draft.paymentMethod] || draft.paymentMethod || '—'}</dd>

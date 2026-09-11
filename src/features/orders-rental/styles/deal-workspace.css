@@ -138,6 +138,22 @@
     text-decoration: underline;
 }
 
+.deal-map-address-error {
+    color: var(--ds-danger);
+}
+
+.deal-map-wrap {
+    margin-top: var(--ds-space-3);
+    border-radius: var(--ds-radius-md);
+    overflow: hidden;
+}
+
+.deal-map-route-summary {
+    margin: var(--ds-space-3) 0 0;
+    font-size: 0.85rem;
+    color: var(--ds-text-muted);
+}
+
 .deal-responsible {
     margin-top: var(--ds-space-3);
     padding-top: var(--ds-space-3);

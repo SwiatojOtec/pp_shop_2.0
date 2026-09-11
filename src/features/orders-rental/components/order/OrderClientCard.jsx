@@ -100,11 +100,6 @@ export default function OrderClientCard({
                         <dt>Email</dt>
                         <dd><input type="email" value={draft.customerEmail || ''} onChange={(e) => setField('customerEmail', e.target.value)} placeholder="email@example.com" /></dd>
                     </div>
-                    <div className="ds-field">
-                        <dt>Адреса</dt>
-                        <dd><input type="text" placeholder="Доставка або самовивіз" value={draft.address || ''} onChange={(e) => setField('address', e.target.value)} /></dd>
-                    </div>
-
                     {hasRent && onRentalExtraChange && (
                         <>
                             <div className="ds-field">

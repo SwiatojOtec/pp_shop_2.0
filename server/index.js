@@ -27,6 +27,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const warehouseRoutes = require('./routes/warehouseRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const warehouseDashboardRoutes = require('./routes/warehouseDashboardRoutes');
+const geocodeRoutes = require('./routes/geocodeRoutes');
 require('./models/Warehouse');
 require('./models/InventoryItem');
 require('./models/WarehouseEvent');
@@ -121,6 +122,7 @@ app.use('/api/admin/dashboard', dashboardRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/warehouse', warehouseDashboardRoutes);
+app.use('/api/geocode', geocodeRoutes);
 // Database Connection and Sync
 const PORT = process.env.PORT || 5000;
 

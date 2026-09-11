@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersApi } from '../../../services/api';
 import { useToast } from '../../../context/ToastContext';
+import { getRentalLessor, DEFAULT_SELLER_ID } from '../../../constants/sellers';
 import ConfirmDialog from '../../admin/ui/ConfirmDialog';
 import { orderHasRentItems } from '../amounts/orderHelpers';
 import { useOrderData } from '../hooks/useOrderData';
@@ -18,6 +19,10 @@ import '../styles/RentalApplicationForm.css';
 import '../styles/deal-workspace.css';
 
 const emptyExtras = () => ({ passport: '', siteAddress: '', responsible: [] });
+
+// Leaflet/react-leaflet only load for the (minority of) deals that actually
+// show the map — keeps them out of the main admin bundle.
+const DealRouteMap = lazy(() => import('../components/order/DealRouteMap'));
 
 export default function DealWorkspace() {
     const { id } = useParams();
@@ -214,6 +219,8 @@ export default function DealWorkspace() {
     if (loading) return <div className="od-loading">Завантаження...</div>;
     if (!order || !draft) return <div className="od-loading od-loading--err">Замовлення не знайдено</div>;
 
+    const lessor = getRentalLessor(draft.sellerId || DEFAULT_SELLER_ID);
+
     return (
         <div className="deal-workspace">
             <OrderHeader
@@ -255,6 +262,14 @@ export default function DealWorkspace() {
                         hasRent={hasRent}
                         rentProductIds={rentProductIds}
                     />
+                    <Suspense fallback={null}>
+                        <DealRouteMap
+                            originAddress={lessor.warehouseAddress}
+                            originPoint={{ lat: lessor.warehouseLat, lon: lessor.warehouseLon }}
+                            siteAddress={rentalExtras.siteAddress}
+                            deliveryAddress={draft.deliveryMethod === 'delivery' ? draft.address : ''}
+                        />
+                    </Suspense>
                 </div>
 
                 <OrderItemsCard
