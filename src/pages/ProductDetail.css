@@ -13,7 +13,7 @@
 
 .rent-product-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
     gap: 28px;
     align-items: start;
     width: 100%;
@@ -29,7 +29,7 @@
 
 .rent-top-row {
     display: grid;
-    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
     gap: 28px;
     align-items: start;
 }
@@ -46,7 +46,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-width: 300px;
+    max-width: 440px;
 }
 
 .rent-price-col {
@@ -418,6 +418,27 @@
     min-width: 0;
 }
 
+/* Кількість + «Замовити» у вузькому сайдбарі оренди — рядком нижче, а не
+   поруч: .buy-btn (спільний з магазином) має flex:1 без min-width:0, тож
+   поруч із лічильником (~164px) у колонці ~300-340px він не стискається,
+   а вилазить за межі сайдбару. Складання в колонку прибирає переповнення
+   за будь-якої ширини й заразом дає більшу, помітнішу кнопку. */
+.rent-sidebar .purchase-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.rent-sidebar .purchase-section .quantity-control {
+    align-self: flex-start;
+}
+
+.rent-sidebar .purchase-section .buy-btn {
+    width: 100%;
+    min-width: 0;
+}
+
 /* Fullscreen image lightbox */
 .image-lightbox {
     position: fixed;
@@ -548,17 +569,17 @@
 /* Large screens */
 @media (max-width: 1200px) {
     .rent-product-layout {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
         gap: 20px;
     }
 
     .rent-top-row {
-        grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
         gap: 20px;
     }
 
     .rent-gallery {
-        max-width: 260px;
+        max-width: 300px;
     }
 }
 

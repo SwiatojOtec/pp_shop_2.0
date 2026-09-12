@@ -672,7 +672,7 @@ export default function ProductDetail() {
                                 </div>
                             )}
 
-                            <div className="purchase-section" style={{ marginBottom: '16px' }}>
+                            <div className="purchase-section">
                                 <div className="quantity-control">
                                     <button onClick={() => setQuantity(prev => Math.max(1, prev - 1))}>
                                         <Minus size={18} />
@@ -693,7 +693,6 @@ export default function ProductDetail() {
                                 <button
                                     className="btn btn-primary buy-btn"
                                     onClick={() => addToCartWithToast(product, quantity, cartItems, addToCart, showToast)}
-                                    style={{ flex: 1 }}
                                     disabled={getMaxRentQuantity() === 0}
                                 >
                                     <ShoppingCart size={20} />
