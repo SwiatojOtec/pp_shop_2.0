@@ -74,8 +74,9 @@ async function buildDashboard(user) {
         }
     }
 
-    if (isOwner) {
+    if (isOwner || role === 'shop_rent') {
         // Запит на видалення складу — той самий журнал, що й на Склад → Склади.
+        // Підтверджувати запит може owner і shop_rent (server/routes/warehouseDashboardRoutes.js).
         const pendingDeleteRequests = await WarehouseEvent.count({ where: { action: 'warehouse_delete_request' } });
         if (pendingDeleteRequests > 0) {
             rows.push({
@@ -86,7 +87,9 @@ async function buildDashboard(user) {
                 date: todayIso,
             });
         }
+    }
 
+    if (isOwner) {
         // Нові користувачі — тільки owner бачить і може діяти (Компанія — owner-only).
         const pendingUsers = await User.count({ where: { status: 'pending' } });
         if (pendingUsers > 0) {

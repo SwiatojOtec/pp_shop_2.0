@@ -240,7 +240,11 @@ router.get('/events', ...GUARD, async (req, res) => {
     }
 });
 
-router.get('/delete-requests', authMiddleware, requireRole(['owner']), async (req, res) => {
+// Читання списку запитів — усім, хто керує складами (той самий GUARD, що й
+// у warehouseRoutes.js), інакше Promise.all на клієнті (StockWarehouses.jsx)
+// падає цілком через 403 на цьому одному запиті, і вся сторінка лишається
+// порожньою для не-owner ролей.
+router.get('/delete-requests', authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud']), async (req, res) => {
     try {
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 100));
         const events = await WarehouseEvent.findAll({
@@ -254,7 +258,11 @@ router.get('/delete-requests', authMiddleware, requireRole(['owner']), async (re
     }
 });
 
-router.post('/delete-requests/:id/approve', authMiddleware, requireRole(['owner']), async (req, res) => {
+// Підтвердження/відхилення запиту — owner і shop_rent (менеджер магазину та
+// оренди має те саме повне керування складами, що й на рівні warehouseRoutes.js:
+// створення/редагування/запит на видалення), щоб не тримати owner єдиним
+// вузьким місцем для рутинного видалення порожніх складів.
+router.post('/delete-requests/:id/approve', authMiddleware, requireRole(['owner', 'shop_rent']), async (req, res) => {
     try {
         const ev = await WarehouseEvent.findByPk(req.params.id);
         if (!ev || ev.action !== 'warehouse_delete_request') {
@@ -293,7 +301,7 @@ router.post('/delete-requests/:id/approve', authMiddleware, requireRole(['owner'
     }
 });
 
-router.post('/delete-requests/:id/reject', authMiddleware, requireRole(['owner']), async (req, res) => {
+router.post('/delete-requests/:id/reject', authMiddleware, requireRole(['owner', 'shop_rent']), async (req, res) => {
     try {
         const ev = await WarehouseEvent.findByPk(req.params.id);
         if (!ev || ev.action !== 'warehouse_delete_request') {
