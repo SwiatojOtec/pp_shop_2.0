@@ -8,6 +8,7 @@ import { useFavorites } from '../context/FavoritesContext';
 import { productsApi, brandsApi, rentCategoriesApi } from '../services/api';
 import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import { optimizeImageUrl } from '../utils/imageOptimize';
+import { getOrderedSpecEntries } from '../utils/specsOrder';
 import './Shop.css';
 
 const RENT_CATEGORY_NAME = 'Оренда інструменту';
@@ -441,7 +442,7 @@ export default function Rent() {
                                 </div>
                                 {quickViewProduct.specs && Object.keys(quickViewProduct.specs).length > 0 ? (
                                     <div className="modal-specs">
-                                        {Object.entries(quickViewProduct.specs).slice(0, 7).map(([label, value], i) => (
+                                        {getOrderedSpecEntries(quickViewProduct.specs, quickViewProduct.specsOrder).slice(0, 7).map(([label, value], i) => (
                                             <div key={i} className="modal-spec-row">
                                                 <span className="modal-spec-label">{label}</span>
                                                 <span className="modal-spec-value">{value}</span>
@@ -449,7 +450,7 @@ export default function Rent() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="modal-desc">{quickViewProduct.desc}</p>
+                                    <div className="modal-desc" dangerouslySetInnerHTML={{ __html: quickViewProduct.desc }} />
                                 )}
                                 <div className="modal-actions">
                                     <button className="btn btn-primary add-btn" onClick={() => addToCartWithToast(quickViewProduct, 1, cartItems, addToCart, showToast)}>

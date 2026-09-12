@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { warehouseApi, inventoryApi, productsApi } from '../../../../services/api';
 import { optimizeImageUrl } from '../../../../utils/imageOptimize';
+import { getOrderedSpecEntries } from '../../../../utils/specsOrder';
 import { useToast } from '../../../../context/ToastContext';
 import Drawer from '../../ui/Drawer';
 import ConfirmDialog from '../../ui/ConfirmDialog';
@@ -446,7 +447,11 @@ export default function ProductWorkDrawer({
 
                 <div className="stock-drawer-section">
                     <div className="stock-drawer-section-title">Опис</div>
-                    <p className="stock-drawer-desc">{p.desc || '—'}</p>
+                    {p.desc ? (
+                        <div className="stock-drawer-desc" dangerouslySetInnerHTML={{ __html: p.desc }} />
+                    ) : (
+                        <p className="stock-drawer-desc">—</p>
+                    )}
                 </div>
 
                 <div className="stock-drawer-section stock-drawer-grid">
@@ -462,7 +467,7 @@ export default function ProductWorkDrawer({
                 {p.specs && Object.keys(p.specs).length > 0 && (
                     <div className="stock-drawer-section">
                         <div className="stock-drawer-section-title">Характеристики</div>
-                        {Object.entries(p.specs).map(([key, val]) => (
+                        {getOrderedSpecEntries(p.specs, p.specsOrder).map(([key, val]) => (
                             <div key={key} className="stock-drawer-spec-row"><strong>{key}:</strong> {String(val)}</div>
                         ))}
                     </div>

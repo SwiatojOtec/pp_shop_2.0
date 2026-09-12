@@ -1,3 +1,24 @@
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import '../../../features/admin/ui/admin-ui.css';
+
+const QUILL_MODULES = {
+    toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'image'],
+        ['clean'],
+    ],
+};
+
+const QUILL_FORMATS = [
+    'header',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+];
+
 /**
  * Product basic info section: name, description, instruction, admin notes.
  */
@@ -17,22 +38,30 @@ export default function ProductBasicInfo({ formData, onChange }) {
                 </div>
                 <div className="form-group">
                     <label>Опис товару</label>
-                    <textarea
-                        value={formData.desc}
-                        onChange={(e) => onChange('desc', e.target.value)}
-                        rows={10}
-                        style={{ resize: 'vertical' }}
-                    />
+                    <div className="admin-quill-wrap">
+                        <ReactQuill
+                            theme="snow"
+                            value={formData.desc}
+                            onChange={(value, _delta, source) => source === 'user' && onChange('desc', value)}
+                            modules={QUILL_MODULES}
+                            formats={QUILL_FORMATS}
+                            className="admin-quill-editor"
+                        />
+                    </div>
                 </div>
                 <div className="form-group">
                     <label>Інструкція (вкладка на сторінці товару)</label>
-                    <textarea
-                        value={formData.instruction || ''}
-                        onChange={(e) => onChange('instruction', e.target.value)}
-                        rows={8}
-                        placeholder="Інструкція з експлуатації та безпеки праці…"
-                        style={{ resize: 'vertical' }}
-                    />
+                    <div className="admin-quill-wrap">
+                        <ReactQuill
+                            theme="snow"
+                            value={formData.instruction || ''}
+                            onChange={(value, _delta, source) => source === 'user' && onChange('instruction', value)}
+                            modules={QUILL_MODULES}
+                            formats={QUILL_FORMATS}
+                            className="admin-quill-editor"
+                            placeholder="Інструкція з експлуатації та безпеки праці…"
+                        />
+                    </div>
                 </div>
                 <div className="form-group">
                     <label>Нотатки (внутрішні, тільки для адмінів)</label>
@@ -41,7 +70,6 @@ export default function ProductBasicInfo({ formData, onChange }) {
                         onChange={(e) => onChange('adminNotes', e.target.value)}
                         rows={4}
                         placeholder="Наприклад: мінімальна ціна, стан, нюанси по оренді, контакт постачальника..."
-                        style={{ resize: 'vertical' }}
                     />
                 </div>
             </div>

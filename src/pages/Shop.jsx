@@ -420,7 +420,7 @@ export default function Shop() {
                                         {quickViewProduct.price} ₴ / {quickViewProduct.unit || 'м²'}
                                     </span>
                                 </div>
-                                <p className="modal-desc">{quickViewProduct.desc}</p>
+                                <div className="modal-desc" dangerouslySetInnerHTML={{ __html: quickViewProduct.desc }} />
                                 <div className="modal-actions">
                                     <button className="btn btn-primary add-btn" onClick={() => addToCart(quickViewProduct)}>
                                         В кошик

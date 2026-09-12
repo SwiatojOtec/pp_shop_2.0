@@ -116,6 +116,10 @@
     transition: border-color var(--ds-duration-fast);
 }
 
+.admin-form textarea {
+    resize: vertical;
+}
+
 .admin-form input:focus,
 .admin-form textarea:focus,
 .admin-form select:focus {
@@ -232,6 +236,22 @@
     flex: 1;
     font-size: 0.9rem;
     color: var(--ds-text);
+}
+
+.spec-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 4px;
+    color: var(--ds-text-subtle);
+    cursor: grab;
+    touch-action: none;
+}
+
+.spec-drag-handle:active {
+    cursor: grabbing;
 }
 
 .add-spec-form {

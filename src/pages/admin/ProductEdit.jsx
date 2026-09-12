@@ -39,11 +39,22 @@ function safeAdminReturnPath(raw) {
     }
 }
 
+// Quill завжди повертає розмітку, навіть для порожнього редактора
+// (`<p><br></p>`) — звичайний .trim() тут більше не відрізняє "нічого не
+// ввели" від справжнього тексту, тому перевіряємо вміст без тегів.
+function normalizeQuillHtml(html) {
+    const str = String(html || '').trim();
+    if (!str) return null;
+    const hasMedia = /<img|<iframe|<video/i.test(str);
+    const textOnly = str.replace(/<[^>]*>/g, '').trim();
+    return (textOnly || hasMedia) ? str : null;
+}
+
 const INITIAL_FORM = {
     name: '', price: '', oldPrice: '', category: '', image: '', images: [],
     desc: '', instruction: '', adminNotes: '', sku: '', slug: '', groupId: '',
     stockStatus: 'in_stock', brand: '', supplierId: '', supplierPrice: '', packSize: 1.0, unit: 'м²', badge: '',
-    specs: {}, priceMatrix: [], priceGrid: null, availableFrom: '', kitItems: [],
+    specs: {}, specsOrder: [], priceMatrix: [], priceGrid: null, availableFrom: '', kitItems: [],
     quantityAvailable: '', showInRentCatalog: true, relatedProducts: [],
     serialNumber: '', inventoryNumber: '', technicalCondition: '',
     weightPerUnit: '', weightTotal: '', replacementCost: '', securityDeposit: '',
@@ -214,6 +225,7 @@ export default function ProductEdit({ context = 'products' }) {
                 adminNotes: data.adminNotes || '',
                 instruction: data.instruction || '',
                 specs: data.specs || {},
+                specsOrder: Array.isArray(data.specsOrder) ? data.specsOrder : [],
                 priceMatrix: data.priceMatrix || [],
                 priceGrid: data.priceGrid || null,
                 availableFrom: data.availableFrom || '',
@@ -245,7 +257,8 @@ export default function ProductEdit({ context = 'products' }) {
                 setFormData((prev) => ({
                     ...prev,
                     price: t.price, category: t.category, desc: t.desc,
-                    specs: t.specs || {}, priceMatrix: t.priceMatrix || [], priceGrid: t.priceGrid || null,
+                    specs: t.specs || {}, specsOrder: Array.isArray(t.specsOrder) ? t.specsOrder : [],
+                    priceMatrix: t.priceMatrix || [], priceGrid: t.priceGrid || null,
                 }));
             }
         } catch (err) {
@@ -309,7 +322,7 @@ export default function ProductEdit({ context = 'products' }) {
                 packSize: formData.packSize === '' ? 1.0 : Number(formData.packSize),
                 availableFrom: formData.availableFrom || null,
                 adminNotes: String(formData.adminNotes || '').trim() || null,
-                instruction: String(formData.instruction || '').trim() || null,
+                instruction: normalizeQuillHtml(formData.instruction),
                 badge: isRentContext ? null : formData.badge,
                 quantityAvailable: !isRentContext
                     ? (formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable))
@@ -463,7 +476,14 @@ export default function ProductEdit({ context = 'products' }) {
                             isRentContext={isRentContext}
                             matrixKind={priceMatrixType}
                         />
-                        <ProductSpecs specs={formData.specs} onChange={(val) => update('specs', val)} />
+                        <ProductSpecs
+                            specs={formData.specs}
+                            specsOrder={formData.specsOrder}
+                            onChange={(specs, specsOrder) => {
+                                setDirty(true);
+                                setFormData((prev) => ({ ...prev, specs, specsOrder }));
+                            }}
+                        />
                     </>
                 )}
 

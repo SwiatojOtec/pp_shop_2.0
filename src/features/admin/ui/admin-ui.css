@@ -772,3 +772,70 @@
     from { transform: translateX(24px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
+/* Спільна обгортка для react-quill (WYSIWYG) у будь-якому екрані адмінки —
+   стан 1:1 з src/features/admin/blog/blog.css. Quill's "snow" theme не має
+   власної темної теми (текст без кольору успадковує колір сторінки, іконки
+   тулбару — жорстко #444/#06c), тому все перекривається токенами тут. */
+.admin-quill-wrap {
+    background: var(--ds-surface);
+    border-radius: var(--ds-radius-md);
+}
+
+.admin-quill-editor {
+    height: 320px;
+    margin-bottom: 50px;
+}
+
+.admin-quill-wrap .ql-toolbar.ql-snow {
+    border-color: var(--ds-border);
+    border-radius: var(--ds-radius-md) var(--ds-radius-md) 0 0;
+}
+
+.admin-quill-wrap .ql-container.ql-snow {
+    border-color: var(--ds-border);
+    border-radius: 0 0 var(--ds-radius-md) var(--ds-radius-md);
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.admin-quill-wrap .ql-editor {
+    color: var(--ds-text);
+}
+
+.admin-quill-wrap .ql-editor.ql-blank::before {
+    color: var(--ds-text-subtle);
+    font-style: normal;
+}
+
+.admin-quill-wrap .ql-snow .ql-stroke {
+    stroke: var(--ds-text-muted);
+}
+
+.admin-quill-wrap .ql-snow .ql-fill,
+.admin-quill-wrap .ql-snow .ql-stroke.ql-fill {
+    fill: var(--ds-text-muted);
+}
+
+.admin-quill-wrap .ql-snow .ql-picker {
+    color: var(--ds-text-muted);
+}
+
+.admin-quill-wrap .ql-snow .ql-picker-options {
+    background: var(--ds-surface);
+    border-color: var(--ds-border);
+}
+
+.admin-quill-wrap .ql-snow.ql-toolbar button:hover,
+.admin-quill-wrap .ql-snow .ql-toolbar button:hover,
+.admin-quill-wrap .ql-snow.ql-toolbar button.ql-active,
+.admin-quill-wrap .ql-snow .ql-toolbar button.ql-active {
+    color: var(--ds-accent);
+}
+
+.admin-quill-wrap .ql-snow.ql-toolbar button:hover .ql-stroke,
+.admin-quill-wrap .ql-snow .ql-toolbar button:hover .ql-stroke,
+.admin-quill-wrap .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.admin-quill-wrap .ql-snow .ql-toolbar button.ql-active .ql-stroke {
+    stroke: var(--ds-accent);
+}

@@ -14,6 +14,7 @@ import {
 } from '../utils/rentPricing';
 import { recordProductView, getRecentProductViews } from '../utils/recentlyViewedProducts';
 import { optimizeImageUrl } from '../utils/imageOptimize';
+import { getOrderedSpecEntries } from '../utils/specsOrder';
 import ProductDetailRecoRails from '../components/ProductDetailRecoRails';
 import './ProductDetail.css';
 
@@ -38,16 +39,26 @@ function sliceDescriptionPreview(full, maxChars) {
     return { preview, truncated: true };
 }
 
+/** `desc`/`instruction` тепер зберігають розмітку з Quill — рахувати символи
+ * й обрізати посеред тегу не можна, тому для згорнутого прев'ю беремо
+ * текст без тегів, а повну розмітку показуємо лише в розгорнутому стані. */
+function stripHtml(html) {
+    return String(html ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function CollapsibleProductDescription({ text, wrapperClassName, textClassName, maxChars = DESC_PREVIEW_MAX_CHARS }) {
     const [expanded, setExpanded] = useState(false);
     const full = String(text ?? '').trim();
     if (!full) return null;
-    const { preview, truncated } = sliceDescriptionPreview(full, maxChars);
-    const display = expanded || !truncated ? full : preview;
+    const { preview, truncated } = sliceDescriptionPreview(stripHtml(full), maxChars);
 
     return (
         <div className={wrapperClassName}>
-            <p className={textClassName}>{display}</p>
+            {expanded || !truncated ? (
+                <div className={textClassName} dangerouslySetInnerHTML={{ __html: full }} />
+            ) : (
+                <p className={textClassName}>{preview}</p>
+            )}
             {truncated && (
                 <button
                     type="button"
@@ -593,7 +604,7 @@ export default function ProductDetail() {
                                     {activeTab === 'specs' && (
                                         <div className="rent-specs-table">
                                             {product.specs && Object.keys(product.specs).length > 0 ? (
-                                                Object.entries(product.specs).map(([label, value], i) => (
+                                                getOrderedSpecEntries(product.specs, product.specsOrder).map(([label, value], i) => (
                                                     <div key={i} className="rent-spec-row">
                                                         <span className="rent-spec-label">{label}</span>
                                                         <span className="rent-spec-value">{value}</span>
@@ -616,14 +627,14 @@ export default function ProductDetail() {
                                     )}
                                     {activeTab === 'desc' && (
                                         product.desc ? (
-                                            <p className="rent-tab-text">{product.desc}</p>
+                                            <div className="rent-tab-text" dangerouslySetInnerHTML={{ __html: product.desc }} />
                                         ) : (
                                             <p className="tab-empty">Опис відсутній.</p>
                                         )
                                     )}
                                     {activeTab === 'instruction' && (
                                         product.instruction ? (
-                                            <p className="rent-tab-text">{product.instruction}</p>
+                                            <div className="rent-tab-text" dangerouslySetInnerHTML={{ __html: product.instruction }} />
                                         ) : (
                                             <p className="tab-empty">Інструкція з&apos;явиться незабаром.</p>
                                         )
@@ -1105,12 +1116,12 @@ export default function ProductDetail() {
                     </div>
                     <div className="tab-content">
                         {activeTab === 'desc' && (
-                            product.desc ? <p className="rent-tab-text">{product.desc}</p> : <p className="tab-empty">Опис відсутній.</p>
+                            product.desc ? <div className="rent-tab-text" dangerouslySetInnerHTML={{ __html: product.desc }} /> : <p className="tab-empty">Опис відсутній.</p>
                         )}
                         {activeTab === 'specs' && (
                             <div className="specs-grid">
                                 <div className="spec-item"><span className="spec-label">Категорія</span><span>{product.category}</span></div>
-                                {product.specs && Object.entries(product.specs).map(([label, value], i) => (
+                                {product.specs && getOrderedSpecEntries(product.specs, product.specsOrder).map(([label, value], i) => (
                                     <div key={i} className="spec-item">
                                         <span className="spec-label">{label}</span>
                                         <span>{value}</span>
@@ -1120,7 +1131,7 @@ export default function ProductDetail() {
                         )}
                         {activeTab === 'instruction' && (
                             product.instruction ? (
-                                <p className="rent-tab-text">{product.instruction}</p>
+                                <div className="rent-tab-text" dangerouslySetInnerHTML={{ __html: product.instruction }} />
                             ) : (
                                 <p className="tab-empty">Інструкція з&apos;явиться незабаром.</p>
                             )

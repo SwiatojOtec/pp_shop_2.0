@@ -74,6 +74,17 @@ const Product = sequelize.define('Product', {
         type: DataTypes.JSONB, // Flexible characteristics
         defaultValue: {}
     },
+    /** Порядок показу ключів `specs` (drag-and-drop в адмінці). Окреме поле,
+     * а не масив пар — `specs` лишається об'єктом, бо за ним фільтрує
+     * клієнтський каталог через JSONB-запит (server/routes/productRoutes.js,
+     * `where.specs = { [key]: value }`), а це працює тільки з ключами
+     * об'єкта, не з масивом. Ключ, якого нема в specsOrder (ще не
+     * впорядкований, або доданий пізніше), показується після впорядкованих —
+     * дивись getOrderedSpecEntries на клієнті. */
+    specsOrder: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: []
+    },
     currency: {
         type: DataTypes.STRING,
         defaultValue: 'UAH'
