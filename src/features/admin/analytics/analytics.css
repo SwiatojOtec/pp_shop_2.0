@@ -1,0 +1,214 @@
+.analytics-loading {
+    color: var(--ds-text-muted);
+    padding: var(--ds-space-4) 0;
+}
+
+.analytics-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-3);
+}
+
+.analytics-seller-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    white-space: nowrap;
+}
+
+.analytics-range-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-4);
+}
+
+.analytics-custom-range {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    color: var(--ds-text-muted);
+}
+
+.analytics-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-4);
+}
+
+.analytics-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--ds-space-3) var(--ds-space-4);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+}
+
+.analytics-kpi-label {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+}
+
+.analytics-kpi-value {
+    font-family: var(--ds-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ds-text);
+}
+
+.analytics-kpi-hint {
+    font-size: var(--ds-text-sm);
+    color: var(--ds-text-muted);
+}
+
+.analytics-charts-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--ds-space-4);
+    margin-bottom: var(--ds-space-4);
+}
+
+@media (max-width: 900px) {
+    .analytics-charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.analytics-chart-card {
+    min-width: 0;
+}
+
+.analytics-chart-wrap {
+    height: 280px;
+    width: 100%;
+}
+
+.analytics-chart-wrap--clickable .recharts-surface {
+    cursor: pointer;
+}
+
+.analytics-drilldown-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 4px 4px 10px;
+    background: var(--ds-accent-soft);
+    color: var(--ds-accent);
+    border-radius: 999px;
+    font-size: var(--ds-text-sm);
+    font-weight: 600;
+}
+
+.analytics-tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--ds-space-4);
+    align-items: start;
+}
+
+.analytics-table-wide {
+    grid-column: 1 / -1;
+}
+
+.analytics-muted {
+    color: var(--ds-text-subtle);
+    font-size: var(--ds-text-sm);
+}
+
+.analytics-product-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 320px;
+    max-width: 420px;
+}
+
+.analytics-product-search-icon {
+    position: absolute;
+    left: 10px;
+    color: var(--ds-text-subtle);
+    pointer-events: none;
+}
+
+.analytics-product-search input {
+    padding-left: 34px;
+    width: 100%;
+}
+
+.analytics-product-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.analytics-product-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    cursor: pointer;
+}
+
+.analytics-product-dropdown-item:hover {
+    background: var(--ds-surface-sunken);
+}
+
+.analytics-product-dropdown-item img {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: var(--ds-radius-sm, 4px);
+    flex-shrink: 0;
+}
+
+.analytics-product-dropdown-name {
+    font-weight: 600;
+}
+
+.analytics-product-picked {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3);
+    flex: 1 1 320px;
+    max-width: 480px;
+    padding: var(--ds-space-2) var(--ds-space-3);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md);
+}
+
+.analytics-product-picked-img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: var(--ds-radius-sm, 4px);
+    flex-shrink: 0;
+}
+
+.analytics-product-picked-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.analytics-product-picked-name {
+    font-weight: 700;
+}
