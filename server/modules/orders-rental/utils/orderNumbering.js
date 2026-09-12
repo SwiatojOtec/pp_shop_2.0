@@ -2,24 +2,31 @@ const { Op } = require('sequelize');
 const Order = require('../../../models/Order');
 const RentalApplication = require('../../../models/RentalApplication');
 
-/** Daily order number: `{n}/{DD}/{MM}/{YYYY}`. Race-prone under concurrent creates. */
+/**
+ * Daily order number: `{n}/{DD}/{MM}/{YYYY}`. Race-prone under concurrent
+ * creates. Numbering is based on the highest `{n}` already used today
+ * (parsed from existing orderNumber strings), not a row count — a count
+ * undercounts as soon as any order created earlier today is deleted, which
+ * then collides with a surviving order's number (unique constraint) and
+ * blocks every new deal for the rest of the day.
+ */
 async function generateOrderNumber() {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const countToday = await Order.count({
-        where: {
-            createdAt: {
-                [Op.gte]: startOfDay,
-            },
-        },
-    });
-
-    const dailyNumber = countToday + 1;
     const day = String(now.getDate()).padStart(2, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
-    return `${dailyNumber}/${day}/${month}/${year}`;
+    const suffix = `/${day}/${month}/${year}`;
+
+    const todaysOrders = await Order.findAll({
+        where: { orderNumber: { [Op.like]: `%${suffix}` } },
+        attributes: ['orderNumber'],
+    });
+    const maxNumber = todaysOrders.reduce((max, o) => {
+        const n = parseInt(String(o.orderNumber).split('/')[0], 10);
+        return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+
+    return `${maxNumber + 1}${suffix}`;
 }
 
 /** Rental application number: `RA-{YYYY}-{NNN}`. Race-prone under concurrent creates. */
