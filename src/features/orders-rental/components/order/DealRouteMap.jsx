@@ -163,6 +163,11 @@ export default function DealRouteMap({ originAddress, originPoint, siteAddress, 
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                 />
+                                {origin.point && (
+                                    <Marker position={[origin.point.lat, origin.point.lon]}>
+                                        <Popup>Склад (точка відправки)</Popup>
+                                    </Marker>
+                                )}
                                 {site.point && (
                                     <Marker position={[site.point.lat, site.point.lon]}>
                                         <Popup>Майданчик</Popup>
