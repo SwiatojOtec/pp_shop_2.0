@@ -57,7 +57,7 @@ async function deleteApplicationHandler(req, res) {
 
 async function convertApplicationToOrderHandler(req, res) {
     try {
-        const order = await convertApplicationToOrder(req.params.id, req.user?.id || null);
+        const order = await convertApplicationToOrder(req.params.id, req.user || null);
         res.status(201).json({ order });
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message });

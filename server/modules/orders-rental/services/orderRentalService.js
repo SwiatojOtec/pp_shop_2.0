@@ -4,7 +4,7 @@ const Product = require('../../../models/Product');
 const Client = require('../../../models/Client');
 const RentalApplication = require('../../../models/RentalApplication');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
-const { recalculateProductQuantity } = require('../../../services/inventoryService');
+const { recalculateProductQuantity, userDisplayName } = require('../../../services/inventoryService');
 const { parseDiscountPercent, roundMoney, calcRentDays } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { generateAppNumber, generateOrderNumber } = require('../utils/orderNumbering');
@@ -405,7 +405,7 @@ function buildOrderItemsFromApplication(items, productsById) {
  * end up computed the same way a hand-built deal would be, not hand-rolled
  * here.
  */
-async function convertApplicationToOrder(applicationId, createdBy = null) {
+async function convertApplicationToOrder(applicationId, createdByUser = null) {
     const order = await sequelize.transaction(async (transaction) => {
         const application = await RentalApplication.findByPk(applicationId, {
             transaction,
@@ -457,10 +457,12 @@ async function convertApplicationToOrder(applicationId, createdBy = null) {
             status: deriveDealStatusFromRentalStatus(application.status),
             rentalApplicationId: application.id,
             rentStartTime: application.rentStartTime || null,
+            createdByUserId: createdByUser?.id || null,
+            createdByName: createdByUser ? userDisplayName(createdByUser) : null,
         }, { transaction });
     });
 
-    const { order: savedOrder } = await saveDealWithRentalApplication(order.id, {}, {}, createdBy);
+    const { order: savedOrder } = await saveDealWithRentalApplication(order.id, {}, {}, createdByUser?.id || null);
     return savedOrder;
 }
 

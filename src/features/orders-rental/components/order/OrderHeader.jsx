@@ -55,8 +55,10 @@ export default function OrderHeader({
                     </div>
                     <div className="deal-header__sub">
                         Створено {formatOrderDate(order.createdAt)}
+                        {order.createdByName && ` (${order.createdByName})`}
                         {' · '}{linkedClient?.fullName || draft.customerName || '—'}
                         {' · '}{getSeller(draft.sellerId).label}
+                        {order.closedByName && ` · Закрив: ${order.closedByName}`}
                     </div>
                 </div>
 

@@ -87,7 +87,7 @@ async function deleteBookingHandler(req, res) {
 
 async function convertBookingHandler(req, res) {
     try {
-        const result = await convertBookingToOrder(req.params.id, req.user?.id || null);
+        const result = await convertBookingToOrder(req.params.id, req.user || null);
         if (!result) return res.status(404).json({ message: 'Бронь не знайдено' });
         res.status(201).json(result);
     } catch (err) {

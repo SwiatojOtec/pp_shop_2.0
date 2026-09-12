@@ -9,6 +9,7 @@ const { resolveSellerId } = require('../../../constants/sellers');
 const { buildClientPatchFromForm } = require('./rentalContractService');
 const { generateOrderNumber } = require('../utils/orderNumbering');
 const { toIsoDate } = require('./rentalApplicationService');
+const { userDisplayName } = require('../../../services/inventoryService');
 
 async function loadOrderWithClient(orderId) {
     const order = await Order.findByPk(orderId);
@@ -64,9 +65,11 @@ async function upsertClientForContract(order, patch = {}) {
 
 /**
  * @param {object} payload — same shape as public checkout
- * @param {{ sendTelegram?: boolean }} opts
+ * @param {{ sendTelegram?: boolean, createdByUser?: object|null }} opts
+ *   createdByUser — req.user when created from the admin ("Нова угода");
+ *   left undefined for the public checkout, which has no logged-in staff.
  */
-async function persistOrder(payload, { sendTelegram = false } = {}) {
+async function persistOrder(payload, { sendTelegram = false, createdByUser = null } = {}) {
     const {
         customerName,
         customerPhone: rawPhone,
@@ -102,6 +105,8 @@ async function persistOrder(payload, { sendTelegram = false } = {}) {
         discount: discount != null ? Number(discount) : 0,
         clientId,
         sellerId,
+        createdByUserId: createdByUser?.id || null,
+        createdByName: createdByUser ? userDisplayName(createdByUser) : null,
     });
 
     if (sendTelegram) {
@@ -356,4 +361,5 @@ module.exports = {
     getOrdersByClient,
     listDeals,
     getAllDealRows,
+    ORDER_TERMINAL_STATUSES,
 };

@@ -35,8 +35,10 @@ const {
     upsertClientForContract,
     getOrdersByClient,
     listDeals,
+    ORDER_TERMINAL_STATUSES,
 } = require('../services/orderService');
 const { decodeBase64Pdf } = require('../utils/decodeBase64Pdf');
+const { userDisplayName } = require('../../../services/inventoryService');
 
 async function createOrder(req, res) {
     try {
@@ -107,7 +109,7 @@ async function createAdminOrder(req, res) {
                 clientId,
                 sellerId,
             },
-            { sendTelegram: false }
+            { sendTelegram: false, createdByUser: req.user }
         );
 
         res.status(201).json(order);
@@ -626,6 +628,14 @@ async function updateOrder(req, res) {
             if (Object.prototype.hasOwnProperty.call(updates, key)) {
                 patch[key] = updates[key];
             }
+        }
+
+        // Хто закрив угоду — проставляється сервером (не з клієнтського
+        // запиту) один раз, саме на перехід у термінальний статус, а не на
+        // кожне збереження вже закритої угоди.
+        if (patch.status && ORDER_TERMINAL_STATUSES.includes(patch.status) && !ORDER_TERMINAL_STATUSES.includes(order.status)) {
+            patch.closedByUserId = req.user?.id || null;
+            patch.closedByName = userDisplayName(req.user);
         }
 
         // "Угода" (docs/admin-redesign/03-screens.md): one Save button, one

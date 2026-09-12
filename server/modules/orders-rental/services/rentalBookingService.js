@@ -10,7 +10,7 @@ const { calcRentDays } = require('../../../utils/orderAmounts');
 const { toIsoDate } = require('./rentalApplicationService');
 const { saveDealWithRentalApplication } = require('./orderRentalService');
 const { generateOrderNumber } = require('../utils/orderNumbering');
-const { getPhysicalQuantityByProduct } = require('../../../services/inventoryService');
+const { getPhysicalQuantityByProduct, userDisplayName } = require('../../../services/inventoryService');
 
 const ACTIVE_APP_STATUSES = ['draft', 'booked', 'active', 'overdue'];
 const HOLD_STATUS = 'hold';
@@ -320,7 +320,7 @@ async function listCalendarEvents({ from, to } = {}) {
  * saveDealWithRentalApplication generate the linked application the same
  * way any other rent deal does, so nothing new is orphaned going forward.
  */
-async function convertBookingToOrder(id, createdBy = null) {
+async function convertBookingToOrder(id, createdByUser = null) {
     const row = await RentalBooking.findByPk(id);
     if (!row) return null;
     if (row.status !== HOLD_STATUS) {
@@ -380,9 +380,11 @@ async function convertBookingToOrder(id, createdBy = null) {
             depositAmount: (replacementCost * qty * (depositPercent / 100)).toFixed(2),
             kitItems: Array.isArray(product.kitItems) ? product.kitItems : [],
         }],
+        createdByUserId: createdByUser?.id || null,
+        createdByName: createdByUser ? userDisplayName(createdByUser) : null,
     });
 
-    const { order: savedOrder, rentalApplication } = await saveDealWithRentalApplication(order.id, {}, {}, createdBy);
+    const { order: savedOrder, rentalApplication } = await saveDealWithRentalApplication(order.id, {}, {}, createdByUser?.id || null);
     if (row.note && rentalApplication?.id) {
         await RentalApplication.update({ notes: row.note }, { where: { id: rentalApplication.id } });
     }

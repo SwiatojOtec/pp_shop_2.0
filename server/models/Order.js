@@ -72,6 +72,28 @@ const Order = sequelize.define('Order', {
         type: DataTypes.STRING(8),
         allowNull: true,
     },
+    /** Хто створив угоду — лише для угод, створених в адмінці (публічний
+     *  чекаут не має залогованого користувача, лишається null). Ім'я
+     *  знято в момент створення, не через живий join на User. */
+    createdByUserId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    createdByName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    /** Хто перевів угоду в термінальний статус (Повернуто/Виконано/
+     *  Скасовано) — проставляється один раз при переході, не на кожне
+     *  збереження вже закритої угоди. */
+    closedByUserId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    closedByName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 }, { timestamps: true });
 
 module.exports = Order;
