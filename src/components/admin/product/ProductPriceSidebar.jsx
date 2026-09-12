@@ -37,6 +37,21 @@ export default function ProductPriceSidebar({
                     />
                 )}
 
+                {!isRentContext && (
+                    <div className="form-group">
+                        <label>Собівартість за од. (₴)</label>
+                        <input
+                            type="number"
+                            value={formData.supplierPrice ?? ''}
+                            onChange={(e) => onChange('supplierPrice', e.target.value)}
+                            placeholder="Скільки коштує закупівля"
+                        />
+                        <p className="field-hint">
+                            Використовується для розрахунку прибутку у вкладці «Аналітика». Не показується на сайті.
+                        </p>
+                    </div>
+                )}
+
                 {formData.badge === 'SALE' && (
                     <div className="form-group">
                         <label>Стара ціна (закреслена, ₴)</label>

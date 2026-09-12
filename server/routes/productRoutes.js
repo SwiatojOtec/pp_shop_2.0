@@ -11,7 +11,7 @@ const { attachRentCatalogHintsToProducts } = require('../utils/rentCatalogEnrich
 
 // Convert empty strings to null for numeric fields to avoid DB type errors
 const sanitizeNumericFields = (data) => {
-    const numericFields = ['oldPrice', 'packSize', 'supplierPrice', 'quantityAvailable',
+    const numericFields = ['oldPrice', 'packSize', 'supplierPrice', 'supplierId', 'quantityAvailable',
         'weightPerUnit', 'weightTotal', 'replacementCost', 'securityDeposit'];
     numericFields.forEach(field => {
         if (data[field] === '' || data[field] === undefined) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Save, ArrowLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { transliterate } from '../../utils/transliterate';
-import { categoriesApi, rentCategoriesApi, brandsApi, warehousesApi, productsApi } from '../../services/api';
+import { categoriesApi, rentCategoriesApi, brandsApi, suppliersApi, warehousesApi, productsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -42,7 +42,7 @@ function safeAdminReturnPath(raw) {
 const INITIAL_FORM = {
     name: '', price: '', oldPrice: '', category: '', image: '', images: [],
     desc: '', instruction: '', adminNotes: '', sku: '', slug: '', groupId: '',
-    stockStatus: 'in_stock', brand: '', packSize: 1.0, unit: 'м²', badge: '',
+    stockStatus: 'in_stock', brand: '', supplierId: '', supplierPrice: '', packSize: 1.0, unit: 'м²', badge: '',
     specs: {}, priceMatrix: [], priceGrid: null, availableFrom: '', kitItems: [],
     quantityAvailable: '', showInRentCatalog: true, relatedProducts: [],
     serialNumber: '', inventoryNumber: '', technicalCondition: '',
@@ -76,6 +76,7 @@ export default function ProductEdit({ context = 'products' }) {
     const [formData, setFormData] = useState({ ...INITIAL_FORM, createWarehouseId: warehouseIdFromQuery || '' });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
     const [warehouses, setWarehouses] = useState([]);
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
@@ -115,6 +116,7 @@ export default function ProductEdit({ context = 'products' }) {
         if (isRentContext && isNew) setFormData((prev) => ({ ...prev, unit: 'шт' }));
         loadCategories();
         loadBrands();
+        loadSuppliers();
         if (isRentContext) loadWarehouses();
         if (!isNew) loadProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,6 +167,15 @@ export default function ProductEdit({ context = 'products' }) {
             setBrands(data);
         } catch (err) {
             showToast(err.message || 'Не вдалося завантажити бренди', 'warning');
+        }
+    }
+
+    async function loadSuppliers() {
+        try {
+            const data = await suppliersApi.list();
+            setSuppliers(Array.isArray(data) ? data : []);
+        } catch (err) {
+            showToast(err.message || 'Не вдалося завантажити постачальників', 'warning');
         }
     }
 
@@ -303,6 +314,7 @@ export default function ProductEdit({ context = 'products' }) {
                 quantityAvailable: !isRentContext
                     ? (formData.quantityAvailable === '' ? null : Number(formData.quantityAvailable))
                     : undefined,
+                supplierId: formData.supplierId === '' ? null : Number(formData.supplierId),
                 relatedProducts: Array.isArray(formData.relatedProducts)
                     ? formData.relatedProducts.map((r) => (typeof r === 'object' ? r.id : r))
                     : [],
@@ -418,7 +430,7 @@ export default function ProductEdit({ context = 'products' }) {
                 {activeTab === 'basic' && (
                     <>
                         <ProductBasicInfo formData={formData} onChange={update} />
-                        <ProductCategoryBrand formData={formData} onChange={update} categories={categories} brands={brands} />
+                        <ProductCategoryBrand formData={formData} onChange={update} categories={categories} brands={brands} suppliers={suppliers} />
                         {!isRentContext && (
                             <ProductIdentifiers formData={formData} onChange={update} onGroupIdBlur={loadGroupData} />
                         )}
