@@ -25,7 +25,7 @@ const NAV_ITEMS = [
     { path: '/admin/catalog',   icon: <Wrench size={16} />,          label: 'Каталог',       show: (r) => hasShopAccess(r) || hasRentAccess(r) },
     { path: '/admin/blog',      icon: <FileText size={16} />,        label: 'Блог',          show: (r) => hasShopAccess(r) },
     { path: '/admin/timesheet', icon: <Building2 size={16} />,       label: 'Табель',        show: (r, head) => canUseTimesheet(r, head) || isTimesheetViewer(r) },
-    { path: '/admin/analytics', icon: <BarChart3 size={16} />,       label: 'Аналітика',     show: (r) => r === 'owner' },
+    { path: '/admin/analytics', icon: <BarChart3 size={16} />,       label: 'Аналітика',     show: (r) => r === 'owner' || r === 'shop_rent' },
     { path: '/admin/company',   icon: <Users size={16} />,           label: 'Компанія',      show: (r) => r === 'owner' },
 ];
 

@@ -142,7 +142,7 @@ async function buildAnalytics({ fromDate, toDate, productId = null, sellerFilter
     const [dealRows, orders, sellers, products, suppliers, clients] = await Promise.all([
         getAllDealRows(),
         Order.findAll({ attributes: ['id', 'discount', 'sellerId'] }),
-        Seller.findAll({ attributes: ['id', 'type'] }),
+        Seller.findAll({ attributes: ['id', 'label', 'type'] }),
         Product.findAll({ attributes: ['id', 'name', 'category', 'brand', 'supplierId', 'supplierPrice', 'isRent', 'quantityAvailable'] }),
         Supplier.findAll({ attributes: ['id', 'name', 'discountPercent'] }),
         Client.findAll({ attributes: ['id', 'fullName'] }),
@@ -318,6 +318,9 @@ async function buildAnalytics({ fromDate, toDate, productId = null, sellerFilter
 
     return {
         range: { granularity },
+        // Лише для фільтра «юрособа» на клієнті — id/label/type, без банківських
+        // і податкових реквізитів (ті лишаються за /api/sellers, owner-only).
+        sellers: sellers.map((s) => ({ id: s.id, label: s.label, type: s.type })),
         kpis: {
             netRevenue,
             shopRevenue: roundMoney(shopRevenue),

@@ -4,7 +4,7 @@ import {
     ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
     CartesianGrid, Tooltip, Legend, Cell,
 } from 'recharts';
-import { analyticsApi, sellersApi } from '../../services/api';
+import { analyticsApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { getStatusLabel, ORDER_STATUS } from '../../features/admin/model/status';
 import PageHeader from '../../features/admin/ui/PageHeader';
@@ -51,15 +51,14 @@ export default function AdminAnalytics() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [drilldown, setDrilldown] = useState(null); // { from, to, label } — клік по точці графіка
     const [sellerFilter, setSellerFilter] = useState('all');
-    const [sellers, setSellers] = useState([]);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        sellersApi.list().then((rows) => setSellers(Array.isArray(rows) ? rows : [])).catch(() => setSellers([]));
-    }, []);
-
+    // Юрособи для фільтра йдуть у відповіді /api/analytics/summary (лише
+    // id/label/type, без банківських реквізитів) — не /api/sellers, той
+    // owner-only, а сюди тепер заходить і shop_rent.
     const sellerOptions = useMemo(() => {
+        const sellers = data?.sellers || [];
         const fopCount = sellers.filter((s) => s.type === 'fop').length;
         const tovCount = sellers.filter((s) => s.type === 'tov').length;
         return [
@@ -68,7 +67,7 @@ export default function AdminAnalytics() {
             ...(tovCount > 1 ? [{ value: 'tov', label: 'Усі ТОВ' }] : []),
             ...sellers.map((s) => ({ value: s.id, label: s.label })),
         ];
-    }, [sellers]);
+    }, [data]);
 
     const range = useMemo(() => {
         if (drilldown) return drilldown;

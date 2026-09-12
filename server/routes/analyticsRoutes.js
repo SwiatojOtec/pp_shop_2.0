@@ -16,12 +16,13 @@ function parseRangeParams(req) {
     return { fromDate, toDate, from, to };
 }
 
-/** Фінансова аналітика (виручка/прибуток/маржа) — чутливі дані, лише owner
- *  (той самий рівень доступу, що й «Юрособи»/повне керування «Постачальниками»).
+/** Фінансова аналітика (виручка/прибуток/маржа) — чутливі дані: owner і
+ *  менеджер магазину та оренди (shop_rent, єдина роль з повним доступом
+ *  до обох напрямків одразу — саме той, кому потрібна зведена картина).
  *  Опційний ?productId=<id> звужує всю агрегацію до одного товару (пошук
  *  «аналітика по товару» на клієнті). Опційний ?seller=all|fop|tov|<sellerId>
  *  фільтрує за юрособою угоди. */
-router.get('/summary', authMiddleware, requireRole(['owner']), async (req, res) => {
+router.get('/summary', authMiddleware, requireRole(['owner', 'shop_rent']), async (req, res) => {
     try {
         const parsed = parseRangeParams(req);
         if (parsed.error) return res.status(400).json({ message: parsed.error });

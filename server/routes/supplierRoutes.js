@@ -3,7 +3,10 @@ const router = express.Router();
 const Supplier = require('../models/Supplier');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
-const allowedRoles = ['owner'];
+// Керування постачальниками — owner і shop_rent (менеджер магазину та
+// оренди), той самий рівень доступу, що й повне керування товарами
+// (server/routes/productRoutes.js).
+const allowedRoles = ['owner', 'shop_rent'];
 
 const FIELDS = [
     'name', 'contactPerson', 'phone', 'email',
@@ -19,9 +22,9 @@ function pickFields(body) {
 }
 
 // Читання доступне будь-якому автентифікованому співробітнику (не лише
-// owner) — картку товару редагують ще й shop_manager/shop_rent/rent/
+// owner/shop_rent) — картку товару редагують ще й shop_manager/rent/
 // pivdenbud (server/routes/productRoutes.js), їм потрібен цей список для
-// вибору постачальника. Керування записами (нижче) лишається лише owner.
+// вибору постачальника, навіть без права його редагувати.
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const suppliers = await Supplier.findAll({ order: [['name', 'ASC']] });
