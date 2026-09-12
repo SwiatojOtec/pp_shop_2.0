@@ -5,6 +5,7 @@ import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
 import { getCategorySlug } from '../utils/categoryMapping';
 import { optimizeImageUrl } from '../utils/imageOptimize';
+import { formatRentCatalogPriceCaption } from '../utils/rentPricing';
 import './Favorites.css';
 
 export default function Favorites() {
@@ -81,7 +82,11 @@ export default function Favorites() {
                                 <Link to={`/magazyn/${getCategorySlug(product.category)}/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <h3 className="favorite-name">{product.name}</h3>
                                 </Link>
-                                <div className="favorite-price">{product.price} ₴ / м²</div>
+                                <div className="favorite-price">
+                                    {product.isRent
+                                        ? formatRentCatalogPriceCaption(product)
+                                        : `${product.price} ₴ / ${product.unit || 'м²'}`}
+                                </div>
                                 <div className="favorite-actions">
                                     <button
                                         className="add-to-cart-from-fav"
