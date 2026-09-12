@@ -6,8 +6,6 @@ import { dashboardApi } from '../../services/api';
 import PageHeader from '../../features/admin/ui/PageHeader';
 import '../../features/admin/dashboard/dashboard.css';
 
-const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
 function monthTitle(iso) {
     if (!iso) return '';
     return new Date(iso).toLocaleString('uk-UA', { month: 'long' });
@@ -78,10 +76,6 @@ export default function AdminDashboard() {
                                         <span className="dashboard-number-value">{data.today.activeRentals}</span>
                                         <span className="dashboard-number-label">Активних оренд</span>
                                     </div>
-                                    <div className="dashboard-number">
-                                        <span className="dashboard-number-value">{money(data.today.activeRentalsAmount)} ₴</span>
-                                        <span className="dashboard-number-label">В оренді на суму</span>
-                                    </div>
                                 </div>
                             </div>
                         )}
@@ -97,10 +91,6 @@ export default function AdminDashboard() {
                                     <div className="dashboard-number">
                                         <span className="dashboard-number-value">{data.shop.paid}</span>
                                         <span className="dashboard-number-label">Оплачено</span>
-                                    </div>
-                                    <div className="dashboard-number">
-                                        <span className="dashboard-number-value">{money(data.shop.revenue)} ₴</span>
-                                        <span className="dashboard-number-label">Виручка</span>
                                     </div>
                                 </div>
                             </div>

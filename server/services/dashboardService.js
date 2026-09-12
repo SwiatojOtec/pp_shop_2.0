@@ -184,7 +184,6 @@ async function buildDashboard(user) {
             toIssue: rentDeals.filter((d) => d.rentFrom === todayIso && ['new', 'invoice', 'paid'].includes(d.status)).length,
             toReturn: issued.filter((d) => d.rentTo === todayIso).length,
             activeRentals: issued.length,
-            activeRentalsAmount: issued.reduce((s, d) => s + Number(d.totalAmount || 0), 0),
         };
     }
 
@@ -200,7 +199,6 @@ async function buildDashboard(user) {
             month: monthStart.toISOString(),
             orders: turnover.length,
             paid: turnover.filter((d) => PAID_OR_LATER_STATUSES.includes(d.status)).length,
-            revenue: turnover.reduce((s, d) => s + Number(d.totalAmount || 0), 0),
         };
     }
 
