@@ -266,3 +266,24 @@ export const sellersApi = {
 export const geocodeApi = {
     lookup: (address) => apiGet('/api/geocode', { q: address }),
 };
+
+export const statusBarApi = {
+    get: () => apiGet('/api/status-bar'),
+};
+
+export const analyticsApi = {
+    summary: ({ from, to, productId, seller } = {}) => apiGet('/api/analytics/summary', {
+        from,
+        to,
+        ...(productId ? { productId } : {}),
+        ...(seller && seller !== 'all' ? { seller } : {}),
+    }),
+};
+
+export const suppliersApi = {
+    list: () => apiGet('/api/suppliers'),
+    create: (data) => apiPost('/api/suppliers', data),
+    update: (id, data) => apiPut(`/api/suppliers/${id}`, data),
+    patch: (id, data) => apiPatch(`/api/suppliers/${id}`, data),
+    remove: (id) => apiDelete(`/api/suppliers/${id}`),
+};

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import AdminLogin from '../../pages/admin/AdminLogin';
@@ -13,12 +14,17 @@ import AdminRent from '../../pages/admin/AdminRent';
 import AdminProducts from '../../pages/admin/AdminProducts';
 import ProductEdit from '../../pages/admin/ProductEdit';
 import AdminCategories from '../../pages/admin/AdminCategories';
+import AdminSuppliers from '../../pages/admin/AdminSuppliers';
 import AdminBlog from '../../pages/admin/AdminBlog';
 import AdminBlogEdit from '../../pages/admin/AdminBlogEdit';
 import PanPivdenbud from '../../pages/admin/PanPivdenbud';
 import AdminUsers from '../../pages/admin/AdminUsers';
 import AdminSubdivisions from '../../pages/admin/AdminSubdivisions';
 import AdminSellers from '../../pages/admin/AdminSellers';
+
+// Тримає recharts поза головним бандлом — заходить лише той, у кого є
+// доступ до «Аналітики» (owner), і лише коли справді відкриває цю вкладку.
+const AdminAnalytics = lazy(() => import('../../pages/admin/AdminAnalytics'));
 
 import OrdersRentalList from '../orders-rental/pages/OrdersRentalList';
 import RentalCalendar from '../orders-rental/pages/RentalCalendar';
@@ -42,6 +48,7 @@ const CATALOG_TABS = [
     { value: 'tools', label: 'Інструмент' },
     { value: 'goods', label: 'Товари' },
     { value: 'taxonomy', label: 'Категорії та бренди' },
+    { value: 'suppliers', label: 'Постачальники' },
 ];
 
 const COMPANY_TABS = [
@@ -95,6 +102,7 @@ export default function AdminRoutes() {
                     <Route path="tools" element={<AdminRent />} />
                     <Route path="goods" element={<AdminProducts />} />
                     <Route path="taxonomy" element={<AdminCategories />} />
+                    <Route path="suppliers" element={<AdminSuppliers />} />
                 </Route>
                 <Route path="catalog/tools/:id" element={<ProductEdit context="rent" />} />
                 <Route path="catalog/goods/:id" element={<ProductEdit />} />
@@ -103,6 +111,15 @@ export default function AdminRoutes() {
                 <Route path="blog/:id" element={<AdminBlogEdit />} />
 
                 <Route path="timesheet" element={<PanPivdenbud />} />
+
+                <Route
+                    path="analytics"
+                    element={(
+                        <Suspense fallback={null}>
+                            <AdminAnalytics />
+                        </Suspense>
+                    )}
+                />
 
                 <Route path="company" element={<SectionTabsLayout basePath="/admin/company" tabs={COMPANY_TABS} />}>
                     <Route index element={<Navigate to="/admin/company/users" replace />} />

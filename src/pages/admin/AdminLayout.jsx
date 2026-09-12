@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, ShoppingCart, ContactRound, Warehouse, Wrench, FileText,
-    Building2, Users, Home, LogOut, ChevronRight,
+    Building2, Users, Home, LogOut, ChevronRight, BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -12,6 +12,7 @@ import {
     canUseTimesheet,
     isTimesheetViewer,
 } from '../../utils/adminRoles';
+import AdminStatusBar from '../../features/admin/statusbar/AdminStatusBar';
 import '../../features/admin/ui/admin-shell.css';
 
 // ─── Flat nav (docs/admin-redesign/00-plan.md, "Нова структура розділів") ──────
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
     { path: '/admin/catalog',   icon: <Wrench size={16} />,          label: 'Каталог',       show: (r) => hasShopAccess(r) || hasRentAccess(r) },
     { path: '/admin/blog',      icon: <FileText size={16} />,        label: 'Блог',          show: (r) => hasShopAccess(r) },
     { path: '/admin/timesheet', icon: <Building2 size={16} />,       label: 'Табель',        show: (r, head) => canUseTimesheet(r, head) || isTimesheetViewer(r) },
+    { path: '/admin/analytics', icon: <BarChart3 size={16} />,       label: 'Аналітика',     show: (r) => r === 'owner' },
     { path: '/admin/company',   icon: <Users size={16} />,           label: 'Компанія',      show: (r) => r === 'owner' },
 ];
 
@@ -35,6 +37,7 @@ const BREADCRUMB_TITLES = {
     '/admin/catalog': 'Каталог',
     '/admin/blog': 'Блог',
     '/admin/timesheet': 'Табель',
+    '/admin/analytics': 'Аналітика',
     '/admin/company': 'Компанія',
     '/admin/profile': 'Мій кабінет',
 };
@@ -151,6 +154,7 @@ export default function AdminLayout() {
                         </div>
                     </Link>
                 </header>
+                <AdminStatusBar />
                 <div className="ds-shell-content">
                     <Outlet />
                 </div>
