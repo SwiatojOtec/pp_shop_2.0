@@ -11,9 +11,14 @@ export default function ProductRelatedSearch({ productId, selected = [], onChang
     const [search, setSearch]   = useState('');
     const [results, setResults] = useState([]);
     const timeoutRef            = useRef(null);
+    // Найсвіжіше введене значення — щоб відкинути відповідь застарілого
+    // запиту, якщо вона прилетить піcля того, як користувач уже змінив
+    // рядок пошуку (пауза між словами розблоковує попередній debounce).
+    const latestSearchRef       = useRef('');
 
     function handleSearchChange(val) {
         setSearch(val);
+        latestSearchRef.current = val;
         clearTimeout(timeoutRef.current);
         if (val.trim().length < 2) { setResults([]); return; }
         timeoutRef.current = setTimeout(async () => {
@@ -23,6 +28,7 @@ export default function ProductRelatedSearch({ productId, selected = [], onChang
                     isRent: true,
                     includeHiddenRent: true,
                 });
+                if (latestSearchRef.current !== val) return;
                 const rows = Array.isArray(data) ? data : [];
                 const existingIds = selected.map((r) => r.id);
                 setResults(
@@ -31,7 +37,7 @@ export default function ProductRelatedSearch({ productId, selected = [], onChang
                         .slice(0, 6)
                 );
             } catch {
-                setResults([]);
+                if (latestSearchRef.current === val) setResults([]);
             }
         }, 300);
     }
