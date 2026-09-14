@@ -1,24 +1,26 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Plus, Phone, Mail, User, AlertTriangle } from 'lucide-react';
+import { Plus, Phone, Mail, User } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { clientsApi } from '../../services/api';
-import { parsePhones } from '../../utils/phoneUtils';
 import PageHeader from '../../features/admin/ui/PageHeader';
 import Toolbar from '../../features/admin/ui/Toolbar';
 import DataTable from '../../features/admin/ui/DataTable';
 import StatusBadge from '../../features/admin/ui/StatusBadge';
 import ClientFormModal from '../../features/admin/clients/ClientFormModal';
+import { CLIENT_FLAGS } from '../../features/admin/clients/clientFlags';
 import '../../features/admin/clients/clients.css';
 
 const CLIENT_STATE = {
     overdue: { label: 'Прострочена оренда', tone: 'danger' },
     active:  { label: 'Оренда активна',      tone: 'info' },
-    claims:  { label: 'Претензії',           tone: 'warning' },
     none:    { label: 'Без активних',        tone: 'neutral' },
 };
 
 const FILTER_OPTIONS = [
-    { value: 'claims', label: 'З претензіями' },
+    { value: 'regular', label: 'Постійні' },
+    { value: 'good', label: 'Хороші' },
+    { value: 'complaint', label: 'З претензіями' },
+    { value: 'blacklist', label: 'Чорний список' },
     { value: 'discount', label: 'Зі знижкою' },
     { value: 'activeRent', label: 'Активна оренда' },
 ];
@@ -75,11 +77,13 @@ export default function AdminClients() {
             label: 'Клієнт',
             render: (_, c) => (
                 <div className="client-name-cell">
-                    {c.claims && String(c.claims).trim() && (
-                        <span className="client-claims-icon" title="Є претензії" aria-label="Претензії">
-                            <AlertTriangle size={17} />
-                        </span>
-                    )}
+                    <div className="client-flags-icons">
+                        {CLIENT_FLAGS.filter((f) => c[f.key]).map((f) => (
+                            <span key={f.key} className={`client-flag-icon client-flag-icon--${f.tone}`} title={f.label} aria-label={f.label}>
+                                <f.icon size={16} />
+                            </span>
+                        ))}
+                    </div>
                     <div className="client-name-block">
                         <div className="client-name">{c.fullName}</div>
                         {c.notes && <div className="client-notes-preview" title={c.notes}>{c.notes}</div>}
@@ -91,7 +95,7 @@ export default function AdminClients() {
             key: 'phone',
             label: 'Контакти',
             render: (_, c) => {
-                const phones = parsePhones(c.phone);
+                const phones = [c.phone, c.phoneSecondary, c.phoneEmergency].filter(Boolean);
                 return (
                     <div>
                         {phones.map((p, i) => (

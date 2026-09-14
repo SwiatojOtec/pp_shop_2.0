@@ -4,7 +4,7 @@ const Product = require('../../../models/Product');
 const RentalApplication = require('../../../models/RentalApplication');
 const { Op } = require('sequelize');
 const { sendTelegramMessage } = require('../../../utils/telegram');
-const { normalizeUaPhone, parsePhones, phoneTailsMatch, normalizePhonesField } = require('../../../utils/phoneUtils');
+const { normalizeUaPhone, phoneTailsMatch, normalizePhonesField } = require('../../../utils/phoneUtils');
 const { resolveSellerId } = require('../../../constants/sellers');
 const { buildClientPatchFromForm } = require('./rentalContractService');
 const { generateOrderNumber } = require('../utils/orderNumbering');
@@ -165,16 +165,19 @@ async function getOrdersByClient(clientId) {
         order: [['createdAt', 'DESC']]
     });
 
-    const phoneList = parsePhones(client.phone);
+    // Клієнт тепер має до трьох окремих номерів (основний/додатковий/
+    // екстрений) — минулі "чужі" (без clientId) угоди підтягуємо, якщо
+    // customerPhone збігається з будь-яким із них.
+    const clientPhones = [client.phone, client.phoneSecondary, client.phoneEmergency].filter(Boolean);
 
     let byPhone = [];
-    if (phoneList.length) {
+    if (clientPhones.length) {
         const candidates = await Order.findAll({
             where: { clientId: { [Op.is]: null } },
             order: [['createdAt', 'DESC']],
             limit: 2500
         });
-        byPhone = candidates.filter((o) => phoneTailsMatch(client.phone, o.customerPhone));
+        byPhone = candidates.filter((o) => clientPhones.some((p) => phoneTailsMatch(p, o.customerPhone)));
     }
 
     const orderMap = new Map();

@@ -3,18 +3,21 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ClipboardList, Phone, Mail,
     FileText, Tag, Edit2, User, Plus, Check, X as XIcon,
-    AlertTriangle, ShoppingCart, Trash2,
+    ShoppingCart, Trash2,
 } from 'lucide-react';
 import { clientsApi, ordersApi } from '../../services/api';
-import { parsePhones } from '../../utils/phoneUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import StatusBadge from '../../features/admin/ui/StatusBadge';
 import DataTable from '../../features/admin/ui/DataTable';
 import ConfirmDialog from '../../features/admin/ui/ConfirmDialog';
+import Switch from '../../features/admin/ui/Switch';
 import ClientFormModal from '../../features/admin/clients/ClientFormModal';
+import { CLIENT_FLAGS } from '../../features/admin/clients/clientFlags';
 import '../../features/admin/clients/clients.css';
 import './AdminClientDetails.css';
+
+const CLIENT_TYPE_LABEL = { individual: 'Фіз особа', fop: 'ФОП', tov: 'ТОВ' };
 
 const ORDER_NON_TURNOVER_STATUSES = ['cancelled'];
 const ACTIVE_RENTAL_STATUSES = ['active', 'booked'];
@@ -42,10 +45,7 @@ export default function AdminClientDetails() {
     const [notesDraft,   setNotesDraft]  = useState('');
     const [notesSaving,  setNotesSaving] = useState(false);
     const notesRef = useRef(null);
-    const [editingClaims, setEditingClaims] = useState(false);
-    const [claimsDraft, setClaimsDraft] = useState('');
-    const [claimsSaving, setClaimsSaving] = useState(false);
-    const claimsRef = useRef(null);
+    const [flagSaving, setFlagSaving] = useState(null);
     const [formOpen, setFormOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -71,20 +71,13 @@ export default function AdminClientDetails() {
         })();
     }, [id, canCreateShopOrders]);
 
-    async function saveClaims() {
-        setClaimsSaving(true);
+    async function toggleFlag(key, next) {
+        setFlagSaving(key);
         try {
-            const updated = await clientsApi.patch(id, { claims: claimsDraft });
+            const updated = await clientsApi.patch(id, { [key]: next });
             setClient(updated);
-            setEditingClaims(false);
         } catch (e) { showToast(e.message || 'Помилка збереження', 'warning'); }
-        finally { setClaimsSaving(false); }
-    }
-
-    function startEditClaims() {
-        setClaimsDraft(client.claims || '');
-        setEditingClaims(true);
-        setTimeout(() => claimsRef.current?.focus(), 50);
+        finally { setFlagSaving(null); }
     }
 
     async function saveNotes() {
@@ -170,14 +163,19 @@ export default function AdminClientDetails() {
     if (loading) return <div className="cd-loading">Завантаження...</div>;
     if (!client) return <div className="cd-loading cd-loading--err">Клієнта не знайдено</div>;
 
-    const phones   = parsePhones(client.phone);
+    const isOrg = client.clientType === 'tov';
+    const phones = [
+        { label: 'Основний телефон', value: client.phone },
+        { label: 'Додатковий номер', value: client.phoneSecondary },
+        { label: 'Екстрений номер', value: client.phoneEmergency },
+    ].filter((p) => p.value);
     const discount = Number(client.discountPercent || 0);
     const turnoverRows = deals.filter((d) => !ORDER_NON_TURNOVER_STATUSES.includes(d.status));
     const totalRevenue = turnoverRows.reduce((s, d) => s + Number(d.totalAmount || 0), 0);
     const activeCount = deals.filter((d) => d.isOverdue
         || (d.statusDomain === 'rental' && ACTIVE_RENTAL_STATUSES.includes(d.status))
         || (d.statusDomain === 'order' && d.status === 'issued')).length;
-    const hasClaims = !!(client.claims && String(client.claims).trim());
+    const activeFlags = CLIENT_FLAGS.filter((f) => client[f.key]);
 
     return (
         <div className="cd-page">
@@ -193,12 +191,13 @@ export default function AdminClientDetails() {
                     <div className="cd-meta-line">
                         <span className="cd-meta-id">#{client.id}</span>
                         {client.createdAt && <span className="cd-meta-date">клієнт з {fmtDate(client.createdAt)}</span>}
+                        <StatusBadge tone="neutral" label={CLIENT_TYPE_LABEL[client.clientType] || CLIENT_TYPE_LABEL.individual} />
                         {discount > 0 && (
                             <StatusBadge tone="success" label={<><Tag size={11} className="cd-badge-icon" />Знижка {discount.toFixed(0)}%</>} />
                         )}
-                        {hasClaims && (
-                            <StatusBadge tone="danger" label={<><AlertTriangle size={11} className="cd-badge-icon" />Претензії</>} />
-                        )}
+                        {activeFlags.map((f) => (
+                            <StatusBadge key={f.key} tone={f.tone} label={<><f.icon size={11} className="cd-badge-icon" />{f.label}</>} />
+                        ))}
                     </div>
                 </div>
 
@@ -231,29 +230,25 @@ export default function AdminClientDetails() {
                         </div>
 
                         <div className="cd-fields">
-                            {phones.length > 0 && (
-                                <div className="cd-field">
-                                    <span className="cd-field-label">Телефон</span>
-                                    <div className="cd-field-value">
-                                        {phones.map((p, i) => (
-                                            <a key={i} href={`tel:${p}`} className="cd-phone-link">{p}</a>
-                                        ))}
-                                    </div>
+                            {phones.map((p) => (
+                                <div className="cd-field" key={p.label}>
+                                    <span className="cd-field-label">{p.label}</span>
+                                    <a href={`tel:${p.value}`} className="cd-phone-link">{p.value}</a>
                                 </div>
-                            )}
+                            ))}
                             {client.email && (
                                 <div className="cd-field">
                                     <span className="cd-field-label">E-mail</span>
                                     <a href={`mailto:${client.email}`} className="cd-link">{client.email}</a>
                                 </div>
                             )}
-                            {client.passport && (
+                            {!isOrg && client.passport && (
                                 <div className="cd-field">
                                     <span className="cd-field-label">Паспорт</span>
                                     <span className="cd-field-value">{client.passport}</span>
                                 </div>
                             )}
-                            {client.passportIssuedAt && (
+                            {!isOrg && client.passportIssuedAt && (
                                 <div className="cd-field">
                                     <span className="cd-field-label">Дата видачі паспорта</span>
                                     <span className="cd-field-value">{client.passportIssuedAt}</span>
@@ -261,8 +256,20 @@ export default function AdminClientDetails() {
                             )}
                             {client.ipn && (
                                 <div className="cd-field">
-                                    <span className="cd-field-label">ІПН</span>
+                                    <span className="cd-field-label">{isOrg ? 'ЄДРПОУ' : 'ІПН'}</span>
                                     <span className="cd-field-value">{client.ipn}</span>
+                                </div>
+                            )}
+                            {isOrg && client.bankName && (
+                                <div className="cd-field">
+                                    <span className="cd-field-label">Банк</span>
+                                    <span className="cd-field-value">{client.bankName}</span>
+                                </div>
+                            )}
+                            {isOrg && client.bankAccount && (
+                                <div className="cd-field">
+                                    <span className="cd-field-label">Розрахунковий рахунок</span>
+                                    <span className="cd-field-value mono">{client.bankAccount}</span>
                                 </div>
                             )}
                             {client.address && (
@@ -383,42 +390,26 @@ export default function AdminClientDetails() {
                             )}
                         </div>
 
-                        <div className={`cd-card ${hasClaims ? 'cd-card--claims' : ''}`}>
+                        <div className="cd-card">
                             <div className="cd-card-title cd-card-title--split">
                                 <span className="cd-card-title-main">
-                                    <AlertTriangle size={15} /> Претензії
+                                    <ClipboardList size={15} /> Статус клієнта
                                 </span>
-                                {!editingClaims && (
-                                    <button type="button" className="cd-notes-edit-btn" onClick={startEditClaims}>
-                                        {hasClaims ? <><Edit2 size={11} /> Редагувати</> : <><Plus size={11} /> Додати</>}
-                                    </button>
-                                )}
                             </div>
-
-                            {editingClaims ? (
-                                <div className="cd-notes-editor">
-                                    <textarea
-                                        ref={claimsRef}
-                                        value={claimsDraft}
-                                        onChange={e => setClaimsDraft(e.target.value)}
-                                        placeholder="Претензії, інциденти, ризики — видно в списку клієнтів"
-                                        rows={5}
-                                        className="cd-notes-textarea"
-                                    />
-                                    <div className="cd-notes-actions">
-                                        <button type="button" className="ds-btn ds-btn--primary ds-btn--sm" onClick={saveClaims} disabled={claimsSaving}>
-                                            <Check size={12} /> {claimsSaving ? 'Збереження...' : 'Зберегти'}
-                                        </button>
-                                        <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => setEditingClaims(false)}>
-                                            <XIcon size={12} /> Скасувати
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : hasClaims ? (
-                                <p className="cd-notes-text cd-claims-text">{client.claims}</p>
-                            ) : (
-                                <p className="cd-notes-empty">Претензій немає</p>
-                            )}
+                            <div className="cd-flags-list">
+                                {CLIENT_FLAGS.map((f) => (
+                                    <label key={f.key} className="cd-flag-row">
+                                        <Switch
+                                            checked={!!client[f.key]}
+                                            disabled={flagSaving === f.key}
+                                            onChange={(next) => toggleFlag(f.key, next)}
+                                            label={f.label}
+                                        />
+                                        <f.icon size={14} className={`client-flag-icon--${f.tone}`} />
+                                        {f.label}
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

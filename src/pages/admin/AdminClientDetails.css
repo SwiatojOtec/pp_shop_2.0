@@ -318,9 +318,19 @@
     gap: 8px;
 }
 
-.cd-card--claims {
-    border-color: var(--ds-danger-soft);
-    box-shadow: 0 1px 3px rgba(180, 35, 28, 0.06);
+.cd-flags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cd-flag-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--ds-text);
+    cursor: pointer;
 }
 
 .cd-claims-text {

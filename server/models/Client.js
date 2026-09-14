@@ -11,9 +11,23 @@ const Client = sequelize.define('Client', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    // 'individual' (фіз особа, типово) | 'fop' | 'tov'.
+    clientType: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'individual'
+    },
     phone: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    phoneSecondary: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    phoneEmergency: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     email: {
         type: DataTypes.STRING,
@@ -27,7 +41,18 @@ const Client = sequelize.define('Client', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    // ІПН (фіз особа/ФОП) або ЄДРПОУ (ТОВ) — те саме поле, підпис у формі
+    // залежить від clientType.
     ipn: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    // Реквізити рахунку — актуальні лише для ТОВ.
+    bankName: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    bankAccount: {
         type: DataTypes.STRING,
         allowNull: true
     },
@@ -48,9 +73,27 @@ const Client = sequelize.define('Client', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    claims: {
-        type: DataTypes.TEXT,
-        allowNull: true
+    // Статусні позначки клієнта (список «Стан») — замінили вільний текст
+    // claims: той самий сенс претензії тепер тут, булевим прапорцем.
+    isRegularClient: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    hasComplaint: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    isGoodClient: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    isBlacklisted: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
     }
 }, { timestamps: true });
 

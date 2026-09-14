@@ -5,20 +5,49 @@ const Client = require('../models/Client');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { getAllDealRows } = require('../modules/orders-rental/services/orderService');
 
-const { phoneTailsMatch, normalizePhonesField, normalizeUaPhone } = require('../utils/phoneUtils');
+const { phoneTailsMatch, normalizeUaPhone } = require('../utils/phoneUtils');
 
 const allowedRoles = ['owner', 'shop_manager', 'shop_rent', 'rent', 'pivdenbud'];
+const CLIENT_TYPES = ['individual', 'fop', 'tov'];
 
 const DEAL_NON_TURNOVER_STATUSES = ['cancelled'];
 const ACTIVE_RENTAL_STATUSES = ['active', 'booked'];
 
 /** «Стан» pill (docs/admin-redesign/03-screens.md, «Клієнти»): прострочена
- *  оренда переважає активну, активна — претензії. */
-function resolveClientState({ hasOverdue, hasActive, hasClaims }) {
+ *  оренда переважає активну. Статусні прапорці (постійний/претензія/
+ *  хороший/чорний список) — окремі значки біля імені, не входять сюди. */
+function resolveClientState({ hasOverdue, hasActive }) {
     if (hasOverdue) return 'overdue';
     if (hasActive) return 'active';
-    if (hasClaims) return 'claims';
     return 'none';
+}
+
+function normalizeClientType(value) {
+    return CLIENT_TYPES.includes(value) ? value : 'individual';
+}
+
+function pickClientPayload(body) {
+    return {
+        fullName: body.fullName,
+        clientType: normalizeClientType(body.clientType),
+        phone: normalizeUaPhone(body.phone) || body.phone || '',
+        phoneSecondary: body.phoneSecondary ? (normalizeUaPhone(body.phoneSecondary) || body.phoneSecondary) : null,
+        phoneEmergency: body.phoneEmergency ? (normalizeUaPhone(body.phoneEmergency) || body.phoneEmergency) : null,
+        email: body.email || null,
+        passport: body.passport || null,
+        passportIssuedAt: body.passportIssuedAt || body.passportIssued || null,
+        ipn: body.ipn || null,
+        bankName: body.bankName || null,
+        bankAccount: body.bankAccount || null,
+        address: body.address || null,
+        siteAddress: body.siteAddress || null,
+        discountPercent: Math.max(0, Math.min(100, Number(body.discountPercent || 0))),
+        notes: body.notes || null,
+        isRegularClient: !!body.isRegularClient,
+        hasComplaint: !!body.hasComplaint,
+        isGoodClient: !!body.isGoodClient,
+        isBlacklisted: !!body.isBlacklisted,
+    };
 }
 
 router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
@@ -30,6 +59,8 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
             where[Op.or] = [
                 { fullName: { [Op.iLike]: `%${q}%` } },
                 { phone: { [Op.iLike]: `%${q}%` } },
+                { phoneSecondary: { [Op.iLike]: `%${q}%` } },
+                { phoneEmergency: { [Op.iLike]: `%${q}%` } },
                 { email: { [Op.iLike]: `%${q}%` } }
             ];
         }
@@ -58,8 +89,7 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
 
         let enriched = clients.map((c) => {
             const deals = dealsByClient.get(c.id) || { count: 0, revenue: 0, hasOverdue: false, hasActive: false };
-            const hasClaims = !!(c.claims && String(c.claims).trim());
-            const state = resolveClientState({ ...deals, hasClaims });
+            const state = resolveClientState(deals);
             return {
                 ...c.toJSON(),
                 dealsCount: deals.count,
@@ -68,9 +98,12 @@ router.get('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
             };
         });
 
-        if (filter === 'claims') enriched = enriched.filter((c) => c.claims && String(c.claims).trim());
         if (filter === 'discount') enriched = enriched.filter((c) => Number(c.discountPercent || 0) > 0);
         if (filter === 'activeRent') enriched = enriched.filter((c) => c.state === 'active' || c.state === 'overdue');
+        if (filter === 'regular') enriched = enriched.filter((c) => c.isRegularClient);
+        if (filter === 'complaint') enriched = enriched.filter((c) => c.hasComplaint);
+        if (filter === 'good') enriched = enriched.filter((c) => c.isGoodClient);
+        if (filter === 'blacklist') enriched = enriched.filter((c) => c.isBlacklisted);
 
         res.json(enriched);
     } catch (err) {
@@ -87,11 +120,21 @@ router.get('/lookup', authMiddleware, requireRole(allowedRoles), async (req, res
         }
         const tail = normalized.slice(-9);
         const candidates = await Client.findAll({
-            where: { phone: { [Op.iLike]: `%${tail}%` } },
+            where: {
+                [Op.or]: [
+                    { phone: { [Op.iLike]: `%${tail}%` } },
+                    { phoneSecondary: { [Op.iLike]: `%${tail}%` } },
+                    { phoneEmergency: { [Op.iLike]: `%${tail}%` } },
+                ],
+            },
             limit: 30,
             order: [['updatedAt', 'DESC']]
         });
-        const client = candidates.find((c) => phoneTailsMatch(c.phone, normalized)) || null;
+        const client = candidates.find((c) => (
+            phoneTailsMatch(c.phone, normalized)
+            || phoneTailsMatch(c.phoneSecondary, normalized)
+            || phoneTailsMatch(c.phoneEmergency, normalized)
+        )) || null;
         res.json({ found: !!client, client });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -110,20 +153,7 @@ router.get('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) =
 
 router.post('/', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     try {
-        const payload = {
-            fullName: req.body.fullName,
-            phone: normalizePhonesField(req.body.phone),
-            email: req.body.email || null,
-            passport: req.body.passport || null,
-            passportIssuedAt: req.body.passportIssuedAt || req.body.passportIssued || null,
-            ipn: req.body.ipn || null,
-            address: req.body.address || null,
-            siteAddress: req.body.siteAddress || null,
-            discountPercent: Math.max(0, Math.min(100, Number(req.body.discountPercent || 0))),
-            notes: req.body.notes || null,
-            claims: req.body.claims || null
-        };
-        const created = await Client.create(payload);
+        const created = await Client.create(pickClientPayload(req.body));
         res.status(201).json(created);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -134,22 +164,7 @@ router.put('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) =
     try {
         const client = await Client.findByPk(req.params.id);
         if (!client) return res.status(404).json({ message: 'Клієнта не знайдено' });
-        const updates = {
-            fullName: req.body.fullName,
-            phone: normalizePhonesField(req.body.phone),
-            email: req.body.email || null,
-            passport: req.body.passport || null,
-            passportIssuedAt: req.body.passportIssuedAt || req.body.passportIssued || null,
-            ipn: req.body.ipn || null,
-            address: req.body.address || null,
-            siteAddress: req.body.siteAddress || null,
-            discountPercent: Math.max(0, Math.min(100, Number(req.body.discountPercent || 0))),
-            notes: req.body.notes || null,
-        };
-        if (Object.prototype.hasOwnProperty.call(req.body, 'claims')) {
-            updates.claims = req.body.claims || null;
-        }
-        await client.update(updates);
+        await client.update(pickClientPayload(req.body));
         res.json(client);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -161,8 +176,11 @@ router.patch('/:id', authMiddleware, requireRole(allowedRoles), async (req, res)
         const client = await Client.findByPk(req.params.id);
         if (!client) return res.status(404).json({ message: 'Клієнта не знайдено' });
         // Partial update — тільки передані поля, щоб застарілий знімок клієнта
-        // (напр. з відкритої вкладки нотаток) не затер сусідні зміни (claims).
-        const patchable = ['notes', 'claims', 'discountPercent', 'siteAddress'];
+        // (напр. з відкритої вкладки нотаток) не затер сусідні зміни.
+        const patchable = [
+            'notes', 'discountPercent', 'siteAddress',
+            'isRegularClient', 'hasComplaint', 'isGoodClient', 'isBlacklisted',
+        ];
         const updates = {};
         for (const key of patchable) {
             if (Object.prototype.hasOwnProperty.call(req.body, key)) {

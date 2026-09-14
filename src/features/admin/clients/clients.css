@@ -18,6 +18,10 @@
     align-items: start;
 }
 
+.client-modal-row--triple {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
 .client-modal-stack {
     display: flex;
     flex-direction: column;
@@ -34,6 +38,7 @@
 }
 
 .client-modal-field input,
+.client-modal-field select,
 .client-modal-field textarea {
     padding: 8px 10px;
     border: 1px solid var(--ds-border);
@@ -55,9 +60,27 @@
     font-size: 0.78rem;
 }
 
+.client-modal-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-4);
+    padding-top: 4px;
+}
+
+.client-modal-flag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ds-text);
+    cursor: pointer;
+}
+
 @media (max-width: 560px) {
     .client-modal-row,
-    .client-modal-row--tight {
+    .client-modal-row--tight,
+    .client-modal-row--triple {
         grid-template-columns: 1fr;
     }
 }
@@ -70,11 +93,22 @@
     gap: 8px;
 }
 
-.client-claims-icon {
+.client-flags-icons {
     flex-shrink: 0;
-    color: var(--ds-warning);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     margin-top: 2px;
 }
+
+.client-flag-icon {
+    display: inline-flex;
+}
+
+.client-flag-icon--info { color: var(--ds-info); }
+.client-flag-icon--success { color: var(--ds-success); }
+.client-flag-icon--warning { color: var(--ds-warning); }
+.client-flag-icon--danger { color: var(--ds-danger); }
 
 .client-name-block {
     min-width: 0;
