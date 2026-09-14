@@ -26,3 +26,12 @@
 .admin-status-item--danger {
     color: var(--ds-danger);
 }
+
+.admin-status-item--warning {
+    color: var(--ds-warning);
+}
+
+.admin-status-item--unknown {
+    color: var(--ds-text-subtle);
+    font-weight: 400;
+}

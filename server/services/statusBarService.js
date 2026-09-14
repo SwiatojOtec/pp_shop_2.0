@@ -69,29 +69,55 @@ async function getWeather() {
     }
 }
 
+// api.ukrainealarm.com: м. Київ і Київська область — окремі регіони
+// верхнього рівня ("State"), Київ не є дочірнім щодо області. ID перевірені
+// живим запитом до /api/v3/regions і стабільні (адміністративні одиниці).
+const KYIV_CITY_REGION_ID = '31';
+const KYIV_OBLAST_REGION_ID = '14';
+
+/**
+ * Пріоритет: тривога в самому Києві переважає тривогу в області (частіше
+ * область "запалюється" на кілька хвилин раніше за місто) — власник хоче
+ * бачити ранній сигнал по області, який перемикається на "Київ", щойно
+ * тривога дійде безпосередньо до міста.
+ *
+ * Один запит на весь список тривог по Україні, а не по одному на кожен
+ * регіон — free-тір ключа явно чутливий до частоти запитів (кілька
+ * паралельних /alerts/{id} поспіль стабільно ловили 401, хоча ключ і
+ * region id перевірені й правильні).
+ */
 async function getAirRaid() {
-    const token = process.env.ALERTS_IN_UA_TOKEN;
-    if (!token) return { configured: false, active: false };
+    const apiKey = process.env.UKRAINEALARM_API_KEY;
+    if (!apiKey) return { configured: false, status: 'unknown' };
 
     if (isFresh(cache.airRaid, TTL.airRaid)) return cache.airRaid.value;
     try {
-        const res = await fetch(`https://api.alerts.in.ua/v1/alerts/active.json?token=${encodeURIComponent(token)}`);
-        if (!res.ok) throw new Error(`alerts.in.ua відповів ${res.status}`);
+        const res = await fetch('https://api.ukrainealarm.com/api/v3/alerts', {
+            headers: { Authorization: apiKey },
+        });
+        if (!res.ok) throw new Error(`ukrainealarm.com відповів ${res.status}`);
         const data = await res.json();
-        const alerts = Array.isArray(data?.alerts) ? data.alerts : [];
-        // Місто Київ — окремий регіон від Київської області в цьому API;
-        // шукаємо саме його, а не область (для доставки важливе саме місто).
-        const kyivAlert = alerts.find((a) => String(a.location_title || '').trim() === 'м. Київ');
-        const value = {
-            configured: true,
-            active: !!kyivAlert,
-            type: kyivAlert?.alert_type || null,
-            since: kyivAlert?.started_at || null,
-        };
+        const entries = Array.isArray(data) ? data : [];
+        const findAlert = (regionId) => entries.find((e) => e.regionId === regionId)?.activeAlerts?.[0] || null;
+        const cityAlert = findAlert(KYIV_CITY_REGION_ID);
+        const oblastAlert = findAlert(KYIV_OBLAST_REGION_ID);
+
+        const active = cityAlert ? { level: 'city', alert: cityAlert } : oblastAlert ? { level: 'oblast', alert: oblastAlert } : null;
+        const value = active
+            ? {
+                configured: true,
+                status: active.level,
+                type: active.alert.type || null,
+                since: active.alert.activeAlertLevels?.[0]?.createdAt || active.alert.lastUpdate || null,
+            }
+            : { configured: true, status: 'clear', type: null, since: null };
+
         cache.airRaid = { at: Date.now(), value };
         return value;
     } catch (err) {
-        return { configured: true, active: false, error: err.message };
+        // Не видаємо "спокійно" на помилці — краще показати "статус
+        // невідомий", ніж хибно заспокоїти.
+        return { configured: true, status: 'unknown', error: err.message };
     }
 }
 

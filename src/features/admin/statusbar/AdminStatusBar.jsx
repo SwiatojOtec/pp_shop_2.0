@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock, Coins, Cloud, Siren, ShieldCheck } from 'lucide-react';
+import { Clock, Coins, Cloud, Siren, ShieldCheck, AlertTriangle, HelpCircle } from 'lucide-react';
 import { statusBarApi } from '../../../services/api';
 import './statusbar.css';
 
@@ -18,22 +18,23 @@ function formatRate(v) {
     return v == null ? '—' : v.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// alerts.in.ua позначає тип загрози машинним кодом — переклад для показу.
+// ukrainealarm.com позначає тип загрози машинним кодом — переклад для показу.
 const AIR_RAID_TYPE_LABELS = {
-    air_raid: 'повітряна тривога',
-    artillery_shelling: 'артобстріл',
-    urban_fights: 'вуличні бої',
-    chemical: 'хімічна загроза',
-    nuclear: 'ядерна загроза',
+    AIR: 'повітряна тривога',
+    ARTILLERY: 'артобстріл',
+    URBAN_FIGHTS: 'вуличні бої',
+    CHEMICAL: 'хімічна загроза',
+    NUCLEAR: 'ядерна загроза',
 };
 
 function airRaidTypeLabel(type) {
-    return type ? (AIR_RAID_TYPE_LABELS[type] || type) : '';
+    return type ? (AIR_RAID_TYPE_LABELS[String(type).toUpperCase()] || type) : '';
 }
 
 /** Смужка під хедером адмінки: курс валют (НБУ), погода в Києві (Open-Meteo),
- *  час і повітряна тривога (alerts.in.ua, коли налаштовано ALERTS_IN_UA_TOKEN)
- *  — орієнтир при плануванні доставки. Не чутливі дані, видно всім ролям. */
+ *  час і повітряна тривога (ukrainealarm.com, коли налаштовано
+ *  UKRAINEALARM_API_KEY) — орієнтир при плануванні доставки. Не чутливі
+ *  дані, видно всім ролям. */
 export default function AdminStatusBar() {
     const [data, setData] = useState(null);
     const time = useKyivClock();
@@ -74,12 +75,40 @@ export default function AdminStatusBar() {
                 </span>
             )}
 
-            {data?.airRaid?.configured && (
-                <span className={`admin-status-item admin-status-item--airraid${data.airRaid.active ? ' admin-status-item--danger' : ''}`}>
-                    {data.airRaid.active ? <Siren size={14} /> : <ShieldCheck size={14} />}
-                    {data.airRaid.active ? `Тривога в Києві${data.airRaid.type ? ` · ${airRaidTypeLabel(data.airRaid.type)}` : ''}` : 'Київ: спокійно'}
-                </span>
-            )}
+            {data?.airRaid?.configured && (() => {
+                const { status, type } = data.airRaid;
+                const typeSuffix = type ? ` · ${airRaidTypeLabel(type)}` : '';
+                if (status === 'city') {
+                    return (
+                        <span className="admin-status-item admin-status-item--airraid admin-status-item--danger">
+                            <Siren size={14} />
+                            {`Тривога в Києві${typeSuffix}`}
+                        </span>
+                    );
+                }
+                if (status === 'oblast') {
+                    return (
+                        <span className="admin-status-item admin-status-item--airraid admin-status-item--warning">
+                            <AlertTriangle size={14} />
+                            {`Тривога в Київській області${typeSuffix}`}
+                        </span>
+                    );
+                }
+                if (status === 'clear') {
+                    return (
+                        <span className="admin-status-item admin-status-item--airraid">
+                            <ShieldCheck size={14} />
+                            Київ: спокійно
+                        </span>
+                    );
+                }
+                return (
+                    <span className="admin-status-item admin-status-item--airraid admin-status-item--unknown" title={data.airRaid.error || ''}>
+                        <HelpCircle size={14} />
+                        Тривога: статус невідомий
+                    </span>
+                );
+            })()}
         </div>
     );
 }
