@@ -5,7 +5,7 @@ const Client = require('../../../models/Client');
 const RentalApplication = require('../../../models/RentalApplication');
 const { DEFAULT_RENTAL_DEPOSIT_PERCENT } = require('../../../constants/rentalDefaults');
 const { recalculateProductQuantity, userDisplayName } = require('../../../services/inventoryService');
-const { parseDiscountPercent, roundMoney, calcRentDays } = require('../../../utils/orderAmounts');
+const { parseDiscountValue, resolveDiscountAmount, roundMoney, calcRentDays } = require('../../../utils/orderAmounts');
 const { coerceDbRentPriceTiers, getRentPricePerDayFromTiers } = require('../../../utils/rentPricing');
 const { generateAppNumber, generateOrderNumber } = require('../utils/orderNumbering');
 const { recalcRentQuantitiesForItemsLists, shouldBeOverdue } = require('./rentalApplicationService');
@@ -128,14 +128,15 @@ async function syncApplicationWithOrder(application, order, transaction) {
     const productsById = new Map(products.map((p) => [p.id, p]));
     const rentItems = buildRentItemsFromOrder(order, productsById, application.items || []);
 
-    const orderDiscount = parseDiscountPercent(order.discount);
+    const orderDiscountType = order.discountType === 'fixed' ? 'fixed' : 'percent';
+    const orderDiscount = parseDiscountValue(order.discount, orderDiscountType);
     const totalRental = roundMoney(
         rentItems.reduce((sum, line) => sum + (parseFloat(line.totalRental) || 0), 0)
     );
     const totalDeposit = roundMoney(
         rentItems.reduce((sum, line) => sum + (parseFloat(line.depositAmount) || 0), 0)
     );
-    const discountAmount = roundMoney(Math.min((totalRental * orderDiscount) / 100, totalRental));
+    const discountAmount = resolveDiscountAmount(totalRental, orderDiscountType, orderDiscount);
     const totalAmount = roundMoney(Math.max(totalRental - discountAmount, 0));
 
     await application.update({
@@ -146,7 +147,7 @@ async function syncApplicationWithOrder(application, order, transaction) {
         clientId: order.clientId || application.clientId || null,
         items: rentItems,
         depositAmount: totalDeposit,
-        discountType: 'percent',
+        discountType: orderDiscountType,
         discountValue: orderDiscount,
         discountAmount,
         totalAmount,
@@ -194,12 +195,13 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
 
         const totalDeposit = rentItems.reduce((sum, line) => sum + parseFloat(line.depositAmount || 0), 0);
         const applicationNumber = await generateAppNumber();
-        const discountPercent = parseDiscountPercent(order.discount);
+        const discountType = order.discountType === 'fixed' ? 'fixed' : 'percent';
+        const discountValue = parseDiscountValue(order.discount, discountType);
 
         const totalRental = roundMoney(
             rentItems.reduce((sum, line) => sum + (parseFloat(line.totalRental) || 0), 0)
         );
-        const discountAmount = roundMoney(Math.min((totalRental * discountPercent) / 100, totalRental));
+        const discountAmount = resolveDiscountAmount(totalRental, discountType, discountValue);
 
         const application = await RentalApplication.create({
             applicationNumber,
@@ -212,8 +214,8 @@ async function createOrGetRentalApplicationFromOrder(orderId, createdBy = null) 
             items: rentItems,
             totalAmount: roundMoney(Math.max(totalRental - discountAmount, 0)),
             depositAmount: totalDeposit.toFixed(2),
-            discountType: 'percent',
-            discountValue: discountPercent,
+            discountType,
+            discountValue,
             discountAmount,
             rentStartTime: order.rentStartTime || null,
             createdBy,
@@ -280,14 +282,15 @@ async function saveDealWithRentalApplication(orderId, orderPatch, dealExtras = {
 
             prevItems = existing?.items || [];
             const rentItems = buildRentItemsFromOrder(order, productsById, prevItems);
-            const orderDiscount = parseDiscountPercent(order.discount);
+            const orderDiscountType = order.discountType === 'fixed' ? 'fixed' : 'percent';
+            const orderDiscount = parseDiscountValue(order.discount, orderDiscountType);
             const totalRental = roundMoney(
                 rentItems.reduce((sum, line) => sum + (parseFloat(line.totalRental) || 0), 0)
             );
             const totalDeposit = roundMoney(
                 rentItems.reduce((sum, line) => sum + (parseFloat(line.depositAmount) || 0), 0)
             );
-            const discountAmount = roundMoney(Math.min((totalRental * orderDiscount) / 100, totalRental));
+            const discountAmount = resolveDiscountAmount(totalRental, orderDiscountType, orderDiscount);
             const totalAmount = roundMoney(Math.max(totalRental - discountAmount, 0));
             const rentFromDates = rentItems.map((l) => l.rentFrom).filter(Boolean).sort();
             const rentToDates = rentItems.map((l) => l.rentTo).filter(Boolean).sort();
@@ -314,7 +317,7 @@ async function saveDealWithRentalApplication(orderId, orderPatch, dealExtras = {
                 rentTo,
                 rentStartTime: order.rentStartTime || null,
                 depositAmount: totalDeposit,
-                discountType: 'percent',
+                discountType: orderDiscountType,
                 discountValue: orderDiscount,
                 discountAmount,
                 totalAmount,
@@ -440,7 +443,8 @@ async function convertApplicationToOrder(applicationId, createdByUser = null) {
         }
 
         const orderNumber = await generateOrderNumber();
-        const discount = application.discountType === 'percent' ? parseDiscountPercent(application.discountValue) : 0;
+        const discountType = application.discountType === 'fixed' ? 'fixed' : 'percent';
+        const discount = parseDiscountValue(application.discountValue, discountType);
 
         return Order.create({
             orderNumber,
@@ -452,6 +456,7 @@ async function convertApplicationToOrder(applicationId, createdByUser = null) {
             paymentMethod: 'invoice',
             items: buildOrderItemsFromApplication(items, productsById),
             totalAmount: parseFloat(application.totalAmount) || 0,
+            discountType,
             discount,
             clientId: application.clientId || null,
             status: deriveDealStatusFromRentalStatus(application.status),

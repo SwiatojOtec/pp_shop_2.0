@@ -1,6 +1,6 @@
 import { DEFAULT_SELLER_ID, SELLER_OPTIONS, getRentalLessor } from '../../../../constants/sellers';
 import { DELIVERY_LABELS, PAYMENT_LABELS } from '../../amounts/orderHelpers';
-import { parseDiscountPercent } from '../../amounts/orderAmounts';
+import { parseDiscountValue } from '../../amounts/orderAmounts';
 
 const money = (value) => Number(value || 0).toLocaleString('uk-UA', {
     minimumFractionDigits: 2,
@@ -73,16 +73,27 @@ export default function OrderDeliveryPaymentCard({
                         <dd>{PAYMENT_LABELS[draft.paymentMethod] || draft.paymentMethod || '—'}</dd>
                     </div>
                     <div className="ds-field">
-                        <dt>Знижка, %</dt>
+                        <dt>Знижка</dt>
                         <dd>
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.5"
-                                value={parseDiscountPercent(draft.discount)}
-                                onChange={(e) => setField('discount', e.target.value)}
-                            />
+                            <div className="rental-discount-controls">
+                                <select
+                                    value={draft.discountType === 'fixed' ? 'fixed' : 'percent'}
+                                    onChange={(e) => setField('discountType', e.target.value)}
+                                    className="rental-discount-type"
+                                >
+                                    <option value="percent">%</option>
+                                    <option value="fixed">₴</option>
+                                </select>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max={draft.discountType === 'fixed' ? undefined : 100}
+                                    step="0.5"
+                                    value={parseDiscountValue(draft.discount, draft.discountType)}
+                                    onChange={(e) => setField('discount', e.target.value)}
+                                    className="rental-discount-value"
+                                />
+                            </div>
                             {hasRent && <span className="deal-card__hint">Діє і на замовлення, і на документи оренди</span>}
                         </dd>
                     </div>

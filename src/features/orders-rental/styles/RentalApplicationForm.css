@@ -478,6 +478,23 @@
 .kit-item-row:last-child { border-bottom: none; }
 .kit-item-num { color: var(--ds-text-subtle); font-size: 0.75rem; min-width: 30px; }
 .kit-item-name { flex: 1; color: var(--ds-text); }
+.kit-item-name-input {
+    flex: 1;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ds-text);
+    font-size: 0.85rem;
+    font-family: inherit;
+    padding: 2px 6px;
+    border-radius: 4px;
+    min-width: 0;
+}
+.kit-item-name-input:hover { border-color: var(--ds-border-subtle); }
+.kit-item-name-input:focus {
+    border-color: var(--ds-accent);
+    outline: none;
+    background: var(--ds-surface);
+}
 .kit-item-state { color: var(--ds-success); font-size: 0.78rem; font-weight: 600; }
 .kit-item-remove-btn {
     background: none;
@@ -497,6 +514,19 @@
     opacity: 1;
     background: var(--ds-danger-soft);
 }
+.kit-item-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    background: none;
+    border: none;
+    color: var(--ds-text-subtle);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 4px 2px;
+}
+.kit-item-add-btn:hover { color: var(--ds-accent); }
 
 .add-item-btn {
     display: flex;

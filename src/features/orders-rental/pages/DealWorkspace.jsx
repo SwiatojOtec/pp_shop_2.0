@@ -65,6 +65,8 @@ export default function DealWorkspace() {
         updateRentDates,
         updateItemEnrichment,
         removeItemKit,
+        addItemKit,
+        changeItemKit,
         suggestedProducts,
     } = useOrderDraftEditor({
         draft,
@@ -286,6 +288,8 @@ export default function DealWorkspace() {
                     onUpdateRentDates={updateRentDates}
                     onUpdateItemEnrichment={updateItemEnrichment}
                     onRemoveItemKit={removeItemKit}
+                    onAddItemKit={addItemKit}
+                    onChangeItemKit={changeItemKit}
                 />
 
                 <DocumentsPanel

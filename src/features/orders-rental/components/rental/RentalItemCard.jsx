@@ -12,6 +12,16 @@ export default function RentalItemCard({
     onRemove,
     onRemoveKitItem,
 }) {
+    function handleAddKitItem() {
+        onUpdate('kitItems', [...(item.kitItems || []), '']);
+    }
+
+    function handleChangeKitItem(kitIndex, value) {
+        const next = [...(item.kitItems || [])];
+        next[kitIndex] = value;
+        onUpdate('kitItems', next);
+    }
+
     return (
         <div className="rental-item-card">
             <div className="item-card-header">
@@ -97,6 +107,8 @@ export default function RentalItemCard({
             <RentalKitItemsList
                 itemIndex={index}
                 kitItems={item.kitItems}
+                onAddKitItem={handleAddKitItem}
+                onChangeKitItem={handleChangeKitItem}
                 onRemoveKitItem={onRemoveKitItem}
             />
         </div>

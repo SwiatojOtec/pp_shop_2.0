@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ordersApi, productsApi, rentalApplicationsApi } from '../../../services/api';
 import { resolveSellerId } from '../../../constants/sellers';
-import { parseDiscountPercent, withOrderTotal, calcOrderAmounts } from '../amounts/orderAmounts';
+import { parseDiscountValue, withOrderTotal, calcOrderAmounts } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
 import { enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 
@@ -24,8 +24,8 @@ export function useOrderData(id) {
     );
 
     const orderAmounts = useMemo(
-        () => calcOrderAmounts(draft?.items, draft?.discount, draft?.sellerId, billingOptions),
-        [draft?.items, draft?.discount, draft?.sellerId, billingOptions]
+        () => calcOrderAmounts(draft?.items, draft?.discount, draft?.discountType, draft?.sellerId, billingOptions),
+        [draft?.items, draft?.discount, draft?.discountType, draft?.sellerId, billingOptions]
     );
 
     useEffect(() => {
@@ -58,7 +58,8 @@ export function useOrderData(id) {
                     ...orderData,
                     sellerId: resolveSellerId(orderData?.sellerId),
                     customerPhone: normalizeUaPhone(orderData?.customerPhone || ''),
-                    discount: parseDiscountPercent(orderData?.discount),
+                    discountType: orderData?.discountType === 'fixed' ? 'fixed' : 'percent',
+                    discount: parseDiscountValue(orderData?.discount, orderData?.discountType),
                     items: enrichRentOrderItemsFromApplication(
                         enrichOrderItemsFromProducts(
                             orderData?.items ? [...orderData.items.map((i) => ({ ...i }))] : [],

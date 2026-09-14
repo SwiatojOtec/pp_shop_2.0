@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { ordersApi } from '../../../services/api';
 import { useToast } from '../../../context/ToastContext';
 import { resolveSellerId } from '../../../constants/sellers';
-import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
+import { parseDiscountValue, withOrderTotal } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
 import { buildOrderItemFromProduct, enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 import { calcDays } from '../model/rentalItems';
@@ -29,11 +29,16 @@ export function useOrderDraftEditor({
         setDirty(true);
         setDraft((prev) => {
             if (!prev) return prev;
-            const next = {
+            let next = {
                 ...prev,
-                [field]: field === 'discount' ? parseDiscountPercent(value) : value,
+                [field]: field === 'discount' ? parseDiscountValue(value, prev.discountType) : value,
             };
-            if (field === 'sellerId' || field === 'discount') {
+            // Перемикання percent/fixed переінтерпретовує вже введене число
+            // (10 при переході в fixed мало б лишитись 10 ₴, не перерахунком).
+            if (field === 'discountType') {
+                next = { ...next, discount: parseDiscountValue(prev.discount, value) };
+            }
+            if (field === 'sellerId' || field === 'discount' || field === 'discountType') {
                 return withOrderTotal(next, billingOptions);
             }
             return next;
@@ -63,7 +68,8 @@ export function useOrderDraftEditor({
             paymentMethod: draft.paymentMethod,
             items: draft.items,
             totalAmount: draft.totalAmount,
-            discount: parseDiscountPercent(draft.discount),
+            discountType: draft.discountType === 'fixed' ? 'fixed' : 'percent',
+            discount: parseDiscountValue(draft.discount, draft.discountType),
             clientId: draft.clientId || null,
             status: draft.status,
             sellerId: resolveSellerId(draft.sellerId),
@@ -82,7 +88,8 @@ export function useOrderDraftEditor({
         setDraft({
             ...updated,
             rentStartTime: updated.rentStartTime || rentStartTime || null,
-            discount: parseDiscountPercent(updated.discount),
+            discountType: updated.discountType === 'fixed' ? 'fixed' : 'percent',
+            discount: parseDiscountValue(updated.discount, updated.discountType),
             items: enrichRentOrderItemsFromApplication(
                 enrichOrderItemsFromProducts(
                     updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
@@ -200,6 +207,36 @@ export function useOrderDraftEditor({
         });
     }
 
+    /** Додає порожній рядок комплектації — для чогось, що менеджер видає
+     * зверху стандартного набору лише в цій конкретній угоді. */
+    function addItemKit(idx) {
+        setDirty(true);
+        setDraft((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.map((item, i) => {
+                if (i !== idx) return item;
+                const kitItems = Array.isArray(item.kitItems) ? [...item.kitItems, ''] : [''];
+                return { ...item, kitItems };
+            });
+            return { ...prev, items };
+        });
+    }
+
+    function changeItemKit(idx, kitIndex, value) {
+        setDirty(true);
+        setDraft((prev) => {
+            if (!prev) return prev;
+            const items = prev.items.map((item, i) => {
+                if (i !== idx) return item;
+                const kitItems = Array.isArray(item.kitItems)
+                    ? item.kitItems.map((kit, ki) => (ki === kitIndex ? value : kit))
+                    : [];
+                return { ...item, kitItems };
+            });
+            return { ...prev, items };
+        });
+    }
+
     async function handleSave() {
         if (!draft) return;
         setSaving(true);
@@ -234,6 +271,8 @@ export function useOrderDraftEditor({
         updateRentDates,
         updateItemEnrichment,
         removeItemKit,
+        addItemKit,
+        changeItemKit,
         handleSave,
         suggestedProducts,
     };

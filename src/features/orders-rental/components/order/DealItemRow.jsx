@@ -38,6 +38,8 @@ export default function DealItemRow({
     onUpdateRentDates,
     onUpdateEnrichment,
     onRemoveKitItem,
+    onAddKitItem,
+    onChangeKitItem,
 }) {
     const [expanded, setExpanded] = useState(false);
     const line = calcLineDisplayAmounts(item, sellerId, billingOptions);
@@ -142,7 +144,13 @@ export default function DealItemRow({
                             <input value={item.depositAmount || '0.00'} readOnly className="readonly-field" />
                         </label>
                     </div>
-                    <RentalKitItemsList itemIndex={0} kitItems={item.kitItems} onRemoveKitItem={onRemoveKitItem} />
+                    <RentalKitItemsList
+                        itemIndex={0}
+                        kitItems={item.kitItems}
+                        onAddKitItem={onAddKitItem}
+                        onChangeKitItem={onChangeKitItem}
+                        onRemoveKitItem={onRemoveKitItem}
+                    />
                 </div>
             )}
         </div>

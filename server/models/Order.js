@@ -43,9 +43,17 @@ const Order = sequelize.define('Order', {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },
+    // Значення знижки — відсоток (0-100) або сума в ₴ залежно від discountType.
+    // DECIMAL(10,2), не (5,2): фіксована знижка в грошах може перевищувати 999.99.
     discount: {
-        type: DataTypes.DECIMAL(5, 2),
+        type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0
+    },
+    // 'percent' (типово) або 'fixed' — конкретна сума в ₴ замість відсотка,
+    // для клієнтів з індивідуальною домовленістю про фіксовану знижку.
+    discountType: {
+        type: DataTypes.STRING,
+        defaultValue: 'percent'
     },
     clientId: {
         type: DataTypes.INTEGER,

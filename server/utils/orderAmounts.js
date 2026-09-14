@@ -17,6 +17,26 @@ function parseDiscountPercent(value) {
     return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
 }
 
+/** Фіксована знижка — це гроші, тому 0-100 обмеження тут не діє. */
+function parseDiscountAmount(value) {
+    if (value == null || value === '') return 0;
+    const normalized = String(value).trim().replace(/\s/g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+function parseDiscountValue(value, discountType) {
+    return discountType === 'fixed' ? parseDiscountAmount(value) : parseDiscountPercent(value);
+}
+
+/** Сума знижки в грошах — для percent рахує від subtotal, для fixed бере
+ * як є, в обох випадках не більше самого subtotal. */
+function resolveDiscountAmount(subtotal, discountType, discountValue) {
+    const parsed = parseDiscountValue(discountValue, discountType);
+    const raw = discountType === 'fixed' ? parsed : (subtotal * parsed) / 100;
+    return Math.min(raw, subtotal);
+}
+
 function buildRentalAppIndex(rentalApplication) {
     const map = new Map();
     const items = rentalApplication?.items;
@@ -98,11 +118,12 @@ function sellerAppliesVat(seller) {
 
 /**
  * @param {Array} items
- * @param {number|string} discountPercent
+ * @param {number|string} discountValue
+ * @param {'percent'|'fixed'} discountType
  * @param {{ type?: string, appliesVat?: boolean }} seller
  * @param {{ rentProductIds?: Set|number[], rentalApplication?: object }} [billingOptions]
  */
-function calcOrderAmounts(items, discountPercent = 0, seller, billingOptions = {}) {
+function calcOrderAmounts(items, discountValue = 0, discountType = 'percent', seller, billingOptions = {}) {
     const appliesVat = sellerAppliesVat(seller);
     const rentalAppIndex = buildRentalAppIndex(billingOptions.rentalApplication);
     const netSubtotal = roundMoney(
@@ -111,8 +132,8 @@ function calcOrderAmounts(items, discountPercent = 0, seller, billingOptions = {
             0
         )
     );
-    const discount = parseDiscountPercent(discountPercent);
-    const netAfterDiscount = roundMoney(netSubtotal * (1 - discount / 100));
+    const discountAmount = resolveDiscountAmount(netSubtotal, discountType, discountValue);
+    const netAfterDiscount = roundMoney(netSubtotal - discountAmount);
 
     if (!appliesVat) {
         return {
@@ -263,6 +284,9 @@ module.exports = {
     UA_VAT_RATE,
     roundMoney,
     parseDiscountPercent,
+    parseDiscountAmount,
+    parseDiscountValue,
+    resolveDiscountAmount,
     calcRentDays,
     buildRentalAppIndex,
     resolveLineNetTotal,

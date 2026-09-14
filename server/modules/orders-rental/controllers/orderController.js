@@ -595,9 +595,15 @@ async function updateOrder(req, res) {
         if (updates.customerPhone != null) {
             updates.customerPhone = normalizeUaPhone(updates.customerPhone);
         }
+        if (updates.discountType != null) {
+            updates.discountType = updates.discountType === 'fixed' ? 'fixed' : 'percent';
+        }
         if (updates.discount != null) {
             const n = Number(String(updates.discount).replace(',', '.'));
-            updates.discount = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+            const isFixed = updates.discountType === 'fixed' || (updates.discountType == null && order.discountType === 'fixed');
+            updates.discount = Number.isFinite(n)
+                ? (isFixed ? Math.max(0, n) : Math.max(0, Math.min(100, n)))
+                : 0;
         }
         if (updates.sellerId != null) {
             updates.sellerId = resolveSellerId(updates.sellerId);
@@ -620,7 +626,7 @@ async function updateOrder(req, res) {
         const allowed = [
             'customerName', 'customerPhone', 'customerEmail', 'address',
             'deliveryMethod', 'paymentMethod', 'items', 'totalAmount',
-            'discount', 'clientId', 'status', 'sellerId', 'rentalApplicationId',
+            'discount', 'discountType', 'clientId', 'status', 'sellerId', 'rentalApplicationId',
             'rentStartTime',
         ];
         const patch = {};

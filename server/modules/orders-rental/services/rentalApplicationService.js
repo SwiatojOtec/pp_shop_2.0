@@ -4,7 +4,7 @@ const Client = require('../../../models/Client');
 const { Op } = require('sequelize');
 const { recalculateProductQuantity } = require('../../../services/inventoryService');
 const { normalizeUaPhone } = require('../../../utils/phoneUtils');
-const { parseDiscountPercent } = require('../../../utils/orderAmounts');
+const { parseDiscountPercent, parseDiscountValue } = require('../../../utils/orderAmounts');
 const { generateAppNumber } = require('../utils/orderNumbering');
 
 function normalizeRentalPayload(body) {
@@ -81,7 +81,7 @@ async function getApplicationById(id) {
 
     const linkedOrder = await Order.findOne({
         where: { rentalApplicationId: app.id },
-        attributes: ['id', 'orderNumber', 'discount', 'clientId', 'sellerId'],
+        attributes: ['id', 'orderNumber', 'discount', 'discountType', 'clientId', 'sellerId'],
     });
 
     let clientDiscount = 0;
@@ -95,7 +95,8 @@ async function getApplicationById(id) {
         ? {
             id: linkedOrder.id,
             orderNumber: linkedOrder.orderNumber,
-            discount: parseDiscountPercent(linkedOrder.discount),
+            discountType: linkedOrder.discountType === 'fixed' ? 'fixed' : 'percent',
+            discount: parseDiscountValue(linkedOrder.discount, linkedOrder.discountType),
             sellerId: linkedOrder.sellerId || null,
         }
         : null;

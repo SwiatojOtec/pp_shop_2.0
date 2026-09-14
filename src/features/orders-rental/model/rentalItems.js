@@ -2,7 +2,7 @@ import { DEFAULT_RENTAL_DEPOSIT_PERCENT } from '../../../constants/rentalDefault
 import { normalizeTechnicalCondition } from '../../../constants/technicalConditions';
 import { getRentPricePerDayFromTiers, coerceDbRentPriceTiers } from '../../../utils/rentPricing';
 import { productsApi } from '../../../services/api';
-import { parseDiscountPercent } from '../amounts/orderAmounts';
+import { parseDiscountPercent, parseDiscountValue } from '../amounts/orderAmounts';
 import { calcRentDays } from './rentDays';
 
 export { calcRentDays as calcDays } from './rentDays';
@@ -79,12 +79,14 @@ export async function enrichApplicationItem(rawItem) {
 }
 
 export function resolveApplicationDiscount(data) {
-    // A linked order owns the deal's discount, so mirror it even when the
-    // application still carries an older value of its own.
+    // A linked order owns the deal's discount, so mirror it (both value AND
+    // mode — the order's discount can now be percent OR a fixed ₴ amount)
+    // even when the application still carries an older value of its own.
     if (data?.linkedOrder) {
-        const orderDiscount = parseDiscountPercent(data.linkedOrder.discount);
+        const orderDiscountType = data.linkedOrder.discountType === 'fixed' ? 'fixed' : 'percent';
+        const orderDiscount = parseDiscountValue(data.linkedOrder.discount, orderDiscountType);
         return {
-            discountType: 'percent',
+            discountType: orderDiscountType,
             discountValue: orderDiscount > 0 ? String(orderDiscount) : '',
         };
     }

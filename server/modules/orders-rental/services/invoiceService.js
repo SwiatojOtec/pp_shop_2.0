@@ -12,7 +12,7 @@ const {
     calcLineDisplayAmounts,
     sellerAppliesVat,
     roundMoney,
-    parseDiscountPercent,
+    parseDiscountValue,
 } = require('../../../utils/orderAmounts');
 
 const RENT_INVOICE_NAME_PREFIX = 'Надання в оренду будiвельних машин i устатковання. ';
@@ -60,7 +60,7 @@ function renderInvoicePdf({
     amounts,
     tableDatas,
     title,
-    discountPercent = 0,
+    discountLabel = '',
 }) {
     return new Promise((resolve, reject) => {
         try {
@@ -170,10 +170,10 @@ function renderInvoicePdf({
             doc.text('Разом, грн:', labelX, currentY, { width: 100, align: 'right' });
             doc.text(subtotalLabel.toFixed(2), valueX, currentY, { width: rowWidth, align: 'right' });
 
-            if (discountPercent > 0) {
+            if (discountLabel) {
                 doc.moveDown(0.5);
                 currentY = doc.y;
-                doc.text(`Знижка (${discountPercent}%):`, labelX, currentY, { width: 100, align: 'right' });
+                doc.text(`Знижка (${discountLabel}):`, labelX, currentY, { width: 100, align: 'right' });
                 doc.text(`-${discountAmount.toFixed(2)}`, valueX, currentY, { width: rowWidth, align: 'right' });
             }
 
@@ -225,8 +225,12 @@ const generateInvoice = async (order, options = {}) => {
     const appliesVat = sellerAppliesVat(seller);
     const rentalApplication = await loadRentalApplication(order);
     const billingOptions = { rentProductIds, rentalApplication };
-    const amounts = calcOrderAmounts(order.items, order.discount, seller, billingOptions);
-    const discountPercent = parseDiscountPercent(order.discount);
+    const discountType = order.discountType === 'fixed' ? 'fixed' : 'percent';
+    const amounts = calcOrderAmounts(order.items, order.discount, discountType, seller, billingOptions);
+    const discountValue = parseDiscountValue(order.discount, discountType);
+    const discountLabel = discountValue > 0
+        ? (discountType === 'fixed' ? `${discountValue.toFixed(2)} ₴` : `${discountValue}%`)
+        : '';
 
     const tableDatas = (order.items || []).map((item, i) => {
         const line = calcLineDisplayAmounts(item, appliesVat, billingOptions);
@@ -248,7 +252,7 @@ const generateInvoice = async (order, options = {}) => {
         amounts,
         tableDatas,
         title: `Рахунок на оплату №${documentNumber}`,
-        discountPercent,
+        discountLabel,
     });
 };
 
@@ -295,7 +299,7 @@ const generateDepositInvoice = async (order, options = {}) => {
         amounts,
         tableDatas,
         title: `Рахунок на оплату №${documentNumber}`,
-        discountPercent: 0,
+        discountLabel: '',
     });
 };
 

@@ -21,7 +21,8 @@ export default function RentalTotalsBlock({
                     <span>Знижка:</span>
                     {discountLocked ? (
                         <span className="rental-discount-locked">
-                            {Number(discountValue || 0).toFixed(0)}% · із замовлення
+                            {Number(discountValue || 0).toFixed(discountType === 'fixed' ? 2 : 0)}
+                            {discountType === 'fixed' ? ' ₴' : '%'} · із замовлення
                         </span>
                     ) : (
                         <div className="rental-discount-controls">

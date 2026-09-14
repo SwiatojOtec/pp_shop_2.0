@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ordersApi, clientsApi } from '../../../services/api';
 import { useToast } from '../../../context/ToastContext';
 import { resolveSellerId } from '../../../constants/sellers';
-import { parseDiscountPercent, withOrderTotal } from '../amounts/orderAmounts';
+import { parseDiscountPercent, parseDiscountValue, withOrderTotal } from '../amounts/orderAmounts';
 import { isValidUaPhone, normalizeUaPhone } from '../../../utils/phoneUtils';
 import { enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 
@@ -61,19 +61,26 @@ export function useOrderClientLink({
         try {
             const client = await clientsApi.get(clientId);
             const clientDiscount = parseDiscountPercent(client?.discountPercent);
+            // Знижка клієнта з бази завжди відсоткова — якщо вона є, вона
+            // перемикає угоду в percent-режим (навіть якщо перед тим була
+            // фіксована сума), інакше лишаємо поточну знижку угоди як є.
+            const discountType = clientDiscount > 0 ? 'percent' : (draft.discountType === 'fixed' ? 'fixed' : 'percent');
+            const discount = clientDiscount > 0 ? clientDiscount : parseDiscountValue(draft.discount, draft.discountType);
             const payload = withOrderTotal({
                 ...draft,
                 clientId,
                 customerPhone: normalizeUaPhone(draft.customerPhone),
                 sellerId: resolveSellerId(draft.sellerId),
-                discount: clientDiscount > 0 ? clientDiscount : parseDiscountPercent(draft.discount),
+                discountType,
+                discount,
             }, billingOptions);
             const { order: updated, rentalApplication } = await ordersApi.update(draft.id, payload);
             setOrder(updated);
             setLinkedRentalApp?.(rentalApplication);
             setDraft({
                 ...updated,
-                discount: parseDiscountPercent(updated.discount),
+                discountType: updated.discountType === 'fixed' ? 'fixed' : 'percent',
+                discount: parseDiscountValue(updated.discount, updated.discountType),
                 items: enrichRentOrderItemsFromApplication(
                     enrichOrderItemsFromProducts(
                         updated.items ? [...updated.items.map((i) => ({ ...i }))] : [],
@@ -108,7 +115,7 @@ export function useOrderClientLink({
                 phone: normalizeUaPhone(draft.customerPhone),
                 email: draft.customerEmail?.trim() || null,
                 address: draft.address?.trim() || null,
-                discountPercent: Number(draft.discount) || 0,
+                discountPercent: draft.discountType === 'fixed' ? 0 : (Number(draft.discount) || 0),
             });
             await linkClientToOrder(created.id);
         } catch (err) {

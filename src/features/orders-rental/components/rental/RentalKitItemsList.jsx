@@ -1,15 +1,21 @@
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
-export default function RentalKitItemsList({ itemIndex, kitItems, onRemoveKitItem }) {
-    if (!Array.isArray(kitItems) || kitItems.length === 0) return null;
+export default function RentalKitItemsList({ itemIndex, kitItems, onAddKitItem, onChangeKitItem, onRemoveKitItem }) {
+    const items = Array.isArray(kitItems) ? kitItems : [];
 
     return (
         <div className="kit-items-section">
             <div className="kit-items-title">До комплекту входять:</div>
-            {kitItems.map((kit, ki) => (
+            {items.map((kit, ki) => (
                 <div key={ki} className="kit-item-row">
                     <span className="kit-item-num">{itemIndex + 1}.{ki + 1}</span>
-                    <span className="kit-item-name">{kit}</span>
+                    <input
+                        type="text"
+                        className="kit-item-name-input"
+                        value={kit}
+                        placeholder="Наприклад: подовжувач 5 м"
+                        onChange={(e) => onChangeKitItem(ki, e.target.value)}
+                    />
                     <span className="kit-item-state">справний</span>
                     <button
                         type="button"
@@ -21,6 +27,9 @@ export default function RentalKitItemsList({ itemIndex, kitItems, onRemoveKitIte
                     </button>
                 </div>
             ))}
+            <button type="button" className="kit-item-add-btn" onClick={onAddKitItem}>
+                <Plus size={14} /> Додати рядок
+            </button>
         </div>
     );
 }

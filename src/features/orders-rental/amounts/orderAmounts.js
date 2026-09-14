@@ -28,6 +28,27 @@ export function parseDiscountPercent(value) {
     return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
 }
 
+/** Фіксована знижка — це гроші, тому 0-100 обмеження тут не діє. */
+export function parseDiscountAmount(value) {
+    if (value == null || value === '') return 0;
+    const normalized = String(value).trim().replace(/\s/g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+/** Розбір значення знижки з урахуванням режиму (percent/fixed). */
+export function parseDiscountValue(value, discountType) {
+    return discountType === 'fixed' ? parseDiscountAmount(value) : parseDiscountPercent(value);
+}
+
+/** Сума знижки в грошах — для percent рахує від subtotal, для fixed бере
+ * як є, в обох випадках не більше самого subtotal. */
+function resolveDiscountAmount(subtotal, discountType, discountValue) {
+    const parsed = parseDiscountValue(discountValue, discountType);
+    const raw = discountType === 'fixed' ? parsed : (subtotal * parsed) / 100;
+    return Math.min(raw, subtotal);
+}
+
 function buildRentalAppIndex(rentalApplication) {
     const map = new Map();
     const items = rentalApplication?.items;
@@ -93,7 +114,7 @@ export function sellerAppliesVat(sellerId) {
     return resolveSellerId(sellerId) === TOV_SELLER_ID;
 }
 
-export function calcOrderAmounts(items, discountPercent = 0, sellerId, billingOptions = {}) {
+export function calcOrderAmounts(items, discountValue = 0, discountType = 'percent', sellerId, billingOptions = {}) {
     const appliesVat = sellerAppliesVat(sellerId);
     const rentalAppIndex = buildRentalAppIndex(billingOptions.rentalApplication);
     const netSubtotal = roundMoney(
@@ -102,8 +123,8 @@ export function calcOrderAmounts(items, discountPercent = 0, sellerId, billingOp
             0
         )
     );
-    const discount = parseDiscountPercent(discountPercent);
-    const netAfterDiscount = roundMoney(netSubtotal * (1 - discount / 100));
+    const discountAmount = resolveDiscountAmount(netSubtotal, discountType, discountValue);
+    const netAfterDiscount = roundMoney(netSubtotal - discountAmount);
 
     if (!appliesVat) {
         return {
@@ -177,7 +198,7 @@ export function calcLineDisplayAmounts(item, sellerId, billingOptions = {}) {
 
 export function withOrderTotal(draft, billingOptions = {}) {
     if (!draft) return draft;
-    const amounts = calcOrderAmounts(draft.items, draft.discount, draft.sellerId, billingOptions);
+    const amounts = calcOrderAmounts(draft.items, draft.discount, draft.discountType, draft.sellerId, billingOptions);
     return { ...draft, totalAmount: amounts.total };
 }
 

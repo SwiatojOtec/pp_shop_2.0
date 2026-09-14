@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { parseDiscountPercent } from '../../amounts/orderAmounts';
+import { parseDiscountValue } from '../../amounts/orderAmounts';
 import DealItemRow from './DealItemRow';
 
 export default function OrderItemsCard({
@@ -16,6 +16,8 @@ export default function OrderItemsCard({
     onUpdateRentDates,
     onUpdateItemEnrichment,
     onRemoveItemKit,
+    onAddItemKit,
+    onChangeItemKit,
 }) {
     return (
         <div className="ds-card deal-card deal-card--items">
@@ -39,6 +41,8 @@ export default function OrderItemsCard({
                             onUpdateRentDates={(dates) => onUpdateRentDates(idx, dates)}
                             onUpdateEnrichment={(field, value) => onUpdateItemEnrichment(idx, field, value)}
                             onRemoveKitItem={(kitIndex) => onRemoveItemKit(idx, kitIndex)}
+                            onAddKitItem={() => onAddItemKit(idx)}
+                            onChangeKitItem={(kitIndex, value) => onChangeItemKit(idx, kitIndex, value)}
                         />
                     );
                 })}
@@ -76,9 +80,12 @@ export default function OrderItemsCard({
                     <span>Підсумок</span>
                     <span className="num">{orderAmounts.netSubtotal.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴</span>
                 </div>
-                {parseDiscountPercent(draft.discount) > 0 && (
+                {parseDiscountValue(draft.discount, draft.discountType) > 0 && (
                     <div className="deal-items-footer__row">
-                        <span>Знижка {parseDiscountPercent(draft.discount)} %</span>
+                        <span>
+                            Знижка {parseDiscountValue(draft.discount, draft.discountType)}
+                            {draft.discountType === 'fixed' ? ' ₴' : ' %'}
+                        </span>
                         <span className="num">
                             −{(orderAmounts.netSubtotal - orderAmounts.netAfterDiscount).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴
                         </span>
