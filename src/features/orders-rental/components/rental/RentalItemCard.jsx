@@ -80,7 +80,7 @@ export default function RentalItemCard({
                 </div>
                 <div className="item-field item-field--highlight">
                     <label>Застава, ₴</label>
-                    <input value={item.depositAmount} readOnly className="readonly-field" />
+                    <input type="number" step="0.01" value={item.depositAmount} onChange={e => onUpdate('depositAmount', e.target.value)} />
                 </div>
                 <div className="item-field">
                     <label>Оренда з</label>

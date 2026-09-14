@@ -141,7 +141,7 @@ export default function DealItemRow({
                             <input type="number" min="0" max="100" value={item.depositPercent ?? ''} onChange={(e) => onUpdateEnrichment('depositPercent', e.target.value)} />
                         </label>
                         <label>Застава, ₴
-                            <input value={item.depositAmount || '0.00'} readOnly className="readonly-field" />
+                            <input type="number" step="0.01" value={item.depositAmount ?? ''} onChange={(e) => onUpdateEnrichment('depositAmount', e.target.value)} />
                         </label>
                     </div>
                     <RentalKitItemsList

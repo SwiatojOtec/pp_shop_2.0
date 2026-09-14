@@ -142,6 +142,15 @@ export function useRentalApplication(id, isNew) {
                 updated.depositAmount = (parseFloat(updated.replacementCostTotal || 0) * parseFloat(value || 0) / 100).toFixed(2);
                 return updated;
             }
+            if (field === 'depositAmount') {
+                // Заставу можна вписати і як %, і одразу в грошах — друге
+                // поле перераховується автоматично, у зворотний бік.
+                const cost = parseFloat(updated.replacementCostTotal || 0);
+                updated.depositPercent = cost > 0
+                    ? Number(((parseFloat(value || 0) / cost) * 100).toFixed(2))
+                    : 0;
+                return updated;
+            }
             if (field === 'pricePerDay') {
                 updated.totalRental = (updated.days * parseFloat(value || 0) * parseFloat(updated.quantity || 1)).toFixed(2);
                 return updated;
