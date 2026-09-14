@@ -12,6 +12,7 @@ import { calcDays } from '../../model/rentalItems';
 import '../../styles/RentalApplicationPrint.css';
 
 const fmtDateTime = (d, time) => fmtDateWithTimeShared(d, time, '___/___/______');
+const itemRentDays = (item) => calcDays(item.rentFrom, item.rentTo) || item.days || 0;
 
 const RentalApplicationPrint = React.forwardRef(({
     applicationNumber,
@@ -149,10 +150,14 @@ const RentalApplicationPrint = React.forwardRef(({
                                 <td className="td-right">{fmt(item.replacementCostTotal)}</td>
                                 <td className="td-center">{item.depositPercent}%</td>
                                 <td className="td-right">{fmt(item.depositAmount)}</td>
-                                <td className="td-center td-date-time">{fmtDateTime(item.rentFrom, rentStartTime)}</td>
-                                <td className="td-center td-date-time">{fmtDateTime(item.rentTo, rentStartTime)}</td>
+                                <td className="td-center td-date-time">
+                                    {fmtDateTime(item.rentFrom, itemRentDays(item) > 1 ? rentStartTime : '')}
+                                </td>
+                                <td className="td-center td-date-time">
+                                    {fmtDateTime(item.rentTo, itemRentDays(item) > 1 ? rentStartTime : '')}
+                                </td>
                                 <td className="td-center">
-                                    {calcDays(item.rentFrom, item.rentTo) || item.days || '—'}
+                                    {itemRentDays(item) || '—'}
                                 </td>
                                 <td className="td-right">{fmt(item.pricePerDay)}</td>
                                 <td className="td-right bold">{fmt(item.totalRental)}</td>

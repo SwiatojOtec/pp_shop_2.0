@@ -207,6 +207,13 @@ export const generateRentalPdf = async ({
 
     const tableBody = [];
     items.forEach((item, idx) => {
+        const itemRentDays = calcDays(item.rentFrom, item.rentTo) || item.days || 0;
+        // Час видачі однаковий і для «з», і для «по» (Order.rentStartTime) —
+        // при однодобовій оренді (рентФром === рентТо) це виглядає так, ніби
+        // видали й прийняли о тій самій годині того ж дня, що вводить в
+        // оману. Показуємо час лише для оренди довшої за 1 добу; час видачі
+        // й так є в підписах нижче.
+        const rentTimeForTable = itemRentDays > 1 ? rentStartTime : '';
         tableBody.push([
             { content: String(idx + 1), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
             { content: item.name || '', styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } },
@@ -220,10 +227,10 @@ export const generateRentalPdf = async ({
             { content: fmtMoney(item.replacementCostTotal, zeroAmounts), styles: { halign: 'right' } },
             { content: zeroAmounts ? '0%' : `${item.depositPercent || 0}%`, styles: { halign: 'center' } },
             { content: fmtMoney(item.depositAmount, zeroAmounts), styles: { halign: 'right' } },
-            { content: fmtDateWithTime(item.rentFrom, rentStartTime), styles: { halign: 'center' } },
-            { content: fmtDateWithTime(item.rentTo, rentStartTime), styles: { halign: 'center' } },
+            { content: fmtDateWithTime(item.rentFrom, rentTimeForTable), styles: { halign: 'center' } },
+            { content: fmtDateWithTime(item.rentTo, rentTimeForTable), styles: { halign: 'center' } },
             {
-                content: String(calcDays(item.rentFrom, item.rentTo) || item.days || 0),
+                content: String(itemRentDays),
                 styles: { halign: 'center' },
             },
             { content: fmtMoney(item.pricePerDay, zeroAmounts), styles: { halign: 'right' } },
