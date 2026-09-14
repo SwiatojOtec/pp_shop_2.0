@@ -63,6 +63,15 @@ export const SELLERS = [
             ...OFFICE_CONTACTS,
         },
     },
+    // Не юрособа — позначка «оплачено готівкою», лише для обліку в
+    // Аналітиці. Немає rentalLessor: документи для такої угоди все одно
+    // виставляються від дефолтного ФОП (getRentalLessor() нижче падає на
+    // нього), тому тут нема окремих реквізитів.
+    {
+        id: 'cash',
+        label: 'Готівка',
+        type: 'cash',
+    },
 ];
 
 export const SELLER_OPTIONS = SELLERS.map(({ id, label }) => ({ id, label }));
@@ -84,7 +93,7 @@ export function getSeller(sellerId) {
 
 /** Lessor party block for rental application PDF / print / Сторони tab. */
 export function getRentalLessor(sellerId) {
-    return getSeller(sellerId).rentalLessor;
+    return getSeller(sellerId).rentalLessor || getSeller(DEFAULT_SELLER_ID).rentalLessor;
 }
 
 /** @deprecated Prefer getRentalLessor(sellerId). Kept for older imports. */

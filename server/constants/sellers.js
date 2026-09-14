@@ -76,11 +76,25 @@ const SELLERS = [
         signedBy: 'Панкрат\'єв О.М.',
         appliesVat: true,
     },
+    // Не юрособа — позначка «оплачено готівкою», лише для внутрішнього обліку
+    // в Аналітиці (Order.sellerId лишається 'cash'). Жодних реквізитів: усі
+    // документи (рахунок/договір/протокол) для такої угоди генеруються так,
+    // ніби продавець — дефолтний ФОП (getSeller() нижче), без жодної згадки
+    // про готівку на самому документі.
+    {
+        id: 'cash',
+        label: 'Готівка',
+        type: 'cash',
+    },
 ];
 
 function getSeller(sellerId) {
     const id = resolveSellerId(sellerId);
-    return SELLERS.find((s) => s.id === id) || SELLERS[0];
+    const seller = SELLERS.find((s) => s.id === id) || SELLERS[0];
+    if (seller.type === 'cash') {
+        return SELLERS.find((s) => s.id === DEFAULT_SELLER_ID) || SELLERS[0];
+    }
+    return seller;
 }
 
 function resolveSellerId(sellerId) {

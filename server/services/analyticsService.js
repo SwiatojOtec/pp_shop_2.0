@@ -4,7 +4,7 @@ const Supplier = require('../models/Supplier');
 const Client = require('../models/Client');
 const Seller = require('../models/Seller');
 const { getAllDealRows } = require('../modules/orders-rental/services/orderService');
-const { resolveLineNetTotal, roundMoney, parseDiscountPercent } = require('../utils/orderAmounts');
+const { resolveLineNetTotal, roundMoney, parseDiscountValue, resolveDiscountAmount } = require('../utils/orderAmounts');
 
 /** Угода вважається «оплаченою» (реальні гроші отримано) з цього статусу і
  *  далі — той самий поріг, що й «Робочий стіл» (server/services/
@@ -141,18 +141,25 @@ async function buildAnalytics({ fromDate, toDate, productId = null, sellerFilter
 
     const [dealRows, orders, sellers, products, suppliers, clients] = await Promise.all([
         getAllDealRows(),
-        Order.findAll({ attributes: ['id', 'discount', 'sellerId'] }),
+        Order.findAll({ attributes: ['id', 'discount', 'discountType', 'sellerId'] }),
         Seller.findAll({ attributes: ['id', 'label', 'type'] }),
         Product.findAll({ attributes: ['id', 'name', 'category', 'brand', 'supplierId', 'supplierPrice', 'isRent', 'quantityAvailable'] }),
         Supplier.findAll({ attributes: ['id', 'name', 'discountPercent'] }),
         Client.findAll({ attributes: ['id', 'fullName'] }),
     ]);
 
-    const discountByOrderId = new Map(orders.map((o) => [o.id, parseDiscountPercent(o.discount)]));
+    const discountTypeByOrderId = new Map(orders.map((o) => [o.id, o.discountType === 'fixed' ? 'fixed' : 'percent']));
+    const discountByOrderId = new Map(
+        orders.map((o) => [o.id, parseDiscountValue(o.discount, o.discountType)])
+    );
     const orderSellerIdById = new Map(orders.map((o) => [o.id, o.sellerId]));
     const sellerTypeByOrderId = new Map();
     const sellerTypeById = new Map(sellers.map((s) => [s.id, s.type]));
-    for (const o of orders) sellerTypeByOrderId.set(o.id, sellerTypeById.get(o.sellerId) || 'fop');
+    // «Готівка» — не юрособа з БД Sellers, а статична позначка
+    // (server/constants/sellers.js) — розпізнаємо за id напряму.
+    for (const o of orders) {
+        sellerTypeByOrderId.set(o.id, o.sellerId === 'cash' ? 'cash' : (sellerTypeById.get(o.sellerId) || 'fop'));
+    }
     const productById = new Map(products.map((p) => [p.id, p]));
     const supplierById = new Map(suppliers.map((s) => [s.id, s]));
     const clientById = new Map(clients.map((c) => [c.id, c]));
@@ -216,8 +223,22 @@ async function buildAnalytics({ fromDate, toDate, productId = null, sellerFilter
     }
 
     for (const row of revenueRows) {
-        const discountPct = discountByOrderId.get(row.id) || 0;
-        const isFop = sellerTypeByOrderId.get(row.id) !== 'tov';
+        // Знижка може бути фіксованою сумою в ₴, а не відсотком — вона дана
+        // на всю угоду, тож рахуємо її як частку від повного нетто-підсумку
+        // угоди (усі рядки, незалежно від productId-фільтра нижче) й далі
+        // застосовуємо цю саму частку до кожного рядка окремо.
+        const rowDiscountType = discountTypeByOrderId.get(row.id) || 'percent';
+        const rowDiscountValue = discountByOrderId.get(row.id) || 0;
+        const rowNetSubtotal = roundMoney(
+            (row.items || []).reduce((sum, it) => sum + resolveLineNetTotal(it, null, new Map()), 0)
+        );
+        const rowDiscountAmount = resolveDiscountAmount(rowNetSubtotal, rowDiscountType, rowDiscountValue);
+        const discountRatio = rowNetSubtotal > 0 ? rowDiscountAmount / rowNetSubtotal : 0;
+        // ФОП на єдиному податку — 5% з виручки. ТОВ — податок вже в
+        // надбавці, не рахуємо тут (див. коментар вище). «Готівка» — власник
+        // сказав рахувати без податку: сума заводиться на ФОП пізніше вручну,
+        // тут вона ще не є задекларованою виручкою.
+        const isFop = sellerTypeByOrderId.get(row.id) === 'fop';
         const bucket = seriesMap.get(bucketKey(row.createdAt, granularity));
         const clientKey = row.clientId ? `c${row.clientId}` : `guest:${row.customerName || ''}:${row.customerPhone || ''}`;
         const clientLabel = (row.clientId && clientById.get(row.clientId)?.fullName) || row.customerName || 'Без імені';
@@ -227,7 +248,7 @@ async function buildAnalytics({ fromDate, toDate, productId = null, sellerFilter
             if (productId && Number(item.id) !== productId) continue;
 
             const netLine = resolveLineNetTotal(item, null, new Map());
-            const revenue = roundMoney(netLine * (1 - discountPct / 100));
+            const revenue = roundMoney(netLine * (1 - discountRatio));
             if (revenue <= 0) continue;
 
             if (!clientEntryTouched) {
@@ -320,7 +341,13 @@ async function buildAnalytics({ fromDate, toDate, productId = null, sellerFilter
         range: { granularity },
         // Лише для фільтра «юрособа» на клієнті — id/label/type, без банківських
         // і податкових реквізитів (ті лишаються за /api/sellers, owner-only).
-        sellers: sellers.map((s) => ({ id: s.id, label: s.label, type: s.type })),
+        // «Готівка» — не рядок у Sellers (БД), а статична позначка
+        // (server/constants/sellers.js); додаємо її сюди вручну, щоб
+        // з'явилась у фільтрі поруч із реальними юрособами.
+        sellers: [
+            ...sellers.map((s) => ({ id: s.id, label: s.label, type: s.type })),
+            { id: 'cash', label: 'Готівка', type: 'cash' },
+        ],
         kpis: {
             netRevenue,
             shopRevenue: roundMoney(shopRevenue),
