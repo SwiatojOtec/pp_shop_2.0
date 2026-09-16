@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin, Send } from 'lucide-react';
-import { ordersApi } from '../services/api';
+import { ordersApi, productsApi } from '../services/api';
 import { normalizeUaPhone } from '../utils/phoneUtils';
+import { applyDeliveryItem, itemsSubtotal, DELIVERY_FREE_THRESHOLD } from '../utils/deliveryPricing';
 import './Checkout.css';
 
 export default function Checkout() {
-    const { cartItems, cartTotal, clearCart } = useCart();
+    const { cartItems, clearCart } = useCart();
     const { showToast } = useToast();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
@@ -22,6 +23,19 @@ export default function Checkout() {
     });
     const [successOrder, setSuccessOrder] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [deliveryProduct, setDeliveryProduct] = useState(null);
+
+    useEffect(() => {
+        productsApi.list({ isService: true, includeHiddenServices: true, category: 'Доставка' })
+            .then((rows) => setDeliveryProduct(Array.isArray(rows) ? rows[0] || null : null))
+            .catch(() => setDeliveryProduct(null));
+    }, []);
+
+    // Рядок "Доставка" додається сам, коли обрано адресну доставку —
+    // безкоштовно від DELIVERY_FREE_THRESHOLD, інакше за ціною послуги —
+    // щоб клієнт бачив повну суму ще до підтвердження замовлення.
+    const displayItems = applyDeliveryItem(cartItems, formData.deliveryMethod, deliveryProduct);
+    const displayTotal = itemsSubtotal(displayItems);
 
     if (successOrder) {
         return (
@@ -83,8 +97,8 @@ export default function Checkout() {
                 ? `${formData.city}, ${formData.address}`
                 : 'Самовивіз (вул. Холодноярська, 2а, Київ)',
             paymentMethod: formData.paymentMethod,
-            items: cartItems,
-            totalAmount: cartTotal
+            items: displayItems,
+            totalAmount: displayTotal
         };
 
         try {
@@ -165,7 +179,11 @@ export default function Checkout() {
                                     />
                                     <Truck size={24} />
                                     <span style={{ fontWeight: 700 }}>Доставка</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>Адресна доставка</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
+                                        {deliveryProduct
+                                            ? `${Number(deliveryProduct.price)} ₴, безкоштовно від ${DELIVERY_FREE_THRESHOLD.toLocaleString()} ₴`
+                                            : 'Адресна доставка'}
+                                    </span>
                                 </label>
                             </div>
 
@@ -212,20 +230,25 @@ export default function Checkout() {
                     <aside className="order-summary">
                         <h3 className="section-title">Ваше замовлення</h3>
                         <div className="summary-items">
-                            {cartItems.map(item => (
+                            {displayItems.map(item => (
                                 <div key={item.id} className="summary-item">
                                     <span className="item-name">
-                                        {item.name} x {item.quantity} {item.unit === 'м²' ? 'уп.' : 'шт.'}
+                                        {item.name}
+                                        {item.id === deliveryProduct?.id
+                                            ? ''
+                                            : ` x ${item.quantity} ${item.unit === 'м²' ? 'уп.' : 'шт.'}`}
                                     </span>
                                     <span className="item-price">
-                                        {(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴
+                                        {item.id === deliveryProduct?.id && item.price === 0
+                                            ? 'безкоштовно'
+                                            : `${(item.price * item.quantity * (item.packSize || 1)).toLocaleString()} ₴`}
                                     </span>
                                 </div>
                             ))}
                         </div>
                         <div className="summary-total">
                             <span>Разом до оплати:</span>
-                            <span className="total-value">{cartTotal.toLocaleString()} ₴</span>
+                            <span className="total-value">{displayTotal.toLocaleString()} ₴</span>
                         </div>
                         <div className="trust-info">
                             <div className="trust-item">

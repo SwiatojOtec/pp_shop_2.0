@@ -6,6 +6,7 @@ import { parseDiscountValue, withOrderTotal } from '../amounts/orderAmounts';
 import { normalizeUaPhone } from '../../../utils/phoneUtils';
 import { buildOrderItemFromProduct, enrichOrderItemsFromProducts, enrichRentOrderItemsFromApplication } from '../model/orderItems';
 import { calcDays } from '../model/rentalItems';
+import { applyDeliveryItem, findDeliveryProduct } from '../../../utils/deliveryPricing';
 
 export function useOrderDraftEditor({
     draft,
@@ -38,7 +39,15 @@ export function useOrderDraftEditor({
             if (field === 'discountType') {
                 next = { ...next, discount: parseDiscountValue(prev.discount, value) };
             }
-            if (field === 'sellerId' || field === 'discount' || field === 'discountType') {
+            // Обрали "Доставка" — рядок послуги "Доставка" додається сам
+            // (безкоштовно від DELIVERY_FREE_THRESHOLD), щоб клієнт бачив
+            // повну суму одразу, а не сюрпризом від менеджера пізніше.
+            // Повернення на "Самовивіз" так само сам прибирає цей рядок.
+            if (field === 'deliveryMethod') {
+                const deliveryProduct = findDeliveryProduct(products);
+                next = { ...next, items: applyDeliveryItem(next.items, value, deliveryProduct) };
+            }
+            if (field === 'sellerId' || field === 'discount' || field === 'discountType' || field === 'deliveryMethod') {
                 return withOrderTotal(next, billingOptions);
             }
             return next;
