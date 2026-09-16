@@ -7,6 +7,8 @@ const sequelize = require('./config/db');
 require('./utils/telegram');
 // Ініціалізація окремого бота для оренди (обмежені права)
 require('./utils/telegramRent');
+// Ініціалізація клієнтського бота — трекінг статусу замовлень
+require('./utils/telegramCustomerBot');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./modules/orders-rental/routes/orderRoutes');
 const currencyRoutes = require('./routes/currencyRoutes');

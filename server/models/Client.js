@@ -29,6 +29,16 @@ const Client = sequelize.define('Client', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    // Telegram-бот трекінгу замовлень: chatId проставляється, коли клієнт
+    // сам поділився номером у боті. telegramUsername — лише для адмінки.
+    telegramChatId: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    telegramUsername: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     email: {
         type: DataTypes.STRING,
         allowNull: true

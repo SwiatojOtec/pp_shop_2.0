@@ -39,6 +39,7 @@ const {
 } = require('../services/orderService');
 const { decodeBase64Pdf } = require('../utils/decodeBase64Pdf');
 const { userDisplayName } = require('../../../services/inventoryService');
+const { notifyOrderCreated, notifyOrderStatusChanged } = require('../../../utils/telegramCustomerBot');
 
 async function createOrder(req, res) {
     try {
@@ -68,6 +69,12 @@ async function createOrder(req, res) {
             },
             { sendTelegram: true }
         );
+
+        try {
+            await notifyOrderCreated(order);
+        } catch (notifyErr) {
+            console.error('customerBot notifyOrderCreated error:', notifyErr);
+        }
 
         res.status(201).json(order);
     } catch (err) {
@@ -653,12 +660,22 @@ async function updateOrder(req, res) {
             clientSiteAddress: req.body?.rentalApplication?.clientSiteAddress,
             responsible: req.body?.rentalApplication?.responsible,
         };
+        const previousStatus = order.status;
         const { order: updated, rentalApplication } = await saveDealWithRentalApplication(
             order.id,
             patch,
             dealExtras,
             req.user?.id || null
         );
+
+        if (patch.status && patch.status !== previousStatus) {
+            try {
+                await notifyOrderStatusChanged(updated);
+            } catch (notifyErr) {
+                console.error('customerBot notifyOrderStatusChanged error:', notifyErr);
+            }
+        }
+
         res.json({ order: updated, rentalApplication });
     } catch (err) {
         res.status(err.status || 400).json({ message: err.message });

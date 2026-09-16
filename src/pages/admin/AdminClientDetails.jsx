@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-    ArrowLeft, ClipboardList, Phone, Mail,
+    ArrowLeft, ClipboardList, Phone, Mail, Send,
     FileText, Tag, Edit2, User, Plus, Check, X as XIcon,
     ShoppingCart, Trash2,
 } from 'lucide-react';
@@ -242,6 +242,14 @@ export default function AdminClientDetails() {
                                     <a href={`mailto:${client.email}`} className="cd-link">{client.email}</a>
                                 </div>
                             )}
+                            <div className="cd-field">
+                                <span className="cd-field-label">Telegram-бот</span>
+                                {client.telegramChatId ? (
+                                    <StatusBadge tone="success" label={<><Send size={11} className="cd-badge-icon" />Підключено{client.telegramUsername ? ` (@${client.telegramUsername})` : ''}</>} />
+                                ) : (
+                                    <StatusBadge tone="neutral" label="Не підключено" />
+                                )}
+                            </div>
                             {!isOrg && client.passport && (
                                 <div className="cd-field">
                                     <span className="cd-field-label">Паспорт</span>
