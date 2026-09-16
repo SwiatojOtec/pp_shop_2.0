@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin } from 'lucide-react';
+import { ChevronLeft, CreditCard, Truck, ShieldCheck, MapPin, Send } from 'lucide-react';
 import { ordersApi } from '../services/api';
 import { normalizeUaPhone } from '../utils/phoneUtils';
 import './Checkout.css';
@@ -36,6 +36,25 @@ export default function Checkout() {
                         Дякуємо за замовлення та бажаємо гарного дня! <br />
                         Невдовзі з вами зв'яжеться наш менеджер для уточнення деталей та виставлення рахунку.
                     </p>
+                    <div style={{ background: '#fff', borderRadius: '14px', padding: '20px', marginBottom: '25px', textAlign: 'left', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        <Send size={22} color="#229ED9" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <div>
+                            <div style={{ fontWeight: 700, marginBottom: '4px' }}>Стежте за статусом у Telegram</div>
+                            <p style={{ color: '#666', fontSize: '0.9rem', margin: '0 0 10px' }}>
+                                Підключіть наш бот — він сам повідомить, коли замовлення оброблять,
+                                і покаже його статус будь-коли за запитом.
+                            </p>
+                            <a
+                                href="https://t.me/panparket_bot"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn"
+                                style={{ display: 'inline-block', padding: '8px 18px', fontSize: '0.9rem' }}
+                            >
+                                Відкрити бота
+                            </a>
+                        </div>
+                    </div>
                     <Link to="/" className="btn btn-primary" style={{ padding: '12px 30px' }}>На головну</Link>
                 </div>
             </div>

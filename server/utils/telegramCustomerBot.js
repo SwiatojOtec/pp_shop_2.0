@@ -12,7 +12,7 @@ const { Op } = require('sequelize');
 const Client = require('../models/Client');
 const { getOrdersByClient } = require('../modules/orders-rental/services/orderService');
 const { normalizeUaPhone, phoneTailsMatch } = require('./phoneUtils');
-const { getOrderStatusLabel } = require('../constants/orderStatusLabels');
+const { getOrderStatusLabel, getDealStatusLabel } = require('../constants/orderStatusLabels');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
@@ -29,7 +29,8 @@ const contactKeyboard = {
 const linkedMenu = {
     reply_markup: {
         keyboard: [
-            [{ text: '📦 Мої замовлення' }],
+            [{ text: '📦 Останнє замовлення' }],
+            [{ text: '🗂 Усі замовлення' }],
             [{ text: '🔌 Відʼєднати' }],
         ],
         resize_keyboard: true,
@@ -94,16 +95,57 @@ async function linkChatToPhone(chatId, phone, from) {
     return client;
 }
 
+function formatUaDate(iso) {
+    const s = String(iso || '').slice(0, 10);
+    const [y, m, d] = s.split('-');
+    return (y && m && d) ? `${d}.${m}.${y}` : '';
+}
+
+// RentalApplication-рядки (statusDomain 'rental', приходять окремо від
+// Order — заявка оренди, ще не перетворена на замовлення) не проставляють
+// isRent на кожній позиції: там усі позиції інструмент за визначенням.
+function formatOrderItemLine(item, row) {
+    const name = item.name || 'Позиція';
+    const isRentItem = item.isRent || row.statusDomain === 'rental';
+    if (isRentItem) {
+        const from = formatUaDate(item.rentFrom);
+        const to = formatUaDate(item.rentTo);
+        const range = from && to ? ` (${from} → ${to})` : (to ? ` до ${to}` : '');
+        return `🔧 ${name}${range}`;
+    }
+    const qty = item.quantity ?? 0;
+    const unit = item.unit || 'шт';
+    return `🛒 ${name} × ${qty} ${unit}`;
+}
+
+function formatOrderDetail(o) {
+    const total = Number(o.totalAmount || 0).toFixed(2);
+    const itemLines = (o.items || []).map((item) => formatOrderItemLine(item, o)).join('\n');
+    let message = `📄 <b>№${o.number}</b> — ${getDealStatusLabel(o)}\n`;
+    message += itemLines ? `${itemLines}\n` : '(поки без позицій)\n';
+    message += `💰 Разом: ${total} ₴`;
+    return message;
+}
+
+async function sendLatestOrder(chatId, client) {
+    const orders = await getOrdersByClient(client.id);
+    if (!orders.length) {
+        await bot.sendMessage(chatId, 'Замовлень поки немає.', linkedMenu);
+        return;
+    }
+    await bot.sendMessage(chatId, formatOrderDetail(orders[0]), { parse_mode: 'HTML', ...linkedMenu });
+}
+
 async function sendOrdersList(chatId, client) {
     const orders = await getOrdersByClient(client.id);
     if (!orders.length) {
         await bot.sendMessage(chatId, 'Замовлень поки немає.', linkedMenu);
         return;
     }
-    let message = '<b>Ваші останні замовлення:</b>\n\n';
-    orders.slice(0, 5).forEach((o) => {
+    let message = '<b>Усі ваші замовлення:</b>\n\n';
+    orders.slice(0, 15).forEach((o) => {
         const total = Number(o.totalAmount || 0).toFixed(2);
-        message += `📄 №${o.number} — ${getOrderStatusLabel(o.status)}\n💰 ${total} ₴\n\n`;
+        message += `📄 №${o.number} — ${getDealStatusLabel(o)} — ${total} ₴\n`;
     });
     await bot.sendMessage(chatId, message, { parse_mode: 'HTML', ...linkedMenu });
 }
@@ -153,7 +195,17 @@ if (token) {
         if (!msg.text || msg.text.startsWith('/')) return;
         const chatId = msg.chat.id;
 
-        if (msg.text === '📦 Мої замовлення') {
+        if (msg.text === '📦 Останнє замовлення') {
+            const client = await Client.findOne({ where: { telegramChatId: String(chatId) } });
+            if (!client) {
+                await bot.sendMessage(chatId, 'Спершу поділіться номером телефону:', contactKeyboard);
+                return;
+            }
+            await sendLatestOrder(chatId, client);
+            return;
+        }
+
+        if (msg.text === '🗂 Усі замовлення') {
             const client = await Client.findOne({ where: { telegramChatId: String(chatId) } });
             if (!client) {
                 await bot.sendMessage(chatId, 'Спершу поділіться номером телефону:', contactKeyboard);
@@ -193,7 +245,7 @@ if (token) {
             await bot.sendMessage(chatId, 'Спершу поділіться номером телефону:', contactKeyboard);
             return;
         }
-        await sendOrdersList(chatId, client);
+        await sendLatestOrder(chatId, client);
     });
 
     bot.onText(/\/unlink/, async (msg) => {
