@@ -4,6 +4,7 @@ const Product = require('../models/Product');
 const RentCategory = require('../models/RentCategory');
 const Warehouse = require('../models/Warehouse');
 const InventoryItem = require('../models/InventoryItem');
+const ProductUnit = require('../models/ProductUnit');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { Op } = require('sequelize');
 const { ensureMainWarehouse, recalculateProductQuantity } = require('../services/inventoryService');
@@ -81,6 +82,18 @@ const ensureInventoryForNewRentProduct = async (product, payload) => {
         row.quantity = qty;
         await row.save();
     }
+
+    // Serial-товар (docs plan «Фізичні одиниці інструменту») — одразу
+    // заготовити стільки порожніх ProductUnit, скільки одиниць щойно
+    // завели на склад, щоб було де одразу дозаповнити серійники.
+    if (product.trackingMode === 'serial' && qty > 0) {
+        const units = Array.from({ length: qty }, () => ({
+            productId: product.id,
+            warehouseId: warehouse.id,
+        }));
+        await ProductUnit.bulkCreate(units);
+    }
+
     await recalculateProductQuantity(product.id);
 };
 

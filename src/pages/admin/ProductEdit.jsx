@@ -17,6 +17,7 @@ import ProductGallery from '../../components/admin/product/ProductGallery';
 import ProductKitItems from '../../components/admin/product/ProductKitItems';
 import ProductRelatedSearch from '../../components/admin/product/ProductRelatedSearch';
 import ProductRentDetails from '../../components/admin/product/ProductRentDetails';
+import ProductUnits from '../../components/admin/product/ProductUnits';
 import ProductPriceSidebar from '../../components/admin/product/ProductPriceSidebar';
 import {
     ensureRentTiersFormShape,
@@ -531,6 +532,7 @@ export default function ProductEdit({ context = 'products' }) {
                                 )}
                             </div>
                         </div>
+                        <ProductUnits productId={id} isNew={isNew} />
                         <ProductKitItems items={formData.kitItems} onChange={(val) => update('kitItems', val)} />
                         <ProductRelatedSearch productId={id} selected={formData.relatedProducts} onChange={(val) => update('relatedProducts', val)} />
                         <ProductRentDetails formData={formData} onChange={update} />

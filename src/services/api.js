@@ -211,6 +211,13 @@ export const usersApi = {
     remove: (id) => apiDelete(`/api/users/${id}`),
 };
 
+export const productUnitsApi = {
+    list: (productId) => apiGet(`/api/products/${productId}/units`),
+    create: (productId, data) => apiPost(`/api/products/${productId}/units`, data),
+    update: (id, data) => apiPut(`/api/product-units/${id}`, data),
+    remove: (id) => apiDelete(`/api/product-units/${id}`),
+};
+
 export const warehousesApi = {
     list: () => apiGet('/api/warehouses'),
     create: (data) => apiPost('/api/warehouses', data),

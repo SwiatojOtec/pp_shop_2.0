@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Trash2, Plus, X } from 'lucide-react';
-import { TECHNICAL_CONDITION_OPTIONS } from '../../../constants/technicalConditions';
 import { optimizeImageUrl } from '../../../utils/imageOptimize';
 
 /**
- * Rent-specific product details: serial number, condition, costs,
- * competitor links, and admin-only photos.
+ * Rent-specific product details: costs, competitor links, and admin-only
+ * photos. Серійник/інв. номер/технічний стан переїхали в ProductUnits.jsx
+ * (docs plan «Фізичні одиниці інструменту») — це тепер властивості кожної
+ * фізичної одиниці, а не картки товару цілком.
  */
 export default function ProductRentDetails({ formData, onChange }) {
     const [newCompetitorUrl, setNewCompetitorUrl] = useState('');
@@ -67,38 +68,8 @@ export default function ProductRentDetails({ formData, onChange }) {
     return (
         <>
             <div className="admin-section">
-                <h2 className="section-title">Додаткова інформація</h2>
+                <h2 className="section-title">Вага та вартість</h2>
                 <div className="admin-form">
-                    <div className="form-group">
-                        <label>Серійний номер</label>
-                        <input
-                            type="text"
-                            value={formData.serialNumber || ''}
-                            onChange={(e) => onChange('serialNumber', e.target.value)}
-                            placeholder="Напр: SN-2024-001"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Інвентарний номер</label>
-                        <input
-                            type="text"
-                            value={formData.inventoryNumber || ''}
-                            onChange={(e) => onChange('inventoryNumber', e.target.value)}
-                            placeholder={formData.sku ? `Буде: ${formData.sku}` : 'Заповнюється автоматично зі SKU'}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Технічний стан</label>
-                        <select
-                            value={formData.technicalCondition || ''}
-                            onChange={(e) => onChange('technicalCondition', e.target.value)}
-                        >
-                            <option value="">Оберіть стан</option>
-                            {TECHNICAL_CONDITION_OPTIONS.map((o) => (
-                                <option key={o.value} value={o.value}>{o.label}</option>
-                            ))}
-                        </select>
-                    </div>
                     <div className="form-group">
                         <label>Вага загальна, кг</label>
                         <input
@@ -129,7 +100,12 @@ export default function ProductRentDetails({ formData, onChange }) {
                             placeholder="0.00"
                         />
                     </div>
+                </div>
+            </div>
 
+            <div className="admin-section">
+                <h2 className="section-title">Додаткова інформація</h2>
+                <div className="admin-form">
                     {/* Competitor links */}
                     <div className="form-group">
                         <label>Конкуренти (посилання на товари)</label>

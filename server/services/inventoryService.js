@@ -4,6 +4,12 @@ const Warehouse = require('../models/Warehouse');
 const InventoryItem = require('../models/InventoryItem');
 const WarehouseEvent = require('../models/WarehouseEvent');
 const RentalApplication = require('../models/RentalApplication');
+const ProductUnit = require('../models/ProductUnit');
+
+/** Одиниці, які не рахуються "потребує ремонту", технічно доступні до
+ *  оренди — той самий канонічний список, що на картці товару
+ *  (src/constants/technicalConditions.js), тримати синхронізовано. */
+const NEEDS_REPAIR_CONDITION = 'Потребує ремонту';
 
 function userDisplayName(user) {
     if (!user) return 'Система';
@@ -197,8 +203,27 @@ async function getPhysicalQuantityByProduct() {
 }
 
 async function recalculateProductQuantity(productId) {
-    const product = await Product.findByPk(productId, { attributes: ['id', 'isRent'] });
+    const product = await Product.findByPk(productId, { attributes: ['id', 'isRent', 'trackingMode'] });
     if (!product) return;
+
+    // Serial-товари (docs plan «Фізичні одиниці інструменту»): фізична
+    // кількість — не сума InventoryItem (та лишається джерелом "на якому
+    // складі" для екрана "Склад"), а кількість активних одиниць
+    // ProductUnit — так "Потребує ремонту"/списана одиниця більше не
+    // рахується доступною, чого раніше не було зовсім.
+    if (product.isRent && product.trackingMode === 'serial') {
+        const physical = await ProductUnit.count({
+            where: {
+                productId,
+                isActive: true,
+                technicalCondition: { [Op.or]: [{ [Op.ne]: NEEDS_REPAIR_CONDITION }, { [Op.is]: null }] },
+            },
+        });
+        const committed = await sumActiveRentalQuantityForProduct(productId);
+        const free = Math.max(0, physical - committed);
+        await Product.update({ quantityAvailable: free }, { where: { id: productId } });
+        return;
+    }
 
     const physicalRaw = await InventoryItem.sum('quantity', { where: { productId } });
     const physical = Number.isFinite(Number(physicalRaw))
