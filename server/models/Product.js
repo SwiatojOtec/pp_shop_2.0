@@ -153,6 +153,20 @@ const Product = sequelize.define('Product', {
         allowNull: false,
         defaultValue: true
     },
+    /** Послуга (укладка, виїзд на заміри, доставка тощо) — той самий Product,
+     *  що й товар/оренда, щоб додавання позиції в угоду й генерація
+     *  документів працювали без змін. Взаємовиключне з isRent. */
+    isService: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    /** Дзеркало showInRentCatalog: дозволяє мати послугу лише для
+     *  внутрішнього використання в угодах, без публічної картки на /poslugy. */
+    showInServiceCatalog: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+    },
     kitItems: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [] // Для оренди: перелік елементів комплекту

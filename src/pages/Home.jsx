@@ -6,6 +6,7 @@ import CategoryGrid from '../components/CategoryGrid';
 import ProductGrid from '../components/ProductGrid';
 import HomeBlogSection from '../components/HomeBlogSection';
 import RentSection from '../components/RentSection';
+import ServicesSection from '../components/ServicesSection';
 import ShowroomSection from '../components/ShowroomSection';
 import ConsultationBlock from '../components/ConsultationBlock';
 
@@ -19,6 +20,7 @@ export default function Home() {
             <ProductGrid />
             <HomeBlogSection />
             <RentSection />
+            <ServicesSection />
             <ShowroomSection />
             <ConsultationBlock />
         </>

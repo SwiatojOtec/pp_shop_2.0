@@ -88,7 +88,7 @@ const ensureInventoryForNewRentProduct = async (product, payload) => {
 
 router.get('/', async (req, res) => {
     try {
-        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit, includeHiddenRent, ids } = req.query;
+        const { search, category, brand, minPrice, maxPrice, sort, badge, groupId, isRent, limit, includeHiddenRent, ids, isService, includeHiddenServices } = req.query;
         let where = {};
 
         if (ids) {
@@ -133,6 +133,22 @@ router.get('/', async (req, res) => {
             where.isRent = {
                 [Op.or]: [false, null]
             };
+            // Товарний список ("Товари" в адмінці, /magazyn на сайті) не має
+            // показувати послуги — вони не товар, а окремий тип позиції.
+            where.isService = {
+                [Op.or]: [false, null]
+            };
+        }
+
+        if (isService === 'true') {
+            where.isService = true;
+            if (includeHiddenServices !== 'true') {
+                where.showInServiceCatalog = true;
+            }
+        } else if (isService === 'false') {
+            where.isService = {
+                [Op.or]: [false, null]
+            };
         }
 
         if (minPrice || maxPrice) {
@@ -142,7 +158,7 @@ router.get('/', async (req, res) => {
         }
 
         // Handle dynamic spec filters (anything else in query)
-        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit', 'includeHiddenRent', 'ids'];
+        const standardParams = ['search', 'category', 'brand', 'minPrice', 'maxPrice', 'sort', 'badge', 'groupId', 'isRent', 'limit', 'includeHiddenRent', 'ids', 'isService', 'includeHiddenServices'];
         Object.keys(req.query).forEach(key => {
             if (!standardParams.includes(key) && req.query[key]) {
                 // For JSONB specs filtering

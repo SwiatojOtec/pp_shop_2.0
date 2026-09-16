@@ -15,6 +15,8 @@ import AdminProducts from '../../pages/admin/AdminProducts';
 import ProductEdit from '../../pages/admin/ProductEdit';
 import AdminCategories from '../../pages/admin/AdminCategories';
 import AdminSuppliers from '../../pages/admin/AdminSuppliers';
+import AdminServices from '../../pages/admin/AdminServices';
+import ServiceEdit from '../../pages/admin/ServiceEdit';
 import AdminBlog from '../../pages/admin/AdminBlog';
 import AdminBlogEdit from '../../pages/admin/AdminBlogEdit';
 import PanPivdenbud from '../../pages/admin/PanPivdenbud';
@@ -47,6 +49,7 @@ const STOCK_TABS = [
 const CATALOG_TABS = [
     { value: 'tools', label: 'Інструмент' },
     { value: 'goods', label: 'Товари' },
+    { value: 'services', label: 'Послуги' },
     { value: 'taxonomy', label: 'Категорії та бренди' },
     { value: 'suppliers', label: 'Постачальники' },
 ];
@@ -101,11 +104,13 @@ export default function AdminRoutes() {
                     <Route index element={<Navigate to="/admin/catalog/tools" replace />} />
                     <Route path="tools" element={<AdminRent />} />
                     <Route path="goods" element={<AdminProducts />} />
+                    <Route path="services" element={<AdminServices />} />
                     <Route path="taxonomy" element={<AdminCategories />} />
                     <Route path="suppliers" element={<AdminSuppliers />} />
                 </Route>
                 <Route path="catalog/tools/:id" element={<ProductEdit context="rent" />} />
                 <Route path="catalog/goods/:id" element={<ProductEdit />} />
+                <Route path="catalog/services/:id" element={<ServiceEdit />} />
 
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="blog/:id" element={<AdminBlogEdit />} />

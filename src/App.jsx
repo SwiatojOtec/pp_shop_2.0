@@ -12,6 +12,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import InfoPage from './pages/InfoPage';
 import Rent from './pages/Rent';
+import Services from './pages/Services';
 import RentPlaceholderPage from './pages/RentPlaceholderPage';
 import NotFound from './pages/NotFound';
 import AdminRoutes from './features/admin/routes';
@@ -39,6 +40,7 @@ function AppContent() {
           <Route path="/orenda/lisa-ryshtuvalni" element={<RentPlaceholderPage pageKey="lisa-ryshtuvalni" />} />
           <Route path="/orenda/opalubka" element={<RentPlaceholderPage pageKey="opalubka" />} />
           <Route path="/orenda/:slug" element={<ProductDetail />} />
+          <Route path="/poslugy" element={<Services />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/contacts" element={<Contacts />} />

@@ -31,7 +31,7 @@ export default function ProductGrid() {
             });
     }, []);
 
-    const shopProducts = products.filter(p => !p.isRent);
+    const shopProducts = products.filter(p => !p.isRent && !p.isService);
 
     const filteredProducts = activeTab === 'all'
         ? shopProducts

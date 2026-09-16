@@ -44,7 +44,8 @@ export default function Header({ onCartClick }) {
       try {
         const data = await productsApi.list({ search: query.trim(), limit: 7 });
         const items = Array.isArray(data) ? data : (data.products || []);
-        setSuggestions(items.slice(0, 7));
+        // Послуги не мають власної сторінки /poslugy/:slug — нема куди вести.
+        setSuggestions(items.filter((p) => !p.isService).slice(0, 7));
         setShowSuggestions(true);
       } catch { setSuggestions([]); }
       finally { setSearching(false); }
@@ -205,6 +206,14 @@ export default function Header({ onCartClick }) {
                 className={`nav-item ${location.pathname.startsWith('/orenda') ? 'active' : ''}`}
               >
                 Оренда
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/poslugy"
+                className={`nav-item ${location.pathname.startsWith('/poslugy') ? 'active' : ''}`}
+              >
+                Послуги
               </Link>
             </li>
             <li className="hide-mobile"><Link to="/magazyn/parketna_doshka" className="nav-item">Паркет</Link></li>
