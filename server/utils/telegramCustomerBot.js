@@ -326,7 +326,7 @@ async function notifyOrderStatusChanged(order) {
         try {
             const text = `🚚 Замовлення №${order.orderNumber} вже в дорозі! Наш кур'єр везе ваше замовлення${order.address ? ` за адресою: ${order.address}` : ''}.`;
             if (fs.existsSync(IN_TRANSIT_PHOTO_PATH)) {
-                await bot.sendPhoto(chatId, IN_TRANSIT_PHOTO_PATH, { caption: text });
+                await bot.sendPhoto(chatId, IN_TRANSIT_PHOTO_PATH, { caption: text }, { filename: 'in-transit.jpg', contentType: 'image/jpeg' });
             } else {
                 await bot.sendMessage(chatId, text);
             }
