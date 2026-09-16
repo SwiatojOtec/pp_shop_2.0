@@ -10,9 +10,11 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { Op } = require('sequelize');
 const Client = require('../models/Client');
+const Product = require('../models/Product');
 const { getOrdersByClient } = require('../modules/orders-rental/services/orderService');
 const { normalizeUaPhone, phoneTailsMatch } = require('./phoneUtils');
 const { getOrderStatusLabel, getDealStatusLabel } = require('../constants/orderStatusLabels');
+const { WAREHOUSE_POINT, geocodeAddress, getRouteEta } = require('./deliveryEta');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
@@ -127,13 +129,43 @@ function formatOrderDetail(o) {
     return message;
 }
 
+// RentalApplication-рядки (statusDomain 'rental') зберігають позиції з
+// productId (не id — той самий id, що на Order-рядках, там сам товар).
+async function getPrimaryItemImage(o) {
+    const items = o.items || [];
+    if (!items.length) return null;
+    const ids = [...new Set(
+        items.map((item) => (o.statusDomain === 'rental' ? item.productId : item.id)).filter(Boolean)
+    )];
+    if (!ids.length) return null;
+    const products = await Product.findAll({ where: { id: ids }, attributes: ['id', 'image'] });
+    const imageById = new Map(products.map((p) => [p.id, p.image]));
+    for (const item of items) {
+        const pid = o.statusDomain === 'rental' ? item.productId : item.id;
+        const image = imageById.get(pid);
+        if (image) return image;
+    }
+    return null;
+}
+
 async function sendLatestOrder(chatId, client) {
     const orders = await getOrdersByClient(client.id);
     if (!orders.length) {
         await bot.sendMessage(chatId, 'Замовлень поки немає.', linkedMenu);
         return;
     }
-    await bot.sendMessage(chatId, formatOrderDetail(orders[0]), { parse_mode: 'HTML', ...linkedMenu });
+    const o = orders[0];
+    const caption = formatOrderDetail(o);
+    const imageUrl = await getPrimaryItemImage(o).catch(() => null);
+    if (imageUrl) {
+        try {
+            await bot.sendPhoto(chatId, imageUrl, { caption, parse_mode: 'HTML', ...linkedMenu });
+            return;
+        } catch (err) {
+            console.error('customerBot sendPhoto error:', err);
+        }
+    }
+    await bot.sendMessage(chatId, caption, { parse_mode: 'HTML', ...linkedMenu });
 }
 
 async function sendOrdersList(chatId, client) {
@@ -274,10 +306,31 @@ async function notifyOrderStatusChanged(order) {
     if (!bot) return;
     const client = await findLinkedClientForOrder(order);
     if (!client) return;
+    const chatId = client.telegramChatId;
+
     await bot.sendMessage(
-        client.telegramChatId,
+        chatId,
         `📦 Замовлення №${order.orderNumber}: статус змінено на «${getOrderStatusLabel(order.status)}».`
     );
+
+    // "У дорозі" — додатково орієнтовна відстань/час і мітка на карті, якщо
+    // вдалось геокодувати адресу. Ніколи не блокує основне повідомлення вище.
+    if (order.status === 'in_transit' && order.deliveryMethod === 'delivery' && order.address) {
+        try {
+            const dest = await geocodeAddress(order.address);
+            if (!dest) return;
+            const eta = await getRouteEta(WAREHOUSE_POINT, dest);
+            if (eta) {
+                await bot.sendMessage(
+                    chatId,
+                    `🚚 Орієнтовно ${eta.distanceKm} км, ≈${eta.etaMinutes} хв в дорозі.`
+                );
+            }
+            await bot.sendLocation(chatId, dest.lat, dest.lon);
+        } catch (err) {
+            console.error('customerBot in_transit ETA error:', err);
+        }
+    }
 }
 
 module.exports = { notifyOrderCreated, notifyOrderStatusChanged };

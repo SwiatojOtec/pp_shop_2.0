@@ -78,6 +78,7 @@ export default function DocumentsPanel({
     };
 
     const kinds = DOC_KINDS.filter((kind) => hasRent || !kind.rentOnly);
+    const isDelivery = draft?.deliveryMethod === 'delivery';
     const otherDocs = groups.get('other') || [];
 
     return (
@@ -91,7 +92,7 @@ export default function DocumentsPanel({
                     const [latest] = versions;
                     const { onGenerate, busy, disabled } = config[type];
                     const isOpen = !!expanded[type];
-                    const hasBasis = !kind.afterStep || isDealAtOrPastStep(dealStatus, hasRent, kind.afterStep);
+                    const hasBasis = !kind.afterStep || isDealAtOrPastStep(dealStatus, hasRent, kind.afterStep, isDelivery);
 
                     return (
                         <li key={type} className={`doc-kind${latest ? ' doc-kind--ready' : ''}`}>

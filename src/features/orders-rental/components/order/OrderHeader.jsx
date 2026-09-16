@@ -21,7 +21,8 @@ export default function OrderHeader({
     onStatusChange,
 }) {
     const [pendingStep, setPendingStep] = useState(null);
-    const steps = getDealSteps(draft.status, hasRent);
+    const isDelivery = draft.deliveryMethod === 'delivery';
+    const steps = getDealSteps(draft.status, hasRent, isDelivery);
     const currentIndex = steps.findIndex((s) => s.state === 'now');
     const hasShop = orderHasShopItems(draft, rentProductIds);
 

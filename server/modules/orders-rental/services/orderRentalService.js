@@ -102,10 +102,13 @@ function buildRentItemsFromOrder(order, productsById, previousItems = []) {
  * consumers (inventory committed-quantity calc, calendar, auto-overdue) working
  * unchanged: paid+ reserves stock (`booked`), issued means physically out
  * (`active`), returned/done both mean the tool is back (`returned`).
+ * in_transit ("У дорозі", delivery-only step before issued) still counts
+ * as booked — the tool already shipped, reservation must not lapse.
  */
 function deriveRentalStatusFromDealStage(dealStatus) {
     switch (dealStatus) {
-        case 'paid': return 'booked';
+        case 'paid':
+        case 'in_transit': return 'booked';
         case 'issued': return 'active';
         case 'returned':
         case 'done': return 'returned';

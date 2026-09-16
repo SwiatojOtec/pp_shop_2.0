@@ -8,6 +8,7 @@ const ORDER_STATUS_LABELS = {
     new: 'Новий',
     invoice: 'Рахунок',
     paid: 'Оплачено',
+    in_transit: 'У дорозі',
     issued: 'Видано',
     returned: 'Повернуто',
     done: 'Виконано',

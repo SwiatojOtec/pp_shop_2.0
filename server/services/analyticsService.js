@@ -9,9 +9,9 @@ const { resolveLineNetTotal, roundMoney, parseDiscountValue, resolveDiscountAmou
 /** Угода вважається «оплаченою» (реальні гроші отримано) з цього статусу і
  *  далі — той самий поріг, що й «Робочий стіл» (server/services/
  *  dashboardService.js, PAID_OR_LATER_STATUSES). Тримати синхронізовано. */
-const REVENUE_STATUSES = ['paid', 'issued', 'returned', 'done'];
+const REVENUE_STATUSES = ['paid', 'in_transit', 'issued', 'returned', 'done'];
 
-const ALL_STATUSES = ['new', 'invoice', 'paid', 'issued', 'returned', 'done', 'cancelled'];
+const ALL_STATUSES = ['new', 'invoice', 'paid', 'in_transit', 'issued', 'returned', 'done', 'cancelled'];
 
 /**
  * Податкове навантаження для «реального прибутку» (за словами власника):

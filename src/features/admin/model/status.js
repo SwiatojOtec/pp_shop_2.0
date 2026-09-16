@@ -10,6 +10,7 @@ export const ORDER_STATUS = {
     new:       { label: 'Новий',      tone: 'info' },
     invoice:   { label: 'Рахунок',    tone: 'warning' },
     paid:      { label: 'Оплачено',   tone: 'success' },
+    in_transit: { label: 'У дорозі',  tone: 'info' },
     issued:    { label: 'Видано',     tone: 'violet' },
     returned:  { label: 'Повернуто',  tone: 'teal' },
     done:      { label: 'Виконано',   tone: 'success' },

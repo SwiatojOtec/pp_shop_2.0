@@ -8,7 +8,7 @@ const { toIsoDate } = require('../modules/orders-rental/services/rentalApplicati
 const { hasShopAccess, hasRentAccess } = require('../utils/roles');
 
 const NON_TURNOVER_STATUSES = ['cancelled'];
-const PAID_OR_LATER_STATUSES = ['paid', 'issued', 'returned', 'done'];
+const PAID_OR_LATER_STATUSES = ['paid', 'in_transit', 'issued', 'returned', 'done'];
 const NEW_INVOICE_THRESHOLD_DAYS = 3;
 
 function startOfMonth(d = new Date()) {
