@@ -141,6 +141,31 @@ router.get('/lookup', authMiddleware, requireRole(allowedRoles), async (req, res
     }
 });
 
+// Лайтовий пошук для віджетів-підказок (напр. модалка "Нова угода") — на
+// відміну від GET / (список клієнтів), не тягне getAllDealRows/агрегати,
+// лише кілька найсвіжіших збігів за ім'ям чи телефоном.
+router.get('/search', authMiddleware, requireRole(allowedRoles), async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        if (q.length < 2) return res.json([]);
+        const clients = await Client.findAll({
+            where: {
+                [Op.or]: [
+                    { fullName: { [Op.iLike]: `%${q}%` } },
+                    { phone: { [Op.iLike]: `%${q}%` } },
+                    { phoneSecondary: { [Op.iLike]: `%${q}%` } },
+                    { phoneEmergency: { [Op.iLike]: `%${q}%` } },
+                ],
+            },
+            limit: 8,
+            order: [['updatedAt', 'DESC']],
+        });
+        res.json(clients);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/:id', authMiddleware, requireRole(allowedRoles), async (req, res) => {
     try {
         const client = await Client.findByPk(req.params.id);

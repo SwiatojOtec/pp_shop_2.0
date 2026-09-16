@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCheck, Loader2 } from 'lucide-react';
 import Modal from '../../../admin/ui/Modal';
@@ -18,6 +18,10 @@ import { isValidUaPhone, normalizeUaPhone } from '../../../../utils/phoneUtils';
  * /api/clients/lookup, що й на екрані угоди (OrderClientCard) — знайдений
  * клієнт одразу підтягує ім'я (якщо поле ще порожнє) і лінкується до угоди
  * при створенні, без окремого кроку "Прив'язати" вже після створення.
+ *
+ * Поле "Ім'я" має свій пошук (/api/clients/search) — менеджер часто памʼятає
+ * клієнта на ім'я, а не телефон напам'ять; вибір підказки заповнює і
+ * телефон, і лінкує клієнта так само, як збіг за телефоном.
  */
 export default function NewDealModal({ open, onClose, prefillClient = null }) {
     const navigate = useNavigate();
@@ -27,12 +31,17 @@ export default function NewDealModal({ open, onClose, prefillClient = null }) {
     const [saving, setSaving] = useState(false);
     const [phoneMatch, setPhoneMatch] = useState(null);
     const [lookupLoading, setLookupLoading] = useState(false);
+    const [nameResults, setNameResults] = useState([]);
+    const [nameDropdownOpen, setNameDropdownOpen] = useState(false);
+    const latestNameRef = useRef('');
 
     useEffect(() => {
         if (!open) return;
         setName(prefillClient?.fullName || '');
         setPhone(prefillClient?.phone ? normalizeUaPhone(prefillClient.phone) : '');
         setPhoneMatch(null);
+        setNameResults([]);
+        setNameDropdownOpen(false);
     }, [open, prefillClient]);
 
     useEffect(() => {
@@ -57,11 +66,48 @@ export default function NewDealModal({ open, onClose, prefillClient = null }) {
         return () => clearTimeout(timer);
     }, [phone, open, prefillClient]);
 
+    // Клієнт уже знайдений за телефоном — підказки за ім'ям тільки заважали б.
+    useEffect(() => {
+        if (!open || prefillClient || phoneMatch) {
+            setNameResults([]);
+            return undefined;
+        }
+        const val = name.trim();
+        latestNameRef.current = val;
+        if (val.length < 2) {
+            setNameResults([]);
+            return undefined;
+        }
+        const timer = setTimeout(() => {
+            clientsApi.search(val)
+                .then((rows) => {
+                    if (latestNameRef.current !== val) return;
+                    const list = Array.isArray(rows) ? rows : [];
+                    setNameResults(list);
+                    setNameDropdownOpen(list.length > 0);
+                })
+                .catch(() => {
+                    if (latestNameRef.current === val) setNameResults([]);
+                });
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [name, open, prefillClient, phoneMatch]);
+
+    function selectNameMatch(client) {
+        setName(client.fullName || '');
+        setPhone(client.phone ? normalizeUaPhone(client.phone) : '');
+        setPhoneMatch(client);
+        setNameResults([]);
+        setNameDropdownOpen(false);
+    }
+
     function handleClose() {
         if (saving) return;
         setName('');
         setPhone('');
         setPhoneMatch(null);
+        setNameResults([]);
+        setNameDropdownOpen(false);
         onClose();
     }
 
@@ -115,9 +161,31 @@ export default function NewDealModal({ open, onClose, prefillClient = null }) {
                 {prefillClient && (
                     <p className="deal-modal-hint">Угода буде одразу прив&apos;язана до клієнта {prefillClient.fullName}.</p>
                 )}
-                <label className="deal-modal-field">
+                <label className="deal-modal-field deal-modal-field--autocomplete">
                     Ім&apos;я
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onFocus={() => { if (nameResults.length > 0) setNameDropdownOpen(true); }}
+                        onBlur={() => setTimeout(() => setNameDropdownOpen(false), 150)}
+                        autoComplete="off"
+                        autoFocus
+                    />
+                    {nameDropdownOpen && nameResults.length > 0 && (
+                        <div className="deal-name-dropdown">
+                            {nameResults.map((c) => (
+                                <div
+                                    key={c.id}
+                                    className="deal-name-dropdown-item"
+                                    onMouseDown={(e) => { e.preventDefault(); selectNameMatch(c); }}
+                                >
+                                    <span className="deal-name-dropdown-name">{c.fullName || '—'}</span>
+                                    <span className="deal-name-dropdown-phone">{c.phone}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </label>
                 <label className="deal-modal-field">
                     Телефон

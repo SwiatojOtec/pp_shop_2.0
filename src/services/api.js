@@ -197,6 +197,7 @@ export const rentalCalendarApi = {
 export const clientsApi = {
     list: (params) => apiGet('/api/clients', params),
     lookupByPhone: (phone) => apiGet('/api/clients/lookup', { phone }),
+    search: (q) => apiGet('/api/clients/search', { q }),
     get: (id) => apiGet(`/api/clients/${id}`),
     create: (data) => apiPost('/api/clients', data),
     update: (id, data) => apiPut(`/api/clients/${id}`, data),
