@@ -7,6 +7,8 @@
  * Той самий каркас, що й server/utils/telegram.js та telegramRent.js —
  * окремий токен, polling, мовчки не стартує без нього.
  */
+const fs = require('fs');
+const path = require('path');
 const TelegramBot = require('node-telegram-bot-api');
 const { Op } = require('sequelize');
 const Client = require('../models/Client');
@@ -14,8 +16,11 @@ const Product = require('../models/Product');
 const { getOrdersByClient } = require('../modules/orders-rental/services/orderService');
 const { normalizeUaPhone, phoneTailsMatch } = require('./phoneUtils');
 const { getOrderStatusLabel, getDealStatusLabel } = require('../constants/orderStatusLabels');
-const { WAREHOUSE_POINT, geocodeAddress, getRouteEta } = require('./deliveryEta');
 require('dotenv').config();
+
+// Статична ілюстрація "у дорозі" (напр. фірмовий Fiat Doblo) — кладеться
+// сюди вручну; поки файлу нема, бот просто не додає фото до повідомлення.
+const IN_TRANSIT_PHOTO_PATH = path.join(__dirname, '../assets/in-transit.jpg');
 
 const token = process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
 
@@ -313,22 +318,20 @@ async function notifyOrderStatusChanged(order) {
         `📦 Замовлення №${order.orderNumber}: статус змінено на «${getOrderStatusLabel(order.status)}».`
     );
 
-    // "У дорозі" — додатково орієнтовна відстань/час і мітка на карті, якщо
-    // вдалось геокодувати адресу. Ніколи не блокує основне повідомлення вище.
-    if (order.status === 'in_transit' && order.deliveryMethod === 'delivery' && order.address) {
+    // "У дорозі" — тепле повідомлення без конкретних хвилин (реальний ОСРМ-
+    // розрахунок без урахування київських заторів давав нереалістичний ETA)
+    // і без мітки на карті (клієнт і так знає свою адресу) — лише фото
+    // фірмової машини, якщо файл уже покладено в assets.
+    if (order.status === 'in_transit' && order.deliveryMethod === 'delivery') {
         try {
-            const dest = await geocodeAddress(order.address);
-            if (!dest) return;
-            const eta = await getRouteEta(WAREHOUSE_POINT, dest);
-            if (eta) {
-                await bot.sendMessage(
-                    chatId,
-                    `🚚 Орієнтовно ${eta.distanceKm} км, ≈${eta.etaMinutes} хв в дорозі.`
-                );
+            const text = `🚚 Замовлення №${order.orderNumber} вже в дорозі! Наш кур'єр везе ваше замовлення${order.address ? ` за адресою: ${order.address}` : ''}.`;
+            if (fs.existsSync(IN_TRANSIT_PHOTO_PATH)) {
+                await bot.sendPhoto(chatId, IN_TRANSIT_PHOTO_PATH, { caption: text });
+            } else {
+                await bot.sendMessage(chatId, text);
             }
-            await bot.sendLocation(chatId, dest.lat, dest.lon);
         } catch (err) {
-            console.error('customerBot in_transit ETA error:', err);
+            console.error('customerBot in_transit message error:', err);
         }
     }
 }
