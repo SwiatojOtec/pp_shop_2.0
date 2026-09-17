@@ -5,7 +5,7 @@ const InventoryItem = require('../models/InventoryItem');
 const Product = require('../models/Product');
 const Warehouse = require('../models/Warehouse');
 const { authMiddleware, requireRole } = require('../middleware/auth');
-const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryItemsBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName, bootstrapRentInventoryFromProducts, restoreAllRentInventoryOneEach, getActiveRentalQuantityByProduct, getPhysicalQuantityByProduct } = require('../services/inventoryService');
+const { recalculateProductQuantity, moveInventoryBetweenWarehouses, moveInventoryItemsBetweenWarehouses, moveInventoryToRepairWarehouse, sendProductToRepair, sendProductToNeedsRepair, restoreProductInStock, logWarehouseEvent, userDisplayName, bootstrapRentInventoryFromProducts, restoreAllRentInventoryOneEach, getActiveRentalQuantityByProduct, getPhysicalQuantityByProduct, getNeedsRepairUnitCountByProduct } = require('../services/inventoryService');
 
 const GUARD = [authMiddleware, requireRole(['owner', 'shop_rent', 'rent', 'pivdenbud'])];
 
@@ -103,14 +103,16 @@ router.get('/', ...GUARD, async (req, res) => {
         // «Кількість» cluster (docs/admin-redesign/03-screens.md, 1.1): на складі
         // (this row, exact) · в оренді / всього по складах (product-wide — no
         // per-warehouse breakdown of rental commitments exists).
-        const [committedByProduct, physicalByProduct] = await Promise.all([
+        const [committedByProduct, physicalByProduct, needsRepairByProduct] = await Promise.all([
             getActiveRentalQuantityByProduct(),
             getPhysicalQuantityByProduct(),
+            getNeedsRepairUnitCountByProduct(),
         ]);
         const out = refreshed.map((r) => {
             const plain = r.get({ plain: true });
             plain.committedQuantity = committedByProduct.get(r.productId) || 0;
             plain.physicalTotal = physicalByProduct.get(r.productId) || 0;
+            plain.needsRepairUnits = needsRepairByProduct.get(r.productId) || 0;
             return plain;
         });
         res.json(out);

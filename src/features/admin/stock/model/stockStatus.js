@@ -23,9 +23,21 @@ export function getEffectiveStockStatusKey(product, item = null) {
     if (product.stockStatus === 'out_of_stock') return 'out_of_stock';
 
     const free = typeof product.quantityAvailable === 'number' ? product.quantityAvailable : null;
-    const rowQty = item != null ? Math.max(0, Math.floor(Number(item.quantity) || 0)) : null;
 
     if (free != null && free <= 0) {
+        // Для trackingMode=serial товарів InventoryItem.quantity більше не
+        // джерело правди про фізичну придатність (та лишається "на якому
+        // складі") — 0 вільно може означати або реальну бронь (committed),
+        // або що всі одиниці позначені "Потребує ремонту", а не що товар
+        // "в оренді". committedQuantity/needsRepairUnits рахуються сервером
+        // з активних заявок і ProductUnit окремо, саме для цього розрізнення.
+        const committed = item && typeof item.committedQuantity === 'number' ? item.committedQuantity : null;
+        if (committed != null) {
+            if (committed > 0) return 'rented';
+            const needsRepairUnits = item && typeof item.needsRepairUnits === 'number' ? item.needsRepairUnits : 0;
+            return needsRepairUnits > 0 ? 'needs_repair' : 'out_of_stock';
+        }
+        const rowQty = item != null ? Math.max(0, Math.floor(Number(item.quantity) || 0)) : null;
         return rowQty == null || rowQty > 0 ? 'rented' : 'out_of_stock';
     }
 

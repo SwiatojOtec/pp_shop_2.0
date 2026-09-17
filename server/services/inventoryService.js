@@ -187,6 +187,26 @@ async function getActiveRentalQuantityByProduct() {
     return map;
 }
 
+/** Скільки активних одиниць товару зараз позначені «Потребує ремонту»
+ *  (ProductUnit, trackingMode=serial) — потрібно окремо від committed, щоб
+ *  відрізнити на Складі "0 вільно через ремонт" від "0 вільно через бронь":
+ *  InventoryItem.quantity для serial-товарів більше не є джерелом правди
+ *  про фізичну придатність, тож без цього лічильника "0 вільно, є на складі"
+ *  завжди помилково підписувалось як «В оренді». */
+async function getNeedsRepairUnitCountByProduct() {
+    const rows = await ProductUnit.findAll({
+        attributes: ['productId', [ProductUnit.sequelize.fn('COUNT', ProductUnit.sequelize.col('id')), 'total']],
+        where: { isActive: true, technicalCondition: NEEDS_REPAIR_CONDITION },
+        group: ['productId'],
+        raw: true,
+    });
+    const map = new Map();
+    for (const r of rows) {
+        map.set(Number(r.productId), Math.max(0, Math.floor(Number(r.total) || 0)));
+    }
+    return map;
+}
+
 /** Фізична сума одиниць по всіх складах, для всіх товарів одразу — «всього по
  *  складах» в панелі позиції. */
 async function getPhysicalQuantityByProduct() {
@@ -443,6 +463,7 @@ module.exports = {
     moveInventoryItemsBetweenWarehouses,
     getActiveRentalQuantityByProduct,
     getPhysicalQuantityByProduct,
+    getNeedsRepairUnitCountByProduct,
     moveInventoryToRepairWarehouse,
     restoreAllRentInventoryOneEach,
     setRentProductStockStatus,
