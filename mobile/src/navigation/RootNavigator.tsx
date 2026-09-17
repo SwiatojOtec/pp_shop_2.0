@@ -8,6 +8,7 @@ import HomeScreen from '../screens/HomeScreen';
 import QuickInvoiceScreen from '../screens/QuickInvoiceScreen';
 import WarehousePickerScreen from '../screens/WarehousePickerScreen';
 import RecountScreen from '../screens/RecountScreen';
+import BookingScreen from '../screens/BookingScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -31,6 +32,7 @@ export default function RootNavigator() {
                         <Stack.Screen name="QuickInvoice" component={QuickInvoiceScreen} />
                         <Stack.Screen name="WarehousePicker" component={WarehousePickerScreen} />
                         <Stack.Screen name="Recount" component={RecountScreen} />
+                        <Stack.Screen name="Booking" component={BookingScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Login" component={LoginScreen} />

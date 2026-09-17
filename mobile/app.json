@@ -29,7 +29,8 @@
         {
           "cameraPermission": "Дозвольте камеру, щоб сканувати QR-наліпки під час переобліку."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

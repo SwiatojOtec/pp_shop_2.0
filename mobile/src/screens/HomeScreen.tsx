@@ -31,6 +31,12 @@ export default function HomeScreen() {
                     <Text style={styles.cardTitle}>Переоблік</Text>
                     <Text style={styles.cardHint}>Сканування QR-наліпок на складі</Text>
                 </Pressable>
+
+                <Pressable style={styles.card} onPress={() => navigation.navigate('Booking')}>
+                    <Text style={styles.cardIcon}>📅</Text>
+                    <Text style={styles.cardTitle}>Брони</Text>
+                    <Text style={styles.cardHint}>Забронювати інструмент на дати</Text>
+                </Pressable>
             </View>
         </View>
     );
