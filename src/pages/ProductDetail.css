@@ -1213,11 +1213,24 @@
 
     .tabs-header {
         gap: 20px;
+        /* 4 вкладки з довгими назвами ("Інструкція", "Комплектація") не
+           влазять навіть зі зменшеним gap — нехай гортаються горизонтально
+           замість того, щоб вилазити за межі екрана. */
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+
+    .tabs-header::-webkit-scrollbar {
+        display: none;
     }
 
     .tab-link {
         font-size: 0.9rem;
         padding: 20px 0;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
 
     .tab-content {

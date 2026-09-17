@@ -1,7 +1,12 @@
 import { Link } from 'react-router-dom';
 import './Footer.css';
 
+const FOUNDED_YEAR = 2024;
+
 export default function Footer() {
+    const currentYear = new Date().getFullYear();
+    const yearLabel = currentYear > FOUNDED_YEAR ? `${FOUNDED_YEAR}–${currentYear}` : String(FOUNDED_YEAR);
+
     return (
         <footer className="footer">
             <div className="container footer-grid">
@@ -35,7 +40,7 @@ export default function Footer() {
             </div>
             <div className="footer-bottom">
                 <div className="container">
-                    <p>&copy; 2025 PAN PARKET. All rights reserved. | <Link to="/admin" style={{ color: '#666' }}>Адмін-панель</Link></p>
+                    <p>&copy; {yearLabel} PAN PARKET. All rights reserved. | <Link to="/admin" style={{ color: '#666' }}>Адмін-панель</Link></p>
                 </div>
             </div>
         </footer>

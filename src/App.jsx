@@ -27,6 +27,13 @@ function AppContent() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
 
+  // React Router не скидає прокрутку сам — без цього перехід на нову
+  // сторінку (напр. з каталогу оренди на карточку товару) успадковує
+  // scroll-позицію попередньої сторінки і може відкритись одразу знизу.
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <div className="app">
       {!isAdmin && <Header onCartClick={() => setIsCartOpen(true)} />}
