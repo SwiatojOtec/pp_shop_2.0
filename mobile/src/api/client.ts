@@ -7,7 +7,7 @@ import * as SecureStore from 'expo-secure-store';
  *
  * Проставте реальний URL Railway перед першим запуском.
  */
-export const API_URL = 'https://ВАШ-БЕКЕНД.up.railway.app';
+export const API_URL = 'https://ppshop20-production.up.railway.app';
 
 const TOKEN_KEY = 'pp_admin_token';
 

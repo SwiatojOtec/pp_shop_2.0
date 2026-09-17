@@ -4,7 +4,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
+import HomeScreen from '../screens/HomeScreen';
 import QuickInvoiceScreen from '../screens/QuickInvoiceScreen';
+import WarehousePickerScreen from '../screens/WarehousePickerScreen';
+import RecountScreen from '../screens/RecountScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,7 +26,12 @@ export default function RootNavigator() {
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {user ? (
-                    <Stack.Screen name="QuickInvoice" component={QuickInvoiceScreen} />
+                    <>
+                        <Stack.Screen name="Home" component={HomeScreen} />
+                        <Stack.Screen name="QuickInvoice" component={QuickInvoiceScreen} />
+                        <Stack.Screen name="WarehousePicker" component={WarehousePickerScreen} />
+                        <Stack.Screen name="Recount" component={RecountScreen} />
+                    </>
                 ) : (
                     <Stack.Screen name="Login" component={LoginScreen} />
                 )}

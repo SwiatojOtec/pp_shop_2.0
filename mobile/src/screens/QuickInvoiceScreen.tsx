@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import { searchProducts, Product } from '../api/products';
 import { createAdminOrder, createInvoiceDocument, downloadInvoiceFile, OrderItem } from '../api/orders';
 import { ApiError } from '../api/client';
@@ -23,7 +23,7 @@ function money(n: number): string {
 }
 
 export default function QuickInvoiceScreen() {
-    const { logout } = useAuth();
+    const navigation = useNavigation<any>();
 
     const [search, setSearch] = useState('');
     const [results, setResults] = useState<Product[]>([]);
@@ -138,10 +138,11 @@ export default function QuickInvoiceScreen() {
     return (
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Швидкий рахунок</Text>
-                <Pressable onPress={logout}>
-                    <Text style={styles.logout}>Вийти</Text>
+                <Pressable onPress={() => navigation.goBack()}>
+                    <Text style={styles.logout}>‹ Назад</Text>
                 </Pressable>
+                <Text style={styles.headerTitle}>Швидкий рахунок</Text>
+                <View style={{ width: 56 }} />
             </View>
 
             <View style={styles.searchWrap}>
