@@ -10,6 +10,7 @@ import AdminClients from '../../pages/admin/AdminClients';
 import AdminClientDetails from '../../pages/admin/AdminClientDetails';
 import StockPositions from './stock/pages/StockPositions';
 import StockEvents from './stock/pages/StockEvents';
+import StockLabels from './stock/pages/StockLabels';
 import AdminRent from '../../pages/admin/AdminRent';
 import AdminProducts from '../../pages/admin/AdminProducts';
 import ProductEdit from '../../pages/admin/ProductEdit';
@@ -44,6 +45,7 @@ const STOCK_TABS = [
     { value: '', label: 'Залишки' },
     { value: 'log', label: 'Журнал' },
     { value: 'warehouses', label: 'Склади' },
+    { value: 'labels', label: 'Наліпки' },
 ];
 
 const CATALOG_TABS = [
@@ -98,6 +100,7 @@ export default function AdminRoutes() {
                     <Route index element={<StockPositions />} />
                     <Route path="log" element={<StockEvents />} />
                     <Route path="warehouses" element={<StockWarehouses />} />
+                    <Route path="labels" element={<StockLabels />} />
                 </Route>
 
                 <Route path="catalog" element={<SectionTabsLayout basePath="/admin/catalog" tabs={CATALOG_TABS} />}>

@@ -213,6 +213,7 @@ export const usersApi = {
 
 export const productUnitsApi = {
     list: (productId) => apiGet(`/api/products/${productId}/units`),
+    listAll: (params) => apiGet('/api/product-units', params),
     create: (productId, data) => apiPost(`/api/products/${productId}/units`, data),
     update: (id, data) => apiPut(`/api/product-units/${id}`, data),
     remove: (id) => apiDelete(`/api/product-units/${id}`),
