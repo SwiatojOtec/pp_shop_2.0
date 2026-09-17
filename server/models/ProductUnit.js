@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
+const Product = require('./Product');
 
 /**
  * Одна фізична одиниця орендного товару (docs plan «Фізичні одиниці
@@ -47,7 +48,15 @@ const ProductUnit = sequelize.define('ProductUnit', {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true
+    },
+    // Коли востаннє фізично підтвердили присутність цієї одиниці —
+    // переоблік з мобільного додатку (docs plan «Переоблік зі сканером»).
+    lastCheckedAt: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, { timestamps: true });
+
+ProductUnit.belongsTo(Product, { foreignKey: 'productId' });
 
 module.exports = ProductUnit;
