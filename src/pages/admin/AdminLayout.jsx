@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, ShoppingCart, ContactRound, Warehouse, Wrench, FileText,
-    Building2, Users, Home, LogOut, ChevronRight, BarChart3,
+    Building2, Users, Home, LogOut, ChevronRight, BarChart3, Menu,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -77,6 +77,7 @@ export default function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const role = user?.role || 'rent';
     const isSubdivisionHead = !!user?.isSubdivisionHead;
     const fullName = user ? `${user.name || ''}${user.lastName ? ' ' + user.lastName : ''}`.trim() : 'Адмін';
@@ -100,8 +101,15 @@ export default function AdminLayout() {
 
     return (
         <div className="ds-shell">
+            {/* Мобільний бекдроп — клік поза висувною панеллю закриває її */}
+            <div
+                className={`ds-shell-backdrop${sidebarOpen ? ' ds-shell-backdrop--visible' : ''}`}
+                onClick={() => setSidebarOpen(false)}
+                aria-hidden="true"
+            />
+
             {/* ── Sidebar ── */}
-            <aside className="ds-shell-side">
+            <aside className={`ds-shell-side${sidebarOpen ? ' ds-shell-side--open' : ''}`}>
                 <div className="ds-shell-side-top">
                     <Link to="/admin" className="ds-shell-brand">
                         <span className="ds-shell-brand-mark">PP</span>bud_Tech
@@ -113,6 +121,7 @@ export default function AdminLayout() {
                         <Link
                             key={item.path}
                             to={item.path}
+                            onClick={() => setSidebarOpen(false)}
                             className={`ds-shell-nav-item${isActive(item.path) ? ' ds-shell-nav-item--active' : ''}`}
                         >
                             {item.icon}
@@ -122,7 +131,7 @@ export default function AdminLayout() {
                 </nav>
 
                 <div className="ds-shell-side-bot">
-                    <Link to="/" className="ds-shell-nav-item" title="Перейти на сайт">
+                    <Link to="/" className="ds-shell-nav-item" title="Перейти на сайт" onClick={() => setSidebarOpen(false)}>
                         <Home size={16} />
                         <span>На сайт</span>
                     </Link>
@@ -139,6 +148,14 @@ export default function AdminLayout() {
 
             <main className="ds-shell-main">
                 <header className="ds-shell-topbar">
+                    <button
+                        type="button"
+                        className="ds-shell-menu-btn"
+                        onClick={() => setSidebarOpen(true)}
+                        aria-label="Відкрити меню"
+                    >
+                        <Menu size={20} />
+                    </button>
                     <div className="ds-shell-breadcrumb">
                         <span className="ds-shell-breadcrumb-role">{roleLabel}</span>
                         <ChevronRight size={14} className="ds-shell-breadcrumb-sep" />

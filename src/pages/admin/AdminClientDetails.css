@@ -74,9 +74,11 @@
 
 .cd-header-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     align-items: center;
     flex-shrink: 0;
+    max-width: 100%;
     margin-top: 4px;
 }
 
@@ -107,14 +109,14 @@
    table into permanent horizontal scroll even at normal desktop widths. */
 .cd-notes-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 20px;
     align-items: start;
 }
 
 @media (max-width: 720px) {
     .cd-notes-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -207,7 +209,7 @@
 /* ── Stats ── */
 .cd-stats-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -395,11 +397,11 @@
 /* ── Responsive ── */
 @media (max-width: 840px) {
     .cd-body {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
     .cd-sidebar {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 }
 

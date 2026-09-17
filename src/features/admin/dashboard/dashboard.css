@@ -1,12 +1,12 @@
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1.9fr 1fr;
+    grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
     gap: var(--ds-space-5);
     align-items: start;
 }
 
 @media (max-width: 960px) {
-    .dashboard-grid { grid-template-columns: 1fr; }
+    .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── Потребує уваги ── */
@@ -119,7 +119,7 @@
 
 .dashboard-numbers-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--ds-space-4);
 }
 

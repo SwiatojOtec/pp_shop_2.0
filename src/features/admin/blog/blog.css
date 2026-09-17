@@ -20,13 +20,13 @@
 
 .blog-edit-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--ds-space-5);
     align-items: start;
 }
 
 @media (max-width: 900px) {
-    .blog-edit-grid { grid-template-columns: 1fr; }
+    .blog-edit-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .blog-edit-section {
@@ -48,12 +48,12 @@
 
 .blog-edit-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--ds-space-3);
 }
 
 @media (max-width: 560px) {
-    .blog-edit-row { grid-template-columns: 1fr; }
+    .blog-edit-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 .blog-edit-field {

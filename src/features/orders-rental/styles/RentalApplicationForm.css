@@ -128,12 +128,12 @@
 /* Parties */
 .rental-parties-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
 }
 
 @media (max-width: 768px) {
-    .rental-parties-grid { grid-template-columns: 1fr; }
+    .rental-parties-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .rental-party-block {
@@ -547,12 +547,12 @@
 /* Footer */
 .rental-footer-grid {
     display: grid;
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: 16px;
     align-items: start;
 }
 @media (max-width: 768px) {
-    .rental-footer-grid { grid-template-columns: 1fr; }
+    .rental-footer-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .rental-totals {

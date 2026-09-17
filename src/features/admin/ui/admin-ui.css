@@ -172,6 +172,15 @@
     align-items: center;
     gap: 4px;
     border-bottom: 1px solid var(--ds-border);
+    /* Вузький екран: рядок вкладок не влазить цілком — хай гортається
+       горизонтально сам, а не обрізає останні пункти чи розтягує сторінку. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.ds-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .ds-tab {
@@ -188,6 +197,8 @@
     font-weight: 600;
     font-family: var(--ds-font);
     cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
     transition: color var(--ds-duration-fast) var(--ds-ease), border-color var(--ds-duration-fast) var(--ds-ease);
 }
 
@@ -590,7 +601,7 @@
 
 .ds-field {
     display: grid;
-    grid-template-columns: 128px 1fr;
+    grid-template-columns: 128px minmax(0, 1fr);
     gap: var(--ds-space-2);
     align-items: start;
     font-size: 0.85rem;

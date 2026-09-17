@@ -149,11 +149,11 @@
 
 .profile-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--ds-space-3);
 }
 @media (max-width: 560px) {
-    .profile-row { grid-template-columns: 1fr; }
+    .profile-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 .profile-field {

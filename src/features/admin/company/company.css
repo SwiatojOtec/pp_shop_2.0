@@ -167,13 +167,13 @@
 
 .company-sub-form-grid {
     display: grid;
-    grid-template-columns: 1fr 1.3fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
     gap: var(--ds-space-5);
     align-items: start;
 }
 
 @media (max-width: 860px) {
-    .company-sub-form-grid { grid-template-columns: 1fr; }
+    .company-sub-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .company-sub-form-main {
@@ -254,6 +254,7 @@
 
 .company-member-row__fields {
     flex: 1;
+    min-width: 0;
     display: flex;
     gap: var(--ds-space-2);
 }
@@ -261,6 +262,7 @@
 .company-member-row__fields select,
 .company-member-row__fields input {
     flex: 1;
+    min-width: 0;
     padding: 7px 10px;
     border: 1px solid var(--ds-border);
     border-radius: var(--ds-radius-sm);
@@ -297,12 +299,12 @@
 
 .seller-form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--ds-space-3);
 }
 
 @media (max-width: 560px) {
-    .seller-form-row { grid-template-columns: 1fr; }
+    .seller-form-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 .seller-form-section-title {

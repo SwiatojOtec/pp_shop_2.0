@@ -9,17 +9,17 @@
 
 .client-modal-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--ds-space-3);
 }
 
 .client-modal-row--tight {
-    grid-template-columns: 160px 1fr;
+    grid-template-columns: 160px minmax(0, 1fr);
     align-items: start;
 }
 
 .client-modal-row--triple {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .client-modal-stack {
@@ -81,7 +81,7 @@
     .client-modal-row,
     .client-modal-row--tight,
     .client-modal-row--triple {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

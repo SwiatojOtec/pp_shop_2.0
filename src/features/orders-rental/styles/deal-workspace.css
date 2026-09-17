@@ -99,7 +99,10 @@
 
 @media (max-width: 1100px) {
     .deal-grid {
-        grid-template-columns: 1fr;
+        /* minmax(0, 1fr), не голий 1fr — інакше трек ніколи не стає вужчим
+           за max-content вмісту (інпутів у ds-field), і картка вилазить за
+           екран замість стискатись, як на телефоні. */
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -171,7 +174,7 @@
 
 .deal-responsible__row {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     gap: 6px;
     margin-bottom: 6px;
 }

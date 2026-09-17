@@ -257,3 +257,74 @@
     flex: 1;
     min-height: 0;
 }
+
+/* ── Мобільне меню (гамбургер + висувна панель) ────────────────────────────
+   Прихована за замовчуванням — сайдбар лишається постійним стовпцем гріда
+   на десктопі, як і був. Нижче breakpoint він виїжджає поверх контенту. */
+
+.ds-shell-menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--ds-radius-md);
+    border: none;
+    background: none;
+    color: var(--ds-text);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-right: var(--ds-space-3);
+}
+
+.ds-shell-menu-btn:hover {
+    background: var(--ds-surface-sunken);
+}
+
+.ds-shell-backdrop {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    .ds-shell {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ds-shell-side {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(var(--ds-sidebar-w), 84vw);
+        z-index: 60;
+        transform: translateX(-100%);
+        transition: transform var(--ds-duration-base) var(--ds-ease);
+        box-shadow: 0 0 0 1px var(--ds-shell-divider);
+    }
+
+    .ds-shell-side--open {
+        transform: translateX(0);
+    }
+
+    .ds-shell-menu-btn {
+        display: inline-flex;
+    }
+
+    .ds-shell-backdrop--visible {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 50;
+    }
+
+    .ds-shell-user-info {
+        display: none;
+    }
+
+    .ds-shell-topbar {
+        padding: 0 var(--ds-space-3);
+    }
+
+    .ds-shell-content {
+        padding: var(--ds-space-4) var(--ds-space-3) 48px;
+    }
+}

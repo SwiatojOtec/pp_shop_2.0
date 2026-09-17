@@ -20,14 +20,14 @@
 
 .catalog-taxonomy-grid {
     display: grid;
-    grid-template-columns: 1fr 1.3fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
     gap: var(--ds-space-4);
     align-items: start;
 }
 
 @media (max-width: 900px) {
     .catalog-taxonomy-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -35,16 +35,17 @@
     display: flex;
     gap: var(--ds-space-2);
     margin-bottom: var(--ds-space-4);
+    flex-wrap: wrap;
 }
 
 .catalog-add-row--rent {
     display: grid;
-    grid-template-columns: 2fr 1fr auto;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
 }
 
 .catalog-add-row--brand {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 .catalog-input,
