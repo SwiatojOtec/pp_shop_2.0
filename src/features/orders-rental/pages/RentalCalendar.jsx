@@ -488,7 +488,7 @@ export default function RentalCalendar() {
                 {loading && <div className="rt-loading">Завантаження…</div>}
                 <div
                     className="rt-grid"
-                    style={{ gridTemplateColumns: `220px repeat(${numDays}, ${dayColWidth}px)`, gridTemplateRows: `34px repeat(${Math.max(totalRows - 1, 0)}, 40px)` }}
+                    style={{ gridTemplateColumns: `260px repeat(${numDays}, ${dayColWidth}px)`, gridTemplateRows: `34px repeat(${Math.max(totalRows - 1, 0)}, minmax(40px, auto))` }}
                 >
                     <div className="rt-head-label rt-place" style={{ '--rt-col': 1, '--rt-row': 1 }}>Інструмент</div>
                     {days.map((d, i) => {

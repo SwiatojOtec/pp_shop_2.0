@@ -136,9 +136,10 @@
 
 .rt-grid {
     display: grid;
-    /* Row label is two lines (name + інв. №/SKU) — needs more than 30px to
-       avoid the flex column squeezing the name line to near-zero height. */
-    grid-auto-rows: 40px;
+    /* minmax(40px, auto), не голий 40px — назва інструменту тепер
+       переноситься (rt-row-label-name), і рядок має рости під неї замість
+       обрізати текст. Однорядкові назви лишаються компактними 40px. */
+    grid-auto-rows: minmax(40px, auto);
     min-width: max-content;
 }
 
@@ -232,18 +233,20 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 4px var(--ds-space-3);
+    padding: 6px var(--ds-space-3);
     min-width: 0;
 }
 
 .rt-row-label-name {
     font-size: 0.82rem;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.25;
     color: var(--ds-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* Повна назва інструменту важливіша за компактний рядок — переносимо
+       замість обрізання «…», рядок таймлайну тепер росте під неї
+       (grid-auto-rows: minmax(40px, auto) вище). */
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 .rt-row-label-sku {
